@@ -6,18 +6,20 @@ import {
   DarkTheme as NavigationDarkTheme,
   DefaultTheme as NavigationDefaultTheme,
   NavigationContainer,
-} from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React from "react";
-import { Appearance, useColorScheme } from "react-native";
-import * as Screens from "../screens";
-import { HomeNavigator } from "./HomeNavigator";
-import { StatusBar } from "expo-status-bar";
+} from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
+import React from 'react';
+import { Appearance, useColorScheme } from 'react-native';
 import {
   MD3DarkTheme,
   MD3LightTheme,
   adaptNavigationTheme,
-} from "react-native-paper";
+} from 'react-native-paper';
+
+import * as Screens from '../screens';
+
+import { HomeNavigator } from './HomeNavigator';
 
 /**
  * This type allows TypeScript to know what routes are defined in this navigator
@@ -49,7 +51,7 @@ const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
   return (
-    <Stack.Navigator initialRouteName={"Home"}>
+    <Stack.Navigator initialRouteName={'Home'}>
       <Stack.Screen
         name="HomeStack"
         component={HomeNavigator}
@@ -90,7 +92,7 @@ export const AppNavigator = (props: NavigationProps) => {
 
   return (
     <NavigationContainer
-      theme={colorScheme === "dark" ? CombinedDarkTheme : CombinedDefaultTheme}
+      theme={colorScheme === 'dark' ? CombinedDarkTheme : CombinedDefaultTheme}
       {...props}
     >
       <StatusBar />

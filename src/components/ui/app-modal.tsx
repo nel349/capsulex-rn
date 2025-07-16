@@ -1,5 +1,6 @@
-import { ViewStyle, View, StyleSheet } from "react-native";
-import { Modal, Text, Button, Portal, useTheme } from "react-native-paper";
+import type { ViewStyle } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Modal, Text, Button, Portal, useTheme } from 'react-native-paper';
 
 interface AppModalProps {
   children: React.ReactNode;
@@ -19,7 +20,7 @@ export function AppModal({
   show,
   submit,
   submitDisabled,
-  submitLabel = "Save", // Defaulting submitLabel to "Save" here
+  submitLabel = 'Save', // Defaulting submitLabel to "Save" here
 }: AppModalProps) {
   const theme = useTheme();
   return (
@@ -67,15 +68,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 16, // Adjust spacing as needed
   },
   action: {
     marginTop: 16, // Adjust spacing as needed
   },
   buttonGroup: {
-    flexDirection: "row",
-    justifyContent: "space-around", // Adjust based on your design requirements
+    flexDirection: 'row',
+    justifyContent: 'space-around', // Adjust based on your design requirements
   },
   button: {
     margin: 4, // Adjust as needed

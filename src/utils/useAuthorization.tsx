@@ -1,16 +1,15 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
-import { PublicKey, PublicKeyInitData } from "@solana/web3.js";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
-import React from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import type { PublicKeyInitData } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Conditional imports based on platform
 let mwaTypes: any = {};
 
 if (Platform.OS === 'android') {
   // Only import MWA types on Android
-  const mwaModule = require("@solana-mobile/mobile-wallet-adapter-protocol");
+  const mwaModule = require('@solana-mobile/mobile-wallet-adapter-protocol');
   mwaTypes = {
     Account: mwaModule.Account,
     AuthorizationResult: mwaModule.AuthorizationResult,
@@ -48,13 +47,15 @@ type AuthorizeAPI = typeof mwaTypes.AuthorizeAPI;
 type AuthToken = typeof mwaTypes.AuthToken;
 type Base64EncodedAddress = typeof mwaTypes.Base64EncodedAddress;
 type DeauthorizeAPI = typeof mwaTypes.DeauthorizeAPI;
-type SignInPayloadWithRequiredFields = typeof mwaTypes.SignInPayloadWithRequiredFields;
+type SignInPayloadWithRequiredFields =
+  typeof mwaTypes.SignInPayloadWithRequiredFields;
 type SignInPayload = typeof mwaTypes.SignInPayload;
 
-import { toUint8Array } from "js-base64";
+import { toUint8Array } from 'js-base64';
+import React, { useCallback, useMemo } from 'react';
 
-const CHAIN = "solana";
-const CLUSTER = "devnet";
+const CHAIN = 'solana';
+const CLUSTER = 'devnet';
 const CHAIN_IDENTIFIER = `${CHAIN}:${CLUSTER}`;
 
 type WalletAuthorization = Readonly<{
@@ -101,14 +102,14 @@ function getPublicKeyFromAddress(address: Base64EncodedAddress): PublicKey {
 }
 
 function cacheReviver(key: string, value: any) {
-  if (key === "publicKey") {
+  if (key === 'publicKey') {
     return new PublicKey(value as PublicKeyInitData); // the PublicKeyInitData should match the actual data structure stored in AsyncStorage
   } else {
     return value;
   }
 }
 
-const AUTHORIZATION_STORAGE_KEY = "authorization-cache";
+const AUTHORIZATION_STORAGE_KEY = 'authorization-cache';
 
 async function fetchAuthorization(): Promise<WalletAuthorization | null> {
   const cacheFetchResult = await AsyncStorage.getItem(
@@ -130,20 +131,20 @@ async function persistAuthorization(
 }
 
 export const APP_IDENTITY = {
-  name: "Solana Mobile Expo Template",
-  uri: "https://fakedomain.com",
+  name: 'Solana Mobile Expo Template',
+  uri: 'https://fakedomain.com',
 };
 
 export function useAuthorization() {
   const queryClient = useQueryClient();
   const { data: authorization, isLoading } = useQuery({
-    queryKey: ["wallet-authorization"],
+    queryKey: ['wallet-authorization'],
     queryFn: () => fetchAuthorization(),
   });
   const { mutate: setAuthorization } = useMutation({
     mutationFn: persistAuthorization,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wallet-authorization"] });
+      queryClient.invalidateQueries({ queryKey: ['wallet-authorization'] });
     },
   });
 
@@ -152,9 +153,9 @@ export function useAuthorization() {
       authorizationResult: AuthorizationResult
     ): Promise<WalletAuthorization> => {
       if (Platform.OS !== 'android') {
-        throw new Error("Authorization not supported on iOS with MWA");
+        throw new Error('Authorization not supported on iOS with MWA');
       }
-      
+
       const nextAuthorization = getAuthorizationFromAuthorizationResult(
         authorizationResult,
         authorization?.selectedAccount
@@ -164,13 +165,13 @@ export function useAuthorization() {
     },
     [authorization, setAuthorization]
   );
-  
+
   const authorizeSession = useCallback(
     async (wallet: AuthorizeAPI) => {
       if (Platform.OS !== 'android') {
-        throw new Error("Authorization not supported on iOS with MWA");
+        throw new Error('Authorization not supported on iOS with MWA');
       }
-      
+
       const authorizationResult = await wallet.authorize({
         identity: APP_IDENTITY,
         chain: CHAIN_IDENTIFIER,
@@ -181,13 +182,13 @@ export function useAuthorization() {
     },
     [authorization, handleAuthorizationResult]
   );
-  
+
   const authorizeSessionWithSignIn = useCallback(
     async (wallet: AuthorizeAPI, signInPayload: SignInPayload) => {
       if (Platform.OS !== 'android') {
-        throw new Error("Authorization not supported on iOS with MWA");
+        throw new Error('Authorization not supported on iOS with MWA');
       }
-      
+
       const authorizationResult = await wallet.authorize({
         identity: APP_IDENTITY,
         chain: CHAIN_IDENTIFIER,
@@ -199,13 +200,13 @@ export function useAuthorization() {
     },
     [authorization, handleAuthorizationResult]
   );
-  
+
   const deauthorizeSession = useCallback(
     async (wallet: DeauthorizeAPI) => {
       if (Platform.OS !== 'android') {
-        throw new Error("Deauthorization not supported on iOS with MWA");
+        throw new Error('Deauthorization not supported on iOS with MWA');
       }
-      
+
       if (authorization?.authToken == null) {
         return;
       }
@@ -214,7 +215,7 @@ export function useAuthorization() {
     },
     [authorization, setAuthorization]
   );
-  
+
   return useMemo(
     () => ({
       accounts: authorization?.accounts ?? null,
@@ -225,7 +226,13 @@ export function useAuthorization() {
       isLoading,
       isSupported: Platform.OS === 'android',
     }),
-    [authorization, authorizeSession, authorizeSessionWithSignIn, deauthorizeSession, isLoading]
+    [
+      authorization,
+      authorizeSession,
+      authorizeSessionWithSignIn,
+      deauthorizeSession,
+      isLoading,
+    ]
   );
 }
 

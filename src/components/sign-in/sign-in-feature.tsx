@@ -1,5 +1,6 @@
-import { View, StyleSheet } from "react-native";
-import { ConnectButton, SignInButton, PlatformInfo } from "./sign-in-ui";
+import { View, StyleSheet } from 'react-native';
+
+import { ConnectButton, SignInButton, PlatformInfo } from './sign-in-ui';
 
 export function SignInFeature() {
   return (
@@ -16,6 +17,6 @@ export function SignInFeature() {
 const styles = StyleSheet.create({
   buttonGroup: {
     marginTop: 16,
-    flexDirection: "row",
+    flexDirection: 'row',
   },
 });

@@ -1,6 +1,7 @@
-import React, { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import type { ReactNode } from 'react';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text } from 'react-native-paper';
 
 export const Section: React.FC<{
   children?: ReactNode;
@@ -22,13 +23,13 @@ export const Section: React.FC<{
 
 const styles = StyleSheet.create({
   titleText: {
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   sectionContainer: {
     marginTop: 18,
   },
   childrenContainer: {
-    alignItems: "center",
-    flexDirection: "row",
+    alignItems: 'center',
+    flexDirection: 'row',
   },
 });

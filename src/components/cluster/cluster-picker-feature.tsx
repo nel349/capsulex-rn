@@ -1,6 +1,7 @@
-import { ClusterNetwork, useCluster } from "./cluster-data-access";
-import { RadioButton, Text } from "react-native-paper";
-import { ClusterPickerRadioButtonGroupRow } from "./cluster-ui";
+import { RadioButton, Text } from 'react-native-paper';
+
+import { ClusterNetwork, useCluster } from './cluster-data-access';
+import { ClusterPickerRadioButtonGroupRow } from './cluster-ui';
 
 function clusternetworkToIndex(clusterName: string): number {
   switch (clusterName) {
@@ -9,7 +10,7 @@ function clusternetworkToIndex(clusterName: string): number {
     case ClusterNetwork.Testnet:
       return 1;
     default:
-      throw Error("Invalid cluster selected");
+      throw Error('Invalid cluster selected');
   }
 }
 
@@ -21,7 +22,7 @@ export default function ClusterPickerFeature() {
     <>
       <Text variant="headlineMedium">Cluster:</Text>
       <RadioButton.Group
-        onValueChange={(newClusternetwork) =>
+        onValueChange={newClusternetwork =>
           setSelectedCluster(clusters[clusternetworkToIndex(newClusternetwork)])
         }
         value={selectedCluster.network}

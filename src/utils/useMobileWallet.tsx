@@ -1,11 +1,13 @@
-import { Platform } from "react-native";
-import { useCallback, useMemo } from "react";
-import { useAuthorization, Account } from "./useAuthorization";
-import {
+import type {
   Transaction,
   TransactionSignature,
   VersionedTransaction,
-} from "@solana/web3.js";
+} from '@solana/web3.js';
+import { useCallback, useMemo } from 'react';
+import { Platform } from 'react-native';
+
+import type { Account } from './useAuthorization';
+import { useAuthorization } from './useAuthorization';
 
 // Conditional imports based on platform
 let transact: any;
@@ -13,15 +15,17 @@ let SignInPayload: any;
 
 if (Platform.OS === 'android') {
   // Only import MWA on Android
-  const mwaModule = require("@solana-mobile/mobile-wallet-adapter-protocol-web3js");
+  const mwaModule = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js');
   transact = mwaModule.transact;
-  
-  const mwaProtocol = require("@solana-mobile/mobile-wallet-adapter-protocol");
+
+  const mwaProtocol = require('@solana-mobile/mobile-wallet-adapter-protocol');
   SignInPayload = mwaProtocol.SignInPayload;
 } else {
   // iOS fallback - create mock functions
   transact = () => {
-    throw new Error("MWA not supported on iOS. Please use alternative wallet provider.");
+    throw new Error(
+      'MWA not supported on iOS. Please use alternative wallet provider.'
+    );
   };
   SignInPayload = null;
 }
@@ -32,9 +36,9 @@ export function useMobileWallet() {
 
   const connect = useCallback(async (): Promise<Account> => {
     if (Platform.OS !== 'android') {
-      throw new Error("MWA wallet connection not available on iOS");
+      throw new Error('MWA wallet connection not available on iOS');
     }
-    
+
     return await transact(async (wallet: any) => {
       return await authorizeSession(wallet);
     });
@@ -43,9 +47,9 @@ export function useMobileWallet() {
   const signIn = useCallback(
     async (signInPayload: any): Promise<Account> => {
       if (Platform.OS !== 'android') {
-        throw new Error("MWA wallet sign-in not available on iOS");
+        throw new Error('MWA wallet sign-in not available on iOS');
       }
-      
+
       return await transact(async (wallet: any) => {
         return await authorizeSessionWithSignIn(wallet, signInPayload);
       });
@@ -55,9 +59,9 @@ export function useMobileWallet() {
 
   const disconnect = useCallback(async (): Promise<void> => {
     if (Platform.OS !== 'android') {
-      throw new Error("MWA wallet disconnect not available on iOS");
+      throw new Error('MWA wallet disconnect not available on iOS');
     }
-    
+
     await transact(async (wallet: any) => {
       await deauthorizeSession(wallet);
     });
@@ -66,12 +70,12 @@ export function useMobileWallet() {
   const signAndSendTransaction = useCallback(
     async (
       transaction: Transaction | VersionedTransaction,
-      minContextSlot: number,
+      minContextSlot: number
     ): Promise<TransactionSignature> => {
       if (Platform.OS !== 'android') {
-        throw new Error("MWA transaction signing not available on iOS");
+        throw new Error('MWA transaction signing not available on iOS');
       }
-      
+
       return await transact(async (wallet: any) => {
         await authorizeSession(wallet);
         const signatures = await wallet.signAndSendTransactions({
@@ -87,9 +91,9 @@ export function useMobileWallet() {
   const signMessage = useCallback(
     async (message: Uint8Array): Promise<Uint8Array> => {
       if (Platform.OS !== 'android') {
-        throw new Error("MWA message signing not available on iOS");
+        throw new Error('MWA message signing not available on iOS');
       }
-      
+
       return await transact(async (wallet: any) => {
         const authResult = await authorizeSession(wallet);
         const signedMessages = await wallet.signMessages({

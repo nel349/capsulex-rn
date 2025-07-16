@@ -1,5 +1,6 @@
-import ClusterPickerFeature from "../components/cluster/cluster-picker-feature";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View } from 'react-native';
+
+import ClusterPickerFeature from '../components/cluster/cluster-picker-feature';
 
 export function SettingsScreen() {
   return (
@@ -13,7 +14,7 @@ export function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screenContainer: {
-    height: "100%",
+    height: '100%',
     padding: 16,
     flex: 1,
   },

@@ -1,12 +1,6 @@
-import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import {
-  useGetBalance,
-  useGetTokenAccountBalance,
-  useGetTokenAccounts,
-  useRequestAirdrop,
-  useTransferSol,
-} from "./account-data-access";
-import { View, StyleSheet, ScrollView, Platform, Alert } from "react-native";
+import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
+import { useState, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
 import {
   Text,
   useTheme,
@@ -14,11 +8,19 @@ import {
   ActivityIndicator,
   DataTable,
   TextInput,
-} from "react-native-paper";
-import { useState, useMemo } from "react";
-import { ellipsify } from "../../utils/ellipsify";
-import { AppModal } from "../ui/app-modal";
-import { useMobileWallet } from "../../utils/useMobileWallet";
+} from 'react-native-paper';
+
+import { ellipsify } from '../../utils/ellipsify';
+import { useMobileWallet } from '../../utils/useMobileWallet';
+import { AppModal } from '../ui/app-modal';
+
+import {
+  useGetBalance,
+  useGetTokenAccountBalance,
+  useGetTokenAccounts,
+  useRequestAirdrop,
+  useTransferSol,
+} from './account-data-access';
 
 function lamportsToSol(balance: number) {
   return Math.round((balance / LAMPORTS_PER_SOL) * 100000) / 100000;
@@ -31,7 +33,7 @@ export function AccountBalance({ address }: { address: PublicKey }) {
       <View style={styles.accountBalance}>
         <Text variant="titleMedium">Current Balance</Text>
         <Text variant="displayLarge">
-          {query.data ? lamportsToSol(query.data) : "..."} SOL
+          {query.data ? lamportsToSol(query.data) : '...'} SOL
         </Text>
       </View>
     </>
@@ -48,8 +50,8 @@ export function AccountButtonGroup({ address }: { address: PublicKey }) {
   const handleSendPress = () => {
     if (!isSupported) {
       Alert.alert(
-        "Send Not Available",
-        "Transaction signing is not supported on iOS. Wallet features coming soon with Privy integration!"
+        'Send Not Available',
+        'Transaction signing is not supported on iOS. Wallet features coming soon with Privy integration!'
       );
       return;
     }
@@ -88,13 +90,10 @@ export function AccountButtonGroup({ address }: { address: PublicKey }) {
         <Button
           mode="contained"
           onPress={handleSendPress}
-          style={[
-            { marginLeft: 6 },
-            !isSupported && { opacity: 0.6 }
-          ]}
+          style={[{ marginLeft: 6 }, !isSupported && { opacity: 0.6 }]}
           disabled={!isSupported}
         >
-          {isSupported ? "Send" : "Send (iOS Soon)"}
+          {isSupported ? 'Send' : 'Send (iOS Soon)'}
         </Button>
         <Button
           mode="contained"
@@ -107,7 +106,8 @@ export function AccountButtonGroup({ address }: { address: PublicKey }) {
       {!isSupported && (
         <View style={styles.iosNotice}>
           <Text variant="bodySmall" style={styles.iosNoticeText}>
-            💡 Send transactions require wallet signing, coming soon to iOS with Privy
+            💡 Send transactions require wallet signing, coming soon to iOS with
+            Privy
           </Text>
         </View>
       )}
@@ -132,7 +132,7 @@ export function AirdropRequestModal({
       hide={hide}
       show={show}
       submit={() => {
-        requestAirdrop.mutateAsync(1).catch((err) => console.log(err));
+        requestAirdrop.mutateAsync(1).catch(err => console.log(err));
       }}
       submitLabel="Request"
       submitDisabled={requestAirdrop.isPending}
@@ -156,8 +156,8 @@ export function TransferSolModal({
   address: PublicKey;
 }) {
   const transferSol = useTransferSol({ address });
-  const [destinationAddress, setDestinationAddress] = useState("");
-  const [amount, setAmount] = useState("");
+  const [destinationAddress, setDestinationAddress] = useState('');
+  const [amount, setAmount] = useState('');
   return (
     <AppModal
       title="Send SOL"
@@ -207,7 +207,7 @@ export function ReceiveSolModal({
     <AppModal title="Receive assets" hide={hide} show={show}>
       <View style={{ padding: 4 }}>
         <Text selectable={true} variant="bodyMedium">
-          You can receive assets by sending them to your public key:{"\n\n"}
+          You can receive assets by sending them to your public key:{'\n\n'}
           <Text variant="bodyLarge">{address.toBase58()}</Text>
         </Text>
       </View>
@@ -216,7 +216,7 @@ export function ReceiveSolModal({
 }
 
 export function AccountTokens({ address }: { address: PublicKey }) {
-  let query = useGetTokenAccounts({ address });
+  const query = useGetTokenAccounts({ address });
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 3; // Items per page
   const theme = useTheme();
@@ -288,10 +288,10 @@ export function AccountTokens({ address }: { address: PublicKey }) {
                 <DataTable.Pagination
                   page={currentPage}
                   numberOfPages={numberOfPages}
-                  onPageChange={(page) => setCurrentPage(page)}
+                  onPageChange={page => setCurrentPage(page)}
                   label={`${currentPage + 1} of ${numberOfPages}`}
                   numberOfItemsPerPage={itemsPerPage}
-                  selectPageDropdownLabel={"Rows per page"}
+                  selectPageDropdownLabel={'Rows per page'}
                 />
               )}
             </DataTable>
@@ -319,21 +319,21 @@ const styles = StyleSheet.create({
   },
   accountButtonGroup: {
     paddingVertical: 4,
-    flexDirection: "row",
+    flexDirection: 'row',
   },
   error: {
-    color: "red",
+    color: 'red',
     padding: 8,
   },
   iosNotice: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: '#f0f0f0',
     padding: 10,
     marginTop: 10,
-    alignItems: "center",
+    alignItems: 'center',
   },
   iosNoticeText: {
     fontSize: 12,
-    color: "#555",
-    textAlign: "center",
+    color: '#555',
+    textAlign: 'center',
   },
 });

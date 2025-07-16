@@ -1,6 +1,7 @@
-import { View, StyleSheet, Platform, Alert } from "react-native";
-import { Button, Text, Card } from "react-native-paper";
-import { useMobileWallet } from "../../utils/useMobileWallet";
+import { View, StyleSheet, Platform, Alert } from 'react-native';
+import { Button, Text, Card } from 'react-native-paper';
+
+import { useMobileWallet } from '../../utils/useMobileWallet';
 
 export function ConnectButton() {
   const { connect, isSupported } = useMobileWallet();
@@ -8,8 +9,8 @@ export function ConnectButton() {
   const handleConnect = async () => {
     if (!isSupported) {
       Alert.alert(
-        "Wallet Not Available", 
-        "Mobile Wallet Adapter is not supported on iOS. Wallet features coming soon with Privy integration!"
+        'Wallet Not Available',
+        'Mobile Wallet Adapter is not supported on iOS. Wallet features coming soon with Privy integration!'
       );
       return;
     }
@@ -17,19 +18,19 @@ export function ConnectButton() {
     try {
       await connect();
     } catch (error) {
-      console.error("Connect error:", error);
-      Alert.alert("Connection Error", "Failed to connect to wallet");
+      console.error('Connect error:', error);
+      Alert.alert('Connection Error', 'Failed to connect to wallet');
     }
   };
 
   return (
-    <Button 
-      mode="contained" 
+    <Button
+      mode="contained"
       onPress={handleConnect}
       style={styles.button}
       disabled={!isSupported}
     >
-      {isSupported ? "Connect Wallet" : "Wallet Coming Soon"}
+      {isSupported ? 'Connect Wallet' : 'Wallet Coming Soon'}
     </Button>
   );
 }
@@ -40,29 +41,32 @@ export function SignInButton() {
   const handleSignIn = async () => {
     if (!isSupported) {
       Alert.alert(
-        "Sign In Not Available", 
-        "Mobile Wallet Adapter is not supported on iOS. Wallet features coming soon with Privy integration!"
+        'Sign In Not Available',
+        'Mobile Wallet Adapter is not supported on iOS. Wallet features coming soon with Privy integration!'
       );
       return;
     }
 
     try {
       // Implement sign in logic when needed
-      Alert.alert("Sign In", "Sign in functionality will be implemented with full wallet integration");
+      Alert.alert(
+        'Sign In',
+        'Sign in functionality will be implemented with full wallet integration'
+      );
     } catch (error) {
-      console.error("Sign in error:", error);
-      Alert.alert("Sign In Error", "Failed to sign in");
+      console.error('Sign in error:', error);
+      Alert.alert('Sign In Error', 'Failed to sign in');
     }
   };
 
   return (
-    <Button 
-      mode="outlined" 
+    <Button
+      mode="outlined"
       onPress={handleSignIn}
       style={styles.button}
       disabled={!isSupported}
     >
-      {isSupported ? "Sign In" : "Sign In Coming Soon"}
+      {isSupported ? 'Sign In' : 'Sign In Coming Soon'}
     </Button>
   );
 }
@@ -79,13 +83,12 @@ export function PlatformInfo() {
       <Card.Content>
         <Text style={styles.infoTitle}>iOS Wallet Support</Text>
         <Text style={styles.infoText}>
-          We're working on bringing full wallet functionality to iOS using Privy. 
-          {"\n\n"}
-          Current status: {"\n"}
-          • ✅ App runs on iOS {"\n"}
-          • ✅ Data fetching works {"\n"}
-          • 🚧 Wallet features in development {"\n"}
-          • 🔜 Privy integration coming soon
+          We're working on bringing full wallet functionality to iOS using
+          Privy.
+          {'\n\n'}
+          Current status: {'\n'}• ✅ App runs on iOS {'\n'}• ✅ Data fetching
+          works {'\n'}• 🚧 Wallet features in development {'\n'}• 🔜 Privy
+          integration coming soon
         </Text>
       </Card.Content>
     </Card>

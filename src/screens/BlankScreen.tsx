@@ -1,5 +1,5 @@
-import { StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { StyleSheet, View } from 'react-native';
+import { Text } from 'react-native-paper';
 export default function BlankScreen() {
   return (
     <>
@@ -12,7 +12,7 @@ export default function BlankScreen() {
 
 const styles = StyleSheet.create({
   screenContainer: {
-    height: "100%",
+    height: '100%',
     padding: 16,
   },
 });

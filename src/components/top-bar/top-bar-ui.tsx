@@ -1,12 +1,14 @@
-import { Button, IconButton, Menu, useTheme } from "react-native-paper";
-import { Account, useAuthorization } from "../../utils/useAuthorization";
-import { useMobileWallet } from "../../utils/useMobileWallet";
-import { useNavigation } from "@react-navigation/native";
-import { ellipsify } from "../../utils/ellipsify";
-import { useState } from "react";
-import * as Clipboard from "expo-clipboard";
-import { Linking } from "react-native";
-import { useCluster } from "../cluster/cluster-data-access";
+import { useNavigation } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
+import { useState } from 'react';
+import { Linking } from 'react-native';
+import { Button, IconButton, Menu, useTheme } from 'react-native-paper';
+
+import { ellipsify } from '../../utils/ellipsify';
+import type { Account } from '../../utils/useAuthorization';
+import { useAuthorization } from '../../utils/useAuthorization';
+import { useMobileWallet } from '../../utils/useMobileWallet';
+import { useCluster } from '../cluster/cluster-data-access';
 
 export function TopBarWalletButton({
   selectedAccount,
@@ -20,12 +22,12 @@ export function TopBarWalletButton({
     <Button
       icon="wallet"
       mode="contained-tonal"
-      style={{ alignSelf: "center" }}
+      style={{ alignSelf: 'center' }}
       onPress={selectedAccount ? openMenu : connect}
     >
       {selectedAccount
         ? ellipsify(selectedAccount.publicKey.toBase58())
-        : "Connect"}
+        : 'Connect'}
     </Button>
   );
 }
@@ -37,7 +39,7 @@ export function TopBarSettingsButton() {
       icon="cog"
       mode="contained-tonal"
       onPress={() => {
-        navigation.navigate("Settings");
+        navigation.navigate('Settings');
       }}
     />
   );

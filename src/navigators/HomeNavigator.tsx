@@ -1,10 +1,11 @@
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import React from "react";
-import { TopBar } from "../components/top-bar/top-bar-feature";
-import { HomeScreen } from "../screens/HomeScreen";
-import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
-import { useTheme } from "react-native-paper";
-import BlankScreen from "../screens/BlankScreen";
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React from 'react';
+import { useTheme } from 'react-native-paper';
+
+import { TopBar } from '../components/top-bar/top-bar-feature';
+import BlankScreen from '../screens/BlankScreen';
+import { HomeScreen } from '../screens/HomeScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -22,19 +23,19 @@ export function HomeNavigator() {
         header: () => <TopBar />,
         tabBarIcon: ({ focused, color, size }) => {
           switch (route.name) {
-            case "Home":
+            case 'Home':
               return (
                 <MaterialCommunityIcon
-                  name={focused ? "home" : "home-outline"}
+                  name={focused ? 'home' : 'home-outline'}
                   size={size}
                   color={color}
                 />
               );
-            case "Blank":
+            case 'Blank':
               return (
                 <MaterialCommunityIcon
                   name={
-                    focused ? "application-edit" : "application-edit-outline"
+                    focused ? 'application-edit' : 'application-edit-outline'
                   }
                   size={size}
                   color={color}

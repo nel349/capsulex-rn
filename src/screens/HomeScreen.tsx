@@ -1,11 +1,11 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text } from 'react-native-paper';
 
-import { Section } from "../Section";
-import { useAuthorization } from "../utils/useAuthorization";
-import { AccountDetailFeature } from "../components/account/account-detail-feature";
-import { SignInFeature } from "../components/sign-in/sign-in-feature";
+import { AccountDetailFeature } from '../components/account/account-detail-feature';
+import { SignInFeature } from '../components/sign-in/sign-in-feature';
+import { Section } from '../Section';
+import { useAuthorization } from '../utils/useAuthorization';
 
 export function HomeScreen() {
   const { selectedAccount } = useAuthorization();
@@ -13,7 +13,7 @@ export function HomeScreen() {
   return (
     <View style={styles.screenContainer}>
       <Text
-        style={{ fontWeight: "bold", marginBottom: 12 }}
+        style={{ fontWeight: 'bold', marginBottom: 12 }}
         variant="displaySmall"
       >
         Solana Mobile Expo Template
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buttonGroup: {
-    flexDirection: "column",
+    flexDirection: 'column',
     paddingVertical: 4,
   },
 });

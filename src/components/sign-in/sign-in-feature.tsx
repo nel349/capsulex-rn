@@ -1,9 +1,10 @@
 import { View, StyleSheet } from "react-native";
-import { ConnectButton, SignInButton } from "./sign-in-ui";
+import { ConnectButton, SignInButton, PlatformInfo } from "./sign-in-ui";
 
 export function SignInFeature() {
   return (
     <>
+      <PlatformInfo />
       <View style={styles.buttonGroup}>
         <ConnectButton />
         <SignInButton />

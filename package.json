@@ -8,7 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "npx eas build --profile development --platform android",
-    "build:local": "npx eas build --profile development --platform android --local",
+    "build:local": "npx eas build --profile development --platform android --local --output builds/app-debug.apk",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "dependencies": {

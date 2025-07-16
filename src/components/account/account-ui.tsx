@@ -6,7 +6,7 @@ import {
   useRequestAirdrop,
   useTransferSol,
 } from "./account-data-access";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, ScrollView, Platform, Alert } from "react-native";
 import {
   Text,
   useTheme,
@@ -18,6 +18,7 @@ import {
 import { useState, useMemo } from "react";
 import { ellipsify } from "../../utils/ellipsify";
 import { AppModal } from "../ui/app-modal";
+import { useMobileWallet } from "../../utils/useMobileWallet";
 
 function lamportsToSol(balance: number) {
   return Math.round((balance / LAMPORTS_PER_SOL) * 100000) / 100000;
@@ -39,9 +40,21 @@ export function AccountBalance({ address }: { address: PublicKey }) {
 
 export function AccountButtonGroup({ address }: { address: PublicKey }) {
   const requestAirdrop = useRequestAirdrop({ address });
+  const { isSupported } = useMobileWallet();
   const [showAirdropModal, setShowAirdropModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
+
+  const handleSendPress = () => {
+    if (!isSupported) {
+      Alert.alert(
+        "Send Not Available",
+        "Transaction signing is not supported on iOS. Wallet features coming soon with Privy integration!"
+      );
+      return;
+    }
+    setShowSendModal(true);
+  };
 
   return (
     <>
@@ -51,11 +64,13 @@ export function AccountButtonGroup({ address }: { address: PublicKey }) {
           show={showAirdropModal}
           address={address}
         />
-        <TransferSolModal
-          hide={() => setShowSendModal(false)}
-          show={showSendModal}
-          address={address}
-        />
+        {isSupported && (
+          <TransferSolModal
+            hide={() => setShowSendModal(false)}
+            show={showSendModal}
+            address={address}
+          />
+        )}
         <ReceiveSolModal
           hide={() => setShowReceiveModal(false)}
           show={showReceiveModal}
@@ -72,10 +87,14 @@ export function AccountButtonGroup({ address }: { address: PublicKey }) {
         </Button>
         <Button
           mode="contained"
-          onPress={() => setShowSendModal(true)}
-          style={{ marginLeft: 6 }}
+          onPress={handleSendPress}
+          style={[
+            { marginLeft: 6 },
+            !isSupported && { opacity: 0.6 }
+          ]}
+          disabled={!isSupported}
         >
-          Send
+          {isSupported ? "Send" : "Send (iOS Soon)"}
         </Button>
         <Button
           mode="contained"
@@ -85,6 +104,13 @@ export function AccountButtonGroup({ address }: { address: PublicKey }) {
           Receive
         </Button>
       </View>
+      {!isSupported && (
+        <View style={styles.iosNotice}>
+          <Text variant="bodySmall" style={styles.iosNoticeText}>
+            💡 Send transactions require wallet signing, coming soon to iOS with Privy
+          </Text>
+        </View>
+      )}
     </>
   );
 }
@@ -298,5 +324,16 @@ const styles = StyleSheet.create({
   error: {
     color: "red",
     padding: 8,
+  },
+  iosNotice: {
+    backgroundColor: "#f0f0f0",
+    padding: 10,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  iosNoticeText: {
+    fontSize: 12,
+    color: "#555",
+    textAlign: "center",
   },
 });

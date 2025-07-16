@@ -1,12 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import type { PublicKeyInitData } from '@solana/web3.js';
 import { PublicKey } from '@solana/web3.js';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toUint8Array } from 'js-base64';
-import React, { useCallback, useMemo } from 'react';
-
-// Import MWA types directly
 import type {
   Account as AuthorizedAccount,
   AuthorizationResult,
@@ -16,6 +10,12 @@ import type {
   DeauthorizeAPI,
   SignInPayload,
 } from '@solana-mobile/mobile-wallet-adapter-protocol';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toUint8Array } from 'js-base64';
+import React, { useCallback, useMemo } from 'react';
+
+// Import MWA types directly
+import { Platform } from 'react-native';
 
 // Use the imported types directly
 type Account = {

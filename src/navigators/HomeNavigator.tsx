@@ -4,8 +4,10 @@ import React from 'react';
 import { useTheme } from 'react-native-paper';
 
 import { TopBar } from '../components/top-bar/top-bar-feature';
-import BlankScreen from '../screens/BlankScreen';
-import { HomeScreen } from '../screens/HomeScreen';
+import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
+import { DiscoverScreen } from '../screens/DiscoverScreen';
+import { HubScreen } from '../screens/HubScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -23,7 +25,7 @@ export function HomeNavigator() {
         header: () => <TopBar />,
         tabBarIcon: ({ focused, color, size }) => {
           switch (route.name) {
-            case 'Home':
+            case 'Hub':
               return (
                 <MaterialCommunityIcon
                   name={focused ? 'home' : 'home-outline'}
@@ -31,22 +33,60 @@ export function HomeNavigator() {
                   color={color}
                 />
               );
-            case 'Blank':
+            case 'Create':
               return (
                 <MaterialCommunityIcon
-                  name={
-                    focused ? 'application-edit' : 'application-edit-outline'
-                  }
+                  name={focused ? 'plus-circle' : 'plus-circle-outline'}
+                  size={size}
+                  color={color}
+                />
+              );
+            case 'Discover':
+              return (
+                <MaterialCommunityIcon
+                  name={focused ? 'earth' : 'earth'}
+                  size={size}
+                  color={color}
+                />
+              );
+            case 'Profile':
+              return (
+                <MaterialCommunityIcon
+                  name={focused ? 'account' : 'account-outline'}
                   size={size}
                   color={color}
                 />
               );
           }
         },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.outline,
+        },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Blank" component={BlankScreen} />
+      <Tab.Screen
+        name="Hub"
+        component={HubScreen}
+        options={{ tabBarLabel: 'Hub' }}
+      />
+      <Tab.Screen
+        name="Create"
+        component={CreateCapsuleScreen}
+        options={{ tabBarLabel: 'Create' }}
+      />
+      <Tab.Screen
+        name="Discover"
+        component={DiscoverScreen}
+        options={{ tabBarLabel: 'Discover' }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ tabBarLabel: 'Profile' }}
+      />
     </Tab.Navigator>
   );
 }

@@ -3,56 +3,26 @@ import { Platform } from 'react-native';
 import type { PublicKeyInitData } from '@solana/web3.js';
 import { PublicKey } from '@solana/web3.js';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toUint8Array } from 'js-base64';
+import React, { useCallback, useMemo } from 'react';
 
-// Conditional imports based on platform
-let mwaTypes: any = {};
+// Import MWA types directly
+import type {
+  Account as AuthorizedAccount,
+  AuthorizationResult,
+  AuthorizeAPI,
+  AuthToken,
+  Base64EncodedAddress,
+  DeauthorizeAPI,
+  SignInPayload,
+} from '@solana-mobile/mobile-wallet-adapter-protocol';
 
-if (Platform.OS === 'android') {
-  // Only import MWA types on Android
-  const mwaModule = require('@solana-mobile/mobile-wallet-adapter-protocol');
-  mwaTypes = {
-    Account: mwaModule.Account,
-    AuthorizationResult: mwaModule.AuthorizationResult,
-    AuthorizeAPI: mwaModule.AuthorizeAPI,
-    AuthToken: mwaModule.AuthToken,
-    Base64EncodedAddress: mwaModule.Base64EncodedAddress,
-    DeauthorizeAPI: mwaModule.DeauthorizeAPI,
-    SignInPayloadWithRequiredFields: mwaModule.SignInPayloadWithRequiredFields,
-    SignInPayload: mwaModule.SignInPayload,
-  };
-} else {
-  // iOS fallback types
-  mwaTypes = {
-    Account: {} as any,
-    AuthorizationResult: {} as any,
-    AuthorizeAPI: {} as any,
-    AuthToken: {} as any,
-    Base64EncodedAddress: {} as any,
-    DeauthorizeAPI: {} as any,
-    SignInPayloadWithRequiredFields: {} as any,
-    SignInPayload: {} as any,
-  };
-}
-
-// Use conditional imports
+// Use the imported types directly
 type Account = {
   address: string; // Base64EncodedAddress
   label?: string;
   publicKey: PublicKey;
 };
-
-type AuthorizedAccount = typeof mwaTypes.Account;
-type AuthorizationResult = typeof mwaTypes.AuthorizationResult;
-type AuthorizeAPI = typeof mwaTypes.AuthorizeAPI;
-type AuthToken = typeof mwaTypes.AuthToken;
-type Base64EncodedAddress = typeof mwaTypes.Base64EncodedAddress;
-type DeauthorizeAPI = typeof mwaTypes.DeauthorizeAPI;
-type SignInPayloadWithRequiredFields =
-  typeof mwaTypes.SignInPayloadWithRequiredFields;
-type SignInPayload = typeof mwaTypes.SignInPayload;
-
-import { toUint8Array } from 'js-base64';
-import React, { useCallback, useMemo } from 'react';
 
 const CHAIN = 'solana';
 const CLUSTER = 'devnet';

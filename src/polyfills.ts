@@ -1,3 +1,8 @@
+// Required Privy polyfills - must be imported first
+// import 'fast-text-encoding';
+// import 'react-native-get-random-values';
+// import '@ethersproject/shims';
+
 import { Buffer } from 'buffer';
 
 import { getRandomValues as expoCryptoGetRandomValues } from 'expo-crypto';

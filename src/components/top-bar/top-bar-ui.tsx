@@ -9,6 +9,8 @@ import type { Account } from '../../utils/useAuthorization';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useMobileWallet } from '../../utils/useMobileWallet';
 import { useCluster } from '../cluster/cluster-data-access';
+import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
+import { Alert } from 'react-native';
 
 export function TopBarWalletButton({
   selectedAccount,
@@ -29,6 +31,35 @@ export function TopBarWalletButton({
         ? ellipsify(selectedAccount.publicKey.toBase58())
         : 'Connect'}
     </Button>
+  );
+}
+
+export function TopBarPrivyButton() {
+  const { login } = useLoginWithOAuth();
+  const { isReady } = usePrivy();
+
+  const handlePrivyConnect = async () => {
+    if (!isReady) {
+      Alert.alert('Not Ready', 'Please wait for Privy to initialize');
+      return;
+    }
+
+    try {
+      await login({ provider: 'twitter' });
+      Alert.alert('Success', 'Successfully connected with Privy!');
+    } catch (error) {
+      console.error('Privy login error:', error);
+      Alert.alert('Login Error', 'Failed to connect with Privy');
+    }
+  };
+
+  return (
+    <IconButton
+      icon="account-plus"
+      mode="contained-tonal"
+      disabled={!isReady}
+      onPress={handlePrivyConnect}
+    />
   );
 }
 

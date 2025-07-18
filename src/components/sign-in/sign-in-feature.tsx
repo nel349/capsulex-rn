@@ -1,6 +1,6 @@
 import { View, StyleSheet } from 'react-native';
 
-import { ConnectButton, SignInButton, PlatformInfo } from './sign-in-ui';
+import { ConnectButton, SignInButton, PrivyConnectButton, PlatformInfo } from './sign-in-ui';
 
 export function SignInFeature() {
   return (
@@ -9,6 +9,9 @@ export function SignInFeature() {
       <View style={styles.buttonGroup}>
         <ConnectButton />
         <SignInButton />
+      </View>
+      <View style={styles.buttonGroup}>
+        <PrivyConnectButton />
       </View>
     </>
   );

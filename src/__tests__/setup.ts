@@ -12,7 +12,9 @@ vi.mock('react-native', () => ({
 vi.mock('react-native-gesture-handler', () => ({}));
 
 // Mock async-storage
-vi.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+vi.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
 
 // Mock fetch for API calls
 global.fetch = vi.fn();

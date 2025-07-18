@@ -1,6 +1,6 @@
 // User Service - Handles all user-related API calls
-import type { User, AuthResponse, CreateUserRequest } from './api';
-import { apiService, ApiResponse, ApiError } from './api';
+import type { User, AuthResponse, CreateUserRequest, ApiResponse } from './api';
+import { apiService, ApiError } from './api';
 
 type WalletType = 'wallet' | 'privy';
 
@@ -89,7 +89,10 @@ export class UserService {
       const data = await this.getUserProfile(walletAddress);
       return true;
     } catch (error) {
-      if (error instanceof ApiError && (error.statusCode === 404 || error.statusCode === 500)) {
+      if (
+        error instanceof ApiError &&
+        (error.statusCode === 404 || error.statusCode === 500)
+      ) {
         // Handle both 404 (not found) and 500 (database query error for non-existent user)
         return false;
       }
@@ -101,9 +104,7 @@ export class UserService {
   // New method to delete a user by wallet address
   async deleteUser(walletAddress: string): Promise<ApiResponse<null>> {
     try {
-      const response = await apiService.delete<null>(
-        `/users/${walletAddress}`
-      );
+      const response = await apiService.delete<null>(`/users/${walletAddress}`);
 
       if (!response.success) {
         throw new ApiError(response.error || 'Failed to delete user');

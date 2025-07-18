@@ -13,4 +13,4 @@ global.Response = Response;
 // @ts-ignore
 global.Headers = Headers;
 // @ts-ignore
-global.FormData = FormData; 
+global.FormData = FormData;

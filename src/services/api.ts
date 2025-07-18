@@ -1,6 +1,7 @@
 // API Configuration and Base Service
+import type { AxiosInstance, AxiosResponse } from 'axios';
+import axios from 'axios';
 import { Platform } from 'react-native';
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 // API Configuration
 const API_CONFIG = {
@@ -62,6 +63,11 @@ class ApiService {
   private axiosInstance: AxiosInstance;
 
   constructor() {
+    console.log(
+      '🔗 API Service initializing with base URL:',
+      API_CONFIG.BASE_URL
+    );
+
     this.axiosInstance = axios.create({
       baseURL: API_CONFIG.BASE_URL,
       timeout: API_CONFIG.TIMEOUT,
@@ -72,12 +78,17 @@ class ApiService {
 
     // Add response interceptor for error handling
     this.axiosInstance.interceptors.response.use(
-      (response) => response,
-      (error) => {
+      response => response,
+      error => {
         if (error.response) {
           // Server responded with error status
-          const errorMessage = error.response.data?.error || `HTTP ${error.response.status}`;
-          throw new ApiError(errorMessage, error.response.status, error.response.data);
+          const errorMessage =
+            error.response.data?.error || `HTTP ${error.response.status}`;
+          throw new ApiError(
+            errorMessage,
+            error.response.status,
+            error.response.data
+          );
         } else if (error.request) {
           // Request was made but no response
           throw new ApiError('Network error - no response from server');
@@ -95,16 +106,16 @@ class ApiService {
     headers?: Record<string, string>
   ): Promise<ApiResponse<T>> {
     try {
-      const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.get(
-        endpoint,
-        { headers }
-      );
+      const response: AxiosResponse<ApiResponse<T>> =
+        await this.axiosInstance.get(endpoint, { headers });
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
-      throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+      throw new ApiError(
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 
@@ -115,17 +126,16 @@ class ApiService {
     headers?: Record<string, string>
   ): Promise<ApiResponse<T>> {
     try {
-      const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.post(
-        endpoint,
-        body,
-        { headers }
-      );
+      const response: AxiosResponse<ApiResponse<T>> =
+        await this.axiosInstance.post(endpoint, body, { headers });
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
-      throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+      throw new ApiError(
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 
@@ -136,17 +146,16 @@ class ApiService {
     headers?: Record<string, string>
   ): Promise<ApiResponse<T>> {
     try {
-      const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.put(
-        endpoint,
-        body,
-        { headers }
-      );
+      const response: AxiosResponse<ApiResponse<T>> =
+        await this.axiosInstance.put(endpoint, body, { headers });
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
-      throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+      throw new ApiError(
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 
@@ -156,16 +165,16 @@ class ApiService {
     headers?: Record<string, string>
   ): Promise<ApiResponse<T>> {
     try {
-      const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.delete(
-        endpoint,
-        { headers }
-      );
+      const response: AxiosResponse<ApiResponse<T>> =
+        await this.axiosInstance.delete(endpoint, { headers });
       return response.data;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
-      throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+      throw new ApiError(
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 }

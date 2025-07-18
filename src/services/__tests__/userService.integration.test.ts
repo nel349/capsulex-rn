@@ -1,15 +1,16 @@
+import axios from 'axios';
 import { describe, it, expect, beforeAll, vi, afterAll } from 'vitest';
+
 import { userService, ApiError } from '../userService';
 // import nodeFetch, { Response as NodeFetchResponse } from 'node-fetch';
 // lets use axios instead
-import axios from 'axios';
 
 // Integration tests - these test against the real backend API
 // Make sure the backend is running on port 3001 before running these tests
 
 describe('UserService Integration Tests', () => {
   const testWalletAddress = `test-wallet-${Date.now()}`;
-  
+
   beforeAll(async () => {
     // Mock Platform.select for api.ts
     vi.mock('react-native', () => ({
@@ -17,18 +18,20 @@ describe('UserService Integration Tests', () => {
         select: vi.fn(obj => obj.ios || obj.default),
       },
     }));
-    
+
     // Check if backend is running
     try {
       // console.log('Checking backend health at http://localhost:3001/health...');
       const response = await axios.get('http://localhost:3001/health');
       // console.log('Health check response:', response);
       // console.log('Health check response status:', response.status);
-      
+
       if (response.status !== 200) {
-        throw new Error(`Backend health check failed with status: ${response.status}`);
+        throw new Error(
+          `Backend health check failed with status: ${response.status}`
+        );
       }
-      
+
       // console.log('Backend health data:', response.data);
     } catch (error) {
       console.error('Health check failed with error:', error);
@@ -55,11 +58,14 @@ describe('UserService Integration Tests', () => {
   describe('registerWalletUser', () => {
     it('should successfully register a new wallet user (direct axios test)', async () => {
       // Test direct axios call first to isolate the issue
-      const response = await axios.post('http://localhost:3001/api/users/auth', {
-        wallet_address: testWalletAddress,
-        auth_type: 'wallet',
-        name: 'Integration Test User'
-      });
+      const response = await axios.post(
+        'http://localhost:3001/api/users/auth',
+        {
+          wallet_address: testWalletAddress,
+          auth_type: 'wallet',
+          name: 'Integration Test User',
+        }
+      );
 
       expect(response.status).toBe(200);
       expect(response.data.success).toBe(true);
@@ -116,7 +122,7 @@ describe('UserService Integration Tests', () => {
 
     it('should handle user not found', async () => {
       const nonExistentWallet = `non-existent-${Date.now()}`;
-      
+
       await expect(
         userService.getUserProfile(nonExistentWallet)
       ).rejects.toThrow(ApiError);
@@ -140,7 +146,7 @@ describe('UserService Integration Tests', () => {
     it('should successfully register a Privy user', async () => {
       const privyWallet = `privy-wallet-${Date.now()}`;
       const privyUserId = `privy-user-${Date.now()}`;
-      
+
       const result = await userService.registerPrivyUser(
         privyWallet,
         privyUserId,

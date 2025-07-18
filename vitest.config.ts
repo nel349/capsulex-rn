@@ -6,10 +6,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: [
-      './src/__tests__/setup.ts',
-      './src/__tests__/vitest.setup.ts',
-    ],
+    setupFiles: ['./src/__tests__/setup.ts', './src/__tests__/vitest.setup.ts'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', '.expo', 'android', 'ios'],
     coverage: {

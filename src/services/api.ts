@@ -1,5 +1,6 @@
 // API Configuration and Base Service
 import { Platform } from 'react-native';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 // API Configuration
 const API_CONFIG = {
@@ -56,60 +57,36 @@ export class ApiError extends Error {
   }
 }
 
-// Base API Service
+// API Service using Axios
 class ApiService {
-  private baseUrl: string;
-  private timeout: number;
+  private axiosInstance: AxiosInstance;
 
   constructor() {
-    this.baseUrl = API_CONFIG.BASE_URL;
-    this.timeout = API_CONFIG.TIMEOUT;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
-    const url = `${this.baseUrl}${endpoint}`;
-
-    const config: RequestInit = {
+    this.axiosInstance = axios.create({
+      baseURL: API_CONFIG.BASE_URL,
+      timeout: API_CONFIG.TIMEOUT,
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
       },
-      ...options,
-    };
+    });
 
-    try {
-      // Create timeout promise
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), this.timeout);
-      });
-
-      const response = await Promise.race([fetch(url, config), timeoutPromise]);
-      const data: ApiResponse<T> = await response.json();
-
-      if (!response.ok) {
-        throw new ApiError(
-          data.error || `HTTP ${response.status}`,
-          response.status,
-          data
-        );
+    // Add response interceptor for error handling
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response) {
+          // Server responded with error status
+          const errorMessage = error.response.data?.error || `HTTP ${error.response.status}`;
+          throw new ApiError(errorMessage, error.response.status, error.response.data);
+        } else if (error.request) {
+          // Request was made but no response
+          throw new ApiError('Network error - no response from server');
+        } else {
+          // Something else happened
+          throw new ApiError(error.message || 'Unknown error');
+        }
       }
-
-      return data;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-
-      // Network or other errors
-      throw new ApiError(
-        error instanceof Error ? error.message : 'Network error',
-        undefined,
-        error
-      );
-    }
+    );
   }
 
   // GET request
@@ -117,10 +94,18 @@ class ApiService {
     endpoint: string,
     headers?: Record<string, string>
   ): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      method: 'GET',
-      headers,
-    });
+    try {
+      const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.get(
+        endpoint,
+        { headers }
+      );
+      return response.data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+    }
   }
 
   // POST request
@@ -129,11 +114,19 @@ class ApiService {
     body?: any,
     headers?: Record<string, string>
   ): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-      headers,
-    });
+    try {
+      const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.post(
+        endpoint,
+        body,
+        { headers }
+      );
+      return response.data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+    }
   }
 
   // PUT request
@@ -142,11 +135,19 @@ class ApiService {
     body?: any,
     headers?: Record<string, string>
   ): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
-      headers,
-    });
+    try {
+      const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.put(
+        endpoint,
+        body,
+        { headers }
+      );
+      return response.data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+    }
   }
 
   // DELETE request
@@ -154,12 +155,23 @@ class ApiService {
     endpoint: string,
     headers?: Record<string, string>
   ): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      method: 'DELETE',
-      headers,
-    });
+    try {
+      const response: AxiosResponse<ApiResponse<T>> = await this.axiosInstance.delete(
+        endpoint,
+        { headers }
+      );
+      return response.data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(error instanceof Error ? error.message : 'Unknown error');
+    }
   }
 }
 
 // Export singleton instance
 export const apiService = new ApiService();
+
+// Export types for convenience
+export type { AxiosResponse };

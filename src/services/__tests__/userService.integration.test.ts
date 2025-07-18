@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, vi, afterAll } from 'vitest';
 import { userService, ApiError } from '../userService';
-import nodeFetch, { Response as NodeFetchResponse } from 'node-fetch';
+// import nodeFetch, { Response as NodeFetchResponse } from 'node-fetch';
+// lets use axios instead
+import axios from 'axios';
 
 // Integration tests - these test against the real backend API
 // Make sure the backend is running on port 3001 before running these tests
@@ -18,17 +20,16 @@ describe('UserService Integration Tests', () => {
     
     // Check if backend is running
     try {
-      console.log('Checking backend health at http://localhost:3001/health...');
-      const response: NodeFetchResponse = await nodeFetch('http://localhost:3001/health');
-      console.log('Health check response:', response);
-      console.log('Health check response status:', response.status);
+      // console.log('Checking backend health at http://localhost:3001/health...');
+      const response = await axios.get('http://localhost:3001/health');
+      // console.log('Health check response:', response);
+      // console.log('Health check response status:', response.status);
       
-      if (!response.ok) {
+      if (response.status !== 200) {
         throw new Error(`Backend health check failed with status: ${response.status}`);
       }
       
-      const healthData = await response.json();
-      console.log('Backend health data:', healthData);
+      // console.log('Backend health data:', response.data);
     } catch (error) {
       console.error('Health check failed with error:', error);
       throw new Error(
@@ -52,9 +53,24 @@ describe('UserService Integration Tests', () => {
   */
 
   describe('registerWalletUser', () => {
+    it('should successfully register a new wallet user (direct axios test)', async () => {
+      // Test direct axios call first to isolate the issue
+      const response = await axios.post('http://localhost:3001/api/users/auth', {
+        wallet_address: testWalletAddress,
+        auth_type: 'wallet',
+        name: 'Integration Test User'
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.success).toBe(true);
+      expect(response.data.data.user.wallet_address).toBe(testWalletAddress);
+      expect(response.data.data.user.auth_type).toBe('wallet');
+    });
+
     it('should successfully register a new wallet user', async () => {
       const result = await userService.registerWalletUser(
         testWalletAddress,
+        'wallet',
         'Integration Test User'
       );
 
@@ -70,6 +86,7 @@ describe('UserService Integration Tests', () => {
       // Register same wallet again
       const result = await userService.registerWalletUser(
         testWalletAddress,
+        'wallet',
         'Updated Name'
       );
 
@@ -82,7 +99,7 @@ describe('UserService Integration Tests', () => {
 
     it('should handle invalid wallet address', async () => {
       await expect(
-        userService.registerWalletUser('')
+        userService.registerWalletUser('', 'wallet')
       ).rejects.toThrow();
     });
   });

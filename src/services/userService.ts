@@ -2,6 +2,8 @@
 import type { User, AuthResponse, CreateUserRequest } from './api';
 import { apiService, ApiResponse, ApiError } from './api';
 
+type WalletType = 'wallet' | 'privy';
+
 export class UserService {
   /**
    * Register or authenticate a user
@@ -31,11 +33,12 @@ export class UserService {
    */
   async registerWalletUser(
     walletAddress: string,
+    walletType: WalletType,
     name?: string
   ): Promise<AuthResponse> {
     return this.registerUser({
       wallet_address: walletAddress,
-      auth_type: 'wallet',
+      auth_type: walletType,
       name,
     });
   }
@@ -83,10 +86,11 @@ export class UserService {
    */
   async userExists(walletAddress: string): Promise<boolean> {
     try {
-      await this.getUserProfile(walletAddress);
+      const data = await this.getUserProfile(walletAddress);
       return true;
     } catch (error) {
-      if (error instanceof ApiError && error.statusCode === 404) {
+      if (error instanceof ApiError && (error.statusCode === 404 || error.statusCode === 500)) {
+        // Handle both 404 (not found) and 500 (database query error for non-existent user)
         return false;
       }
       // Re-throw other errors (network, server errors, etc.)

@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClusterProvider } from './src/components/cluster/cluster-data-access';
+import { AuthProvider } from './src/contexts';
 import { AppNavigator } from './src/navigators/AppNavigator';
 import { ConnectionProvider } from './src/utils/ConnectionProvider';
 
@@ -103,7 +104,9 @@ export default function App() {
                 appId={process.env.EXPO_PUBLIC_PRIVY_APP_ID}
                 clientId={process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID}
               >
-                <AppNavigator />
+                <AuthProvider>
+                  <AppNavigator />
+                </AuthProvider>
               </PrivyProvider>
             </PaperProvider>
           </SafeAreaView>

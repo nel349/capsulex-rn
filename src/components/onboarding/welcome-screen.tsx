@@ -6,9 +6,10 @@ import { useMobileWallet } from '../../utils/useMobileWallet';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
+  onSignIn: () => void;
 }
 
-export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
+export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
   const { isSupported } = useMobileWallet();
 
   const features = [
@@ -89,6 +90,17 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
         </Button>
 
         {isSupported && (
+          <Button
+            mode="outlined"
+            onPress={onSignIn}
+            style={styles.signInButton}
+            contentStyle={styles.buttonContent}
+          >
+            Sign In
+          </Button>
+        )}
+
+        {isSupported && (
           <Text variant="bodySmall" style={styles.disclaimer}>
             By continuing, you agree to connect your Solana mobile wallet
           </Text>
@@ -161,6 +173,11 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   getStartedButton: {
+    width: '100%',
+    maxWidth: 300,
+    marginBottom: 12,
+  },
+  signInButton: {
     width: '100%',
     maxWidth: 300,
     marginBottom: 16,

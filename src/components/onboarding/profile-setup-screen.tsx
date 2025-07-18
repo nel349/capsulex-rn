@@ -8,20 +8,22 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 
-import { userService } from '../../services/userService';
-
 interface ProfileSetupScreenProps {
   walletAddress: string;
+  initialName?: string;
   onComplete: () => void;
   onBack: () => void;
+  onCancel?: () => void;
 }
 
 export function ProfileSetupScreen({
   walletAddress,
+  initialName = '',
   onComplete,
   onBack,
+  onCancel,
 }: ProfileSetupScreenProps) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -31,16 +33,13 @@ export function ProfileSetupScreen({
     }
 
     setIsLoading(true);
-    try {
-      const result = await userService.registerWalletUser(
-        walletAddress,
-        'wallet',
-        name.trim()
-      );
 
+    // Simulate account creation (no API integration for now)
+    setTimeout(() => {
+      setIsLoading(false);
       Alert.alert(
         'Welcome to CapsuleX!',
-        `Hi ${result.user.name}, your account has been created successfully.`,
+        `Hi ${name.trim()}, your account setup is complete!`,
         [
           {
             text: 'Continue',
@@ -48,29 +47,17 @@ export function ProfileSetupScreen({
           },
         ]
       );
-    } catch (error) {
-      // Registration error handled by user feedback
-      Alert.alert(
-        'Registration Error',
-        'Failed to create your account. Please try again.',
-        [
-          {
-            text: 'Try Again',
-            onPress: () => setIsLoading(false),
-          },
-        ]
-      );
-    }
+    }, 1500);
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text variant="headlineMedium" style={styles.title}>
-          Set Up Your Profile
+          Create Your Account
         </Text>
         <Text variant="bodyLarge" style={styles.subtitle}>
-          Let's personalize your CapsuleX experience
+          Complete your registration to get started
         </Text>
       </View>
 
@@ -117,6 +104,17 @@ export function ProfileSetupScreen({
           Back
         </Button>
 
+        {onCancel && (
+          <Button
+            mode="text"
+            onPress={onCancel}
+            style={styles.cancelButton}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+        )}
+
         <Button
           mode="contained"
           onPress={handleSubmit}
@@ -124,7 +122,7 @@ export function ProfileSetupScreen({
           disabled={isLoading || !name.trim()}
           loading={isLoading}
         >
-          {isLoading ? 'Creating Account...' : 'Complete Setup'}
+          {isLoading ? 'Creating Account...' : 'Create Account'}
         </Button>
       </View>
 
@@ -148,6 +146,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
+    paddingTop: 16,
   },
   header: {
     alignItems: 'center',
@@ -191,10 +190,13 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     paddingBottom: 32,
   },
   backButton: {
+    flex: 1,
+  },
+  cancelButton: {
     flex: 1,
   },
   continueButton: {

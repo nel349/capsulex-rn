@@ -1,7 +1,8 @@
+import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Alert } from 'react-native';
 import { Button, IconButton, Menu, useTheme } from 'react-native-paper';
 
 import { ellipsify } from '../../utils/ellipsify';
@@ -9,8 +10,6 @@ import type { Account } from '../../utils/useAuthorization';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useMobileWallet } from '../../utils/useMobileWallet';
 import { useCluster } from '../cluster/cluster-data-access';
-import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
-import { Alert } from 'react-native';
 
 export function TopBarWalletButton({
   selectedAccount,

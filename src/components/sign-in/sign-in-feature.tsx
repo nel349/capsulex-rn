@@ -1,6 +1,11 @@
 import { View, StyleSheet } from 'react-native';
 
-import { ConnectButton, SignInButton, PrivyConnectButton, PlatformInfo } from './sign-in-ui';
+import {
+  ConnectButton,
+  SignInButton,
+  PrivyConnectButton,
+  PlatformInfo,
+} from './sign-in-ui';
 
 export function SignInFeature() {
   return (

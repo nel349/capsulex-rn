@@ -1,12 +1,11 @@
+import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
 import { View, StyleSheet, Platform, Alert } from 'react-native';
 import { Button, Text, Card } from 'react-native-paper';
 
 import { useMobileWallet } from '../../utils/useMobileWallet';
-import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
 
 export function ConnectButton() {
   const { connect, isSupported } = useMobileWallet();
-  
 
   const handleConnect = async () => {
     if (!isSupported) {
@@ -71,7 +70,7 @@ export function PrivyConnectButton() {
 
 export function SignInButton() {
   const { signIn, isSupported } = useMobileWallet();
-  const {isReady} = usePrivy();
+  const { isReady } = usePrivy();
 
   const handleSignIn = async () => {
     if (!isSupported) {
@@ -83,7 +82,10 @@ export function SignInButton() {
     }
 
     if (!isReady) {
-      Alert.alert('Sign In Not Available', 'Please wait for the app to be ready');
+      Alert.alert(
+        'Sign In Not Available',
+        'Please wait for the app to be ready'
+      );
       return;
     }
 

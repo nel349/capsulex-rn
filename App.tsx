@@ -1,11 +1,13 @@
 // Polyfills
 import './src/polyfills';
 
+import { PrivyProvider } from '@privy-io/expo';
 import {
   DarkTheme as NavigationDarkTheme,
   DefaultTheme as NavigationDefaultTheme,
 } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { StyleSheet, useColorScheme } from 'react-native';
 import {
   PaperProvider,
@@ -14,13 +16,10 @@ import {
   adaptNavigationTheme,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect } from 'react';
 
 import { ClusterProvider } from './src/components/cluster/cluster-data-access';
 import { AppNavigator } from './src/navigators/AppNavigator';
 import { ConnectionProvider } from './src/utils/ConnectionProvider';
-import { PrivyProvider } from '@privy-io/expo';
-
 
 const queryClient = new QueryClient();
 
@@ -46,8 +45,12 @@ export default function App() {
     // Suppress the embedded wallet proxy error for OAuth-only usage
     const originalError = console.error;
     console.error = (...args) => {
-      if (args[0]?.toString().includes('Embedded wallet proxy not initialized')) {
-        console.warn('⚠️ Embedded wallet proxy warning suppressed for OAuth login');
+      if (
+        args[0]?.toString().includes('Embedded wallet proxy not initialized')
+      ) {
+        console.warn(
+          '⚠️ Embedded wallet proxy warning suppressed for OAuth login'
+        );
         return;
       }
       originalError(...args);

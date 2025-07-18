@@ -2,7 +2,11 @@ import { useNavigation } from '@react-navigation/core';
 import { StyleSheet } from 'react-native';
 import { Appbar, useTheme } from 'react-native-paper';
 
-import { TopBarWalletButton, TopBarWalletMenu, TopBarPrivyButton } from './top-bar-ui';
+import {
+  TopBarWalletButton,
+  TopBarWalletMenu,
+  TopBarPrivyButton,
+} from './top-bar-ui';
 
 export function TopBar() {
   const navigation = useNavigation();

@@ -1,0 +1,121 @@
+// User Service - Handles all user-related API calls
+import type { User, AuthResponse, CreateUserRequest } from './api';
+import { apiService, ApiResponse, ApiError } from './api';
+
+export class UserService {
+  /**
+   * Register or authenticate a user
+   * If user exists, returns existing user data
+   * If user doesn't exist, creates new user
+   */
+  async registerUser(userData: CreateUserRequest): Promise<AuthResponse> {
+    try {
+      const response = await apiService.post<AuthResponse>(
+        '/users/auth',
+        userData
+      );
+
+      if (!response.success || !response.data) {
+        throw new ApiError(response.error || 'Failed to register user');
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Register user error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Register a wallet user (for Android MWA)
+   */
+  async registerWalletUser(
+    walletAddress: string,
+    name?: string
+  ): Promise<AuthResponse> {
+    return this.registerUser({
+      wallet_address: walletAddress,
+      auth_type: 'wallet',
+      name,
+    });
+  }
+
+  /**
+   * Register a Privy user (for iOS/web)
+   */
+  async registerPrivyUser(
+    walletAddress: string,
+    privyUserId: string,
+    email?: string,
+    name?: string
+  ): Promise<AuthResponse> {
+    return this.registerUser({
+      wallet_address: walletAddress,
+      auth_type: 'privy',
+      privy_user_id: privyUserId,
+      email,
+      name,
+    });
+  }
+
+  /**
+   * Get user profile by wallet address
+   */
+  async getUserProfile(walletAddress: string): Promise<User> {
+    try {
+      const response = await apiService.get<User>(
+        `/users/profile/${walletAddress}`
+      );
+
+      if (!response.success || !response.data) {
+        throw new ApiError(response.error || 'User not found');
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('UserService: Get user profile error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user exists by wallet address
+   */
+  async userExists(walletAddress: string): Promise<boolean> {
+    try {
+      await this.getUserProfile(walletAddress);
+      return true;
+    } catch (error) {
+      if (error instanceof ApiError && error.statusCode === 404) {
+        return false;
+      }
+      // Re-throw other errors (network, server errors, etc.)
+      throw error;
+    }
+  }
+
+  // New method to delete a user by wallet address
+  async deleteUser(walletAddress: string): Promise<ApiResponse<null>> {
+    try {
+      const response = await apiService.delete<null>(
+        `/users/${walletAddress}`
+      );
+
+      if (!response.success) {
+        throw new ApiError(response.error || 'Failed to delete user');
+      }
+
+      return response;
+    } catch (error) {
+      console.error('UserService: Delete user error:', error);
+      throw error;
+    }
+  }
+}
+
+// Export singleton instance
+export const userService = new UserService();
+
+// Export types for convenience
+export type { User, AuthResponse, CreateUserRequest };
+export { ApiError };

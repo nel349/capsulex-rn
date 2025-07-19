@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Platform, Pressable } from 'react-native';
 import {
   Text,
   TextInput,
@@ -9,8 +9,12 @@ import {
   Portal,
   Modal,
 } from 'react-native-paper';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as anchor from "@coral-xyz/anchor";
 
 import { useAuthorization } from '../utils/useAuthorization';
+import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import * as Crypto from 'expo-crypto';
 
 interface SOLBalance {
   balance: number;
@@ -20,12 +24,14 @@ interface SOLBalance {
 
 export function CreateCapsuleScreen() {
   const { selectedAccount } = useAuthorization();
-  const [content, setContent] = useState('');
+  const { createCapsule } = useCapsulexProgram();
+  const [content, setContent] = useState('something:for testing');
   const [selectedPlatform, setSelectedPlatform] = useState<
     'twitter' | 'instagram'
   >('twitter');
-  const [revealDate, setRevealDate] = useState('');
-  const [revealTime, setRevealTime] = useState('');
+  const [revealDateTime, setRevealDateTime] = useState(new Date()); // Combined Date and Time
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSOLModal, setShowSOLModal] = useState(false);
   const [solBalance, setSolBalance] = useState<SOLBalance>({
@@ -39,15 +45,12 @@ export function CreateCapsuleScreen() {
     { key: 'instagram', label: 'Instagram', icon: '📷' },
   ];
 
-  // Check SOL balance on mount
   useEffect(() => {
     checkSOLBalance();
   }, []);
 
   const checkSOLBalance = async () => {
-    // TODO: Implement actual SOL balance check
-    // For now, simulate the check
-    const mockBalance = Math.random() * 0.01; // Random balance between 0-0.01 SOL
+    const mockBalance = Math.random() * 0.01;
     const required = 0.00005;
 
     setSolBalance({
@@ -57,13 +60,33 @@ export function CreateCapsuleScreen() {
     });
   };
 
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    const currentDate = selectedDate || revealDateTime;
+    setShowDatePicker(Platform.OS === 'ios');
+    setRevealDateTime(currentDate);
+  };
+
+  const onTimeChange = (event: any, selectedTime?: Date) => {
+    const currentTime = selectedTime || revealDateTime;
+    setShowTimePicker(Platform.OS === 'ios');
+    setRevealDateTime(currentTime);
+  };
+
+  const showDatepicker = () => {
+    setShowDatePicker(true);
+  };
+
+  const showTimepicker = () => {
+    setShowTimePicker(true);
+  };
+
   const handleCreateCapsule = async () => {
     if (!content.trim()) {
       Alert.alert('Error', 'Please enter content for your capsule');
       return;
     }
 
-    if (!revealDate || !revealTime) {
+    if (!revealDateTime) {
       Alert.alert('Error', 'Please select a reveal date and time');
       return;
     }
@@ -73,7 +96,6 @@ export function CreateCapsuleScreen() {
       return;
     }
 
-    // Check SOL balance before creating
     if (!solBalance.sufficient) {
       setShowSOLModal(true);
       return;
@@ -82,14 +104,19 @@ export function CreateCapsuleScreen() {
     setIsLoading(true);
 
     try {
-      // TODO: Implement capsule creation logic
-      // This would involve:
-      // 1. Creating the capsule on Solana program
-      // 2. Storing content and reveal date
-      // 3. Paying the transaction fee
+      // Convert to Unix timestamp (seconds) and then to Anchor BN
+      const revealDateBN = new anchor.BN(Math.floor(revealDateTime.getTime() / 1000));
 
-      // Simulate creation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const contentStorage = { text: {} }; 
+      const contentHash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, content);
+
+      await createCapsule.mutateAsync({
+        encryptedContent: content,
+        contentStorage: contentStorage,
+        contentIntegrityHash: contentHash,
+        revealDate: revealDateBN,
+        isGamified: false,
+      });
 
       Alert.alert(
         'Success!',
@@ -98,17 +125,15 @@ export function CreateCapsuleScreen() {
           {
             text: 'OK',
             onPress: () => {
-              // TODO: Navigate back to hub
               setContent('');
-              setRevealDate('');
-              setRevealTime('');
+              setRevealDateTime(new Date()); // Reset to current date/time
             },
           },
         ]
       );
     } catch (error) {
       console.error('Error creating capsule:', error);
-      Alert.alert('Error', 'Failed to create capsule. Please try again.');
+      Alert.alert('Error', `Failed to create capsule: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +141,6 @@ export function CreateCapsuleScreen() {
 
   const handleBuySOL = () => {
     setShowSOLModal(false);
-    // TODO: Open SOL onramp modal
     Alert.alert('Buy SOL', 'This will open the SOL onramp modal');
   };
 
@@ -217,23 +241,45 @@ export function CreateCapsuleScreen() {
             When to Reveal
           </Text>
           <View style={styles.dateTimeContainer}>
-            <TextInput
-              mode="outlined"
-              placeholder="YYYY-MM-DD"
-              value={revealDate}
-              onChangeText={setRevealDate}
-              style={styles.dateInput}
-              label="Date"
-            />
-            <TextInput
-              mode="outlined"
-              placeholder="HH:MM"
-              value={revealTime}
-              onChangeText={setRevealTime}
-              style={styles.timeInput}
-              label="Time"
-            />
+            <Pressable onPress={showDatepicker} style={styles.dateInput}>
+              <TextInput
+                mode="outlined"
+                label="Date"
+                value={revealDateTime.toLocaleDateString()}
+                editable={false}
+                pointerEvents="none"
+              />
+            </Pressable>
+            <Pressable onPress={showTimepicker} style={styles.timeInput}>
+              <TextInput
+                mode="outlined"
+                label="Time"
+                value={revealDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                editable={false}
+                pointerEvents="none"
+              />
+            </Pressable>
           </View>
+          {showDatePicker && (
+            <DateTimePicker
+              testID="datePicker"
+              value={revealDateTime}
+              mode="date"
+              is24Hour={true}
+              display="default"
+              onChange={onDateChange}
+            />
+          )}
+          {showTimePicker && (
+            <DateTimePicker
+              testID="timePicker"
+              value={revealDateTime}
+              mode="time"
+              is24Hour={true}
+              display="default"
+              onChange={onTimeChange}
+            />
+          )}
         </View>
 
         {/* Cost Breakdown */}
@@ -261,11 +307,11 @@ export function CreateCapsuleScreen() {
         <Button
           mode="contained"
           onPress={handleCreateCapsule}
-          loading={isLoading}
-          disabled={isLoading || !content.trim() || !revealDate || !revealTime}
+          loading={isLoading || createCapsule.isPending}
+          disabled={isLoading || createCapsule.isPending || !content.trim() || !revealDateTime}
           style={styles.createButton}
         >
-          {isLoading ? 'Creating Capsule...' : 'Create Time Capsule'}
+          {isLoading || createCapsule.isPending ? 'Creating Capsule...' : 'Create Time Capsule'}
         </Button>
       </ScrollView>
 
@@ -435,3 +481,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+

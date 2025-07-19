@@ -9,6 +9,7 @@ import { Platform } from 'react-native';
 
 import type { Account } from './useAuthorization';
 import { useAuthorization } from './useAuthorization';
+import { Web3MobileWallet } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 
 // Conditional imports based on platform
 let transact: any;
@@ -135,6 +136,21 @@ export function useMobileWallet() {
     [authorizeSession]
   );
 
+  const signTransactions = useCallback(
+    async <T extends Transaction | VersionedTransaction>(
+      transactions: T[]
+    ): Promise<T[]> => {
+      return await transact(async (wallet: Web3MobileWallet) => {
+        await authorizeSession(wallet);
+        const signedTransactions = await wallet.signTransactions({
+          transactions,
+        });
+        return signedTransactions;
+      });
+    },
+    [authorizeSession]
+  );
+
   const signMessage = useCallback(
     async (message: Uint8Array): Promise<Uint8Array> => {
       if (Platform.OS !== 'android') {
@@ -160,8 +176,9 @@ export function useMobileWallet() {
       disconnect,
       signAndSendTransaction,
       signMessage,
+      signTransactions,
       isSupported: true, // Now supports both Android (MWA) and iOS (Privy)
     }),
-    [connect, signIn, disconnect, signAndSendTransaction, signMessage]
+    [connect, signIn, disconnect, signAndSendTransaction, signMessage, signTransactions]
   );
 }

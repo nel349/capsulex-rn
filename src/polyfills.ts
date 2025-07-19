@@ -25,3 +25,10 @@ const webCrypto = typeof crypto !== 'undefined' ? crypto : new Crypto();
 
 // Additional polyfills for Privy embedded wallet
 import '@ethersproject/shims';
+
+// Polyfill for structuredClone
+if (typeof structuredClone === 'undefined') {
+  global.structuredClone = (obj: any) => {
+    return JSON.parse(JSON.stringify(obj));
+  };
+}

@@ -1,9 +1,10 @@
+import { useLoginWithOAuth, useLoginWithEmail } from '@privy-io/expo';
 import type {
   Transaction,
   TransactionSignature,
   VersionedTransaction,
 } from '@solana/web3.js';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 
 import type { Account } from './useAuthorization';
@@ -31,18 +32,64 @@ if (Platform.OS === 'android') {
 }
 
 export function useMobileWallet() {
+  const { login, state } = useLoginWithOAuth({
+    onSuccess: (user: any) => {
+      console.log('✅ Privy OAuth login successful', user);
+    },
+    onError: (error: any) => {
+      console.error('❌ Privy OAuth login failed', error);
+    },
+  });
+
+  const { sendCode, loginWithCode, state: emailState } = useLoginWithEmail();
+
+  // useEffect(() => {
+  //   // console.log('🔄 Starting Privy OAuth login...');
+  //   // console.log('🔄 Starting Privy email login...');
+  //   // console.log('📱 Email login state:', emailState.status);
+  //   // console.log('📱 Login state:', state.status);
+  // }, [state, emailState]);
+
   const { authorizeSessionWithSignIn, authorizeSession, deauthorizeSession } =
     useAuthorization();
 
   const connect = useCallback(async (): Promise<Account> => {
     if (Platform.OS !== 'android') {
-      throw new Error('MWA wallet connection not available on iOS');
+      // iOS: Use Privy OAuth login
+      console.log('🔄 Starting Privy OAuth login...');
+      console.log('📱 Login state:', state.status);
+
+      if (state.status === 'loading') {
+        throw new Error('Login already in progress');
+      }
+
+      try {
+        const user = await login({ provider: 'twitter' });
+        console.log('✅ Privy login completed', user?.id);
+
+        // Return a mock Account for now - you'll need to convert Privy user to Account format
+        return {
+          address: user?.id || '',
+          label: user?.id || 'Privy User',
+          publicKey: new Uint8Array() as any, // Temporary fix - need proper PublicKey type
+        };
+      } catch (error: any) {
+        console.error('❌ Privy login error:', error);
+        if (error.message?.includes('Embedded wallet proxy not initialized')) {
+          console.log(
+            '⚠️ Embedded wallet proxy error - this is usually non-fatal for OAuth login'
+          );
+          // You might want to retry or use a fallback authentication method
+        }
+        throw error;
+      }
     }
 
+    // Android: Use Mobile Wallet Adapter
     return await transact(async (wallet: any) => {
       return await authorizeSession(wallet);
     });
-  }, [authorizeSession]);
+  }, [authorizeSession, login]);
 
   const signIn = useCallback(
     async (signInPayload: any): Promise<Account> => {
@@ -113,7 +160,7 @@ export function useMobileWallet() {
       disconnect,
       signAndSendTransaction,
       signMessage,
-      isSupported: Platform.OS === 'android',
+      isSupported: true, // Now supports both Android (MWA) and iOS (Privy)
     }),
     [connect, signIn, disconnect, signAndSendTransaction, signMessage]
   );

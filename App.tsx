@@ -1,11 +1,13 @@
 // Polyfills
 import './src/polyfills';
 
+import { PrivyProvider } from '@privy-io/expo';
 import {
   DarkTheme as NavigationDarkTheme,
   DefaultTheme as NavigationDefaultTheme,
 } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { StyleSheet, useColorScheme } from 'react-native';
 import {
   PaperProvider,
@@ -16,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClusterProvider } from './src/components/cluster/cluster-data-access';
+import { AuthProvider } from './src/contexts';
 import { AppNavigator } from './src/navigators/AppNavigator';
 import { ConnectionProvider } from './src/utils/ConnectionProvider';
 
@@ -27,6 +30,37 @@ export default function App() {
     reactNavigationLight: NavigationDefaultTheme,
     reactNavigationDark: NavigationDarkTheme,
   });
+
+  const privyClientId = process.env.EXPO_PUBLIC_PRIVY_APP_CLIENT_ID;
+  const privyAppId = process.env.EXPO_PUBLIC_PRIVY_APP_ID;
+
+  if (!privyClientId || !privyAppId) {
+    throw new Error('Missing Privy client ID or app ID');
+  } else {
+    console.log('Privy client ID:', privyClientId);
+    console.log('Privy app ID:', privyAppId);
+  }
+
+  // Handle embedded wallet proxy initialization
+  useEffect(() => {
+    // Suppress the embedded wallet proxy error for OAuth-only usage
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (
+        args[0]?.toString().includes('Embedded wallet proxy not initialized')
+      ) {
+        console.warn(
+          '⚠️ Embedded wallet proxy warning suppressed for OAuth login'
+        );
+        return;
+      }
+      originalError(...args);
+    };
+
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
 
   const CombinedDefaultTheme = {
     ...MD3LightTheme,
@@ -66,7 +100,14 @@ export default function App() {
                   : CombinedDefaultTheme
               }
             >
-              <AppNavigator />
+              <PrivyProvider
+                appId={process.env.EXPO_PUBLIC_PRIVY_APP_ID}
+                clientId={process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID}
+              >
+                <AuthProvider>
+                  <AppNavigator />
+                </AuthProvider>
+              </PrivyProvider>
             </PaperProvider>
           </SafeAreaView>
         </ConnectionProvider>

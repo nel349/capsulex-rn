@@ -17,6 +17,7 @@ import {
   adaptNavigationTheme,
 } from 'react-native-paper';
 
+import { AppWrapper } from '../components/app-wrapper';
 import * as Screens from '../screens';
 
 import { HomeNavigator } from './HomeNavigator';
@@ -51,7 +52,12 @@ const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
   return (
-    <Stack.Navigator initialRouteName={'Home'}>
+    <Stack.Navigator initialRouteName={'Main'}>
+      <Stack.Screen
+        name="Main"
+        component={AppWrapper}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="HomeStack"
         component={HomeNavigator}

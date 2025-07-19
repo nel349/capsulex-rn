@@ -1,4 +1,6 @@
+import 'fast-text-encoding';
 import { Buffer } from 'buffer';
+import 'react-native-get-random-values';
 
 import { getRandomValues as expoCryptoGetRandomValues } from 'expo-crypto';
 
@@ -20,3 +22,6 @@ const webCrypto = typeof crypto !== 'undefined' ? crypto : new Crypto();
     });
   }
 })();
+
+// Additional polyfills for Privy embedded wallet
+import '@ethersproject/shims';

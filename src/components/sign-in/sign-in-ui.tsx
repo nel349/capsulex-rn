@@ -1,3 +1,4 @@
+import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
 import { View, StyleSheet, Platform, Alert } from 'react-native';
 import { Button, Text, Card } from 'react-native-paper';
 
@@ -35,14 +36,55 @@ export function ConnectButton() {
   );
 }
 
+export function PrivyConnectButton() {
+  const { login } = useLoginWithOAuth();
+  const { isReady } = usePrivy();
+
+  const handlePrivyConnect = async () => {
+    if (!isReady) {
+      Alert.alert('Not Ready', 'Please wait for Privy to initialize');
+      return;
+    }
+
+    try {
+      await login({ provider: 'google' });
+      Alert.alert('Success', 'Successfully connected with Privy!');
+    } catch (error) {
+      console.error('Privy login error:', error);
+      Alert.alert('Login Error', 'Failed to connect with Privy');
+    }
+  };
+
+  return (
+    <Button
+      mode="contained"
+      onPress={handlePrivyConnect}
+      style={styles.button}
+      disabled={!isReady}
+      icon="account-plus"
+    >
+      {!isReady ? 'Loading...' : 'Connect with Privy'}
+    </Button>
+  );
+}
+
 export function SignInButton() {
   const { signIn, isSupported } = useMobileWallet();
+  const { isReady } = usePrivy();
 
   const handleSignIn = async () => {
     if (!isSupported) {
       Alert.alert(
         'Sign In Not Available',
         'Mobile Wallet Adapter is not supported on iOS. Wallet features coming soon with Privy integration!'
+      );
+      return;
+    }
+
+    if (!isReady) {
+      Alert.alert(
+        'Sign In Not Available',
+        'Please wait for the app to be ready'
       );
       return;
     }

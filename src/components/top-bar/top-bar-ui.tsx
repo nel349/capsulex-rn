@@ -1,7 +1,8 @@
+import { usePrivy, useLoginWithOAuth } from '@privy-io/expo';
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Alert } from 'react-native';
 import { Button, IconButton, Menu, useTheme } from 'react-native-paper';
 
 import { ellipsify } from '../../utils/ellipsify';
@@ -29,6 +30,35 @@ export function TopBarWalletButton({
         ? ellipsify(selectedAccount.publicKey.toBase58())
         : 'Connect'}
     </Button>
+  );
+}
+
+export function TopBarPrivyButton() {
+  const { login } = useLoginWithOAuth();
+  const { isReady } = usePrivy();
+
+  const handlePrivyConnect = async () => {
+    if (!isReady) {
+      Alert.alert('Not Ready', 'Please wait for Privy to initialize');
+      return;
+    }
+
+    try {
+      await login({ provider: 'twitter' });
+      Alert.alert('Success', 'Successfully connected with Privy!');
+    } catch (error) {
+      console.error('Privy login error:', error);
+      Alert.alert('Login Error', 'Failed to connect with Privy');
+    }
+  };
+
+  return (
+    <IconButton
+      icon="account-plus"
+      mode="contained-tonal"
+      disabled={!isReady}
+      onPress={handlePrivyConnect}
+    />
   );
 }
 

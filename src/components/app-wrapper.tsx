@@ -4,6 +4,7 @@ import { useAuth } from '../contexts';
 import { HomeNavigator } from '../navigators/HomeNavigator';
 
 import { OnboardingFlow } from './onboarding';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export function AppWrapper() {
   const {
@@ -39,5 +40,18 @@ export function AppWrapper() {
   console.log(
     '🔄 Showing onboarding - either no wallet OR signup not completed'
   );
-  return <OnboardingFlow onComplete={() => setOnboardingComplete(true)} />;
+  return <OnboardingFlow onComplete={() => {
+    setOnboardingComplete(true);
+
+    // lets make sure we clear the onboarding state. this is a hack to make sure we dont get stuck in the onboarding flow
+    AsyncStorage.multiRemove([
+      'onboarding_in_progress',
+      'onboarding_step',
+      'onboarding_user_name',
+      'onboarding_wallet_address',
+      'onboarding_social_connected',
+    ]);
+    console.log('🔄 Onboarding state cleared');
+    console.log('🔄 Onboarding complete');
+  }} />;
 }

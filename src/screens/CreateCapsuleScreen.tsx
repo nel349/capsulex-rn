@@ -15,6 +15,8 @@ import * as anchor from "@coral-xyz/anchor";
 import { useAuthorization } from '../utils/useAuthorization';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import * as Crypto from 'expo-crypto';
+import { useSolanaService } from '../services/solana';
+import { Address } from '@solana/kit';
 
 interface SOLBalance {
   balance: number;
@@ -35,10 +37,12 @@ export function CreateCapsuleScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSOLModal, setShowSOLModal] = useState(false);
   const [solBalance, setSolBalance] = useState<SOLBalance>({
-    balance: 0.0124,
+    balance: 0,
     sufficient: true,
     required: 0.00005,
   });
+
+  const { getBalance } = useSolanaService();
 
   const platforms = [
     { key: 'twitter', label: 'Twitter', icon: '🐦' },
@@ -47,15 +51,15 @@ export function CreateCapsuleScreen() {
 
   useEffect(() => {
     checkSOLBalance();
-  }, []);
+  }, [getBalance, selectedAccount]);
 
   const checkSOLBalance = async () => {
-    const mockBalance = Math.random() * 0.01;
+    const balance = await getBalance(selectedAccount?.publicKey.toString() as Address);
     const required = 0.00005;
 
     setSolBalance({
-      balance: mockBalance,
-      sufficient: mockBalance >= required,
+      balance: balance,
+      sufficient: balance >= required,
       required,
     });
   };

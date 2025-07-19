@@ -9,6 +9,8 @@ import {
 import { Text, Card, FAB, IconButton, Chip } from 'react-native-paper';
 
 import { useAuthorization } from '../utils/useAuthorization';
+import { SolanaService } from '../services/solana';
+import { Address } from '@solana/kit';
 
 interface Capsule {
   id: string;
@@ -28,6 +30,18 @@ export function HubScreen() {
     pendingCapsules: 0,
     nextReveal: null as Date | null,
   });
+  const [solBalance, setSolBalance] = useState<number | null>(null);
+
+  // use effect to fetch solana balance
+  useEffect(() => {
+    if (selectedAccount) {
+      const fetchSolanaBalance = async () => {
+        const balance = await new SolanaService().getBalance(selectedAccount.publicKey.toString() as Address);
+        setSolBalance(balance);
+      };
+      fetchSolanaBalance();
+    }
+  }, [selectedAccount]);
 
   // Mock data for now
   useEffect(() => {
@@ -154,7 +168,7 @@ export function HubScreen() {
                 SOL Balance
               </Text>
               <Text variant="headlineSmall" style={styles.statValue}>
-                0.0124 SOL
+                {solBalance !== null ? `${solBalance.toFixed(4)} SOL` : 'N/A'}
               </Text>
             </Card.Content>
           </Card>

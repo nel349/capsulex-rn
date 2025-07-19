@@ -89,12 +89,23 @@ export class UserService {
       const data = await this.getUserProfile(walletAddress);
       return true;
     } catch (error) {
-      if (
-        error instanceof ApiError &&
-        (error.statusCode === 404 || error.statusCode === 500)
-      ) {
-        // Handle both 404 (not found) and 500 (database query error for non-existent user)
-        return false;
+      if (error instanceof ApiError) {
+        if (error.statusCode === 404) {
+          // User not found - this is expected for new users
+          return false;
+        } else if (error.statusCode === 500) {
+          // Server error - check if it's specifically a "no rows" error
+          // there can be no multiple users with the same wallet address we dont allow that in the database
+          // if this error is thrown, it means that the user is not registered
+          if (error.message.includes('multiple (or no) rows returned')) {
+            console.log('User does not exist!!');
+
+            // user does not exist, so we return false
+            return false;
+          }
+          // Other 500 errors should be thrown
+          throw error;
+        }
       }
       // Re-throw other errors (network, server errors, etc.)
       throw error;

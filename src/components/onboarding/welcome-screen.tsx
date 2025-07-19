@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Button, Text, Card } from 'react-native-paper';
 
+import { useAuthorization } from '../../utils/useAuthorization';
 import { useMobileWallet } from '../../utils/useMobileWallet';
 
 interface WelcomeScreenProps {
@@ -10,7 +11,8 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
-  const { isSupported } = useMobileWallet();
+  const { selectedAccount } = useAuthorization();
+  const { isSupported, disconnect } = useMobileWallet();
 
   const features = [
     {
@@ -97,6 +99,17 @@ export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
             contentStyle={styles.buttonContent}
           >
             Sign In
+          </Button>
+        )}
+
+        {isSupported && selectedAccount?.publicKey && (
+          <Button
+            mode="text"
+            onPress={disconnect}
+            style={styles.disconnectButton}
+          >
+            Disconnect Wallet (
+            {selectedAccount.publicKey.toBase58().slice(0, 8)}...)
           </Button>
         )}
 
@@ -189,5 +202,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.6,
     paddingHorizontal: 16,
+  },
+  disconnectButton: {
+    marginBottom: 8,
   },
 });

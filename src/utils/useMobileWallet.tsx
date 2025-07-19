@@ -43,12 +43,12 @@ export function useMobileWallet() {
 
   const { sendCode, loginWithCode, state: emailState } = useLoginWithEmail();
 
-  useEffect(() => {
-    console.log('🔄 Starting Privy OAuth login...');
-    console.log('🔄 Starting Privy email login...');
-    console.log('📱 Email login state:', emailState.status);
-    console.log('📱 Login state:', state.status);
-  }, [state, emailState]);
+  // useEffect(() => {
+  //   // console.log('🔄 Starting Privy OAuth login...');
+  //   // console.log('🔄 Starting Privy email login...');
+  //   // console.log('📱 Email login state:', emailState.status);
+  //   // console.log('📱 Login state:', state.status);
+  // }, [state, emailState]);
 
   const { authorizeSessionWithSignIn, authorizeSession, deauthorizeSession } =
     useAuthorization();

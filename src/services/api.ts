@@ -7,9 +7,9 @@ import { Platform } from 'react-native';
 const API_CONFIG = {
   BASE_URL: __DEV__
     ? Platform.select({
-        ios: 'http://localhost:3001/api',
-        android: 'http://10.0.2.2:3001/api', // Android emulator localhost
-        default: 'http://localhost:3001/api',
+        ios: 'http://192.168.1.157:3001/api', // Use Mac's IP for iOS device/simulator
+        android: 'http://192.168.1.157:3001/api', // Use Mac's IP for Android device/emulator
+        default: 'http://192.168.1.157:3001/api',
       })
     : 'https://api.capsulex.com/api', // Production URL
   TIMEOUT: 10000, // 10 seconds
@@ -67,6 +67,8 @@ class ApiService {
       '🔗 API Service initializing with base URL:',
       API_CONFIG.BASE_URL
     );
+    console.log('📱 Platform detected:', Platform.OS);
+    console.log('🛠️ Development mode:', __DEV__);
 
     this.axiosInstance = axios.create({
       baseURL: API_CONFIG.BASE_URL,
@@ -91,9 +93,18 @@ class ApiService {
           );
         } else if (error.request) {
           // Request was made but no response
-          throw new ApiError('Network error - no response from server');
+          console.error('📡 Network request failed:', {
+            url: error.config?.url,
+            method: error.config?.method,
+            baseURL: error.config?.baseURL,
+            request: error.request._response || error.request,
+          });
+          throw new ApiError(
+            `Network error - no response from server. URL: ${error.config?.baseURL}${error.config?.url}`
+          );
         } else {
           // Something else happened
+          console.error('⚠️ Request setup error:', error.message);
           throw new ApiError(error.message || 'Unknown error');
         }
       }

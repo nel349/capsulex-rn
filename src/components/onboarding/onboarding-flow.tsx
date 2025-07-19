@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { Text } from 'react-native-paper';
 
+import { userService, ApiError } from '../../services';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useMobileWallet } from '../../utils/useMobileWallet';
 
@@ -31,7 +32,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [socialConnected, setSocialConnected] = useState<boolean>(false);
   const [isSignInFlow, setIsSignInFlow] = useState<boolean>(false);
   const { selectedAccount } = useAuthorization();
-  const { connect } = useMobileWallet();
+  const { connect, disconnect } = useMobileWallet();
 
   // Restore onboarding state after app restart (deep linking)
   useEffect(() => {
@@ -69,7 +70,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             setCurrentStep('social-connection');
             await saveOnboardingState(
               'social-connection',
-              savedUserName,
+              savedUserName || '',
               address,
               savedSocialConnected === 'true'
             );
@@ -123,25 +124,162 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   // Set wallet address when account is connected and handle flow
   useEffect(() => {
+    console.log('🔍 Wallet state change detected:', {
+      hasAccount: !!selectedAccount?.publicKey,
+      address: selectedAccount?.publicKey?.toBase58(),
+      currentStep,
+      isSignInFlow,
+    });
+
     if (selectedAccount?.publicKey && currentStep === 'connecting') {
       const address = selectedAccount.publicKey.toBase58();
+      console.log('🔗 New wallet connected:', address);
+      
+      // Prevent duplicate API calls by checking if we already have this address
+      if (walletAddress === address) {
+        console.log('⚠️ Wallet already processed, skipping duplicate check');
+        return;
+      }
+      
       setWalletAddress(address);
 
       if (isSignInFlow) {
-        // Sign In flow: go directly to main app (no API check for now)
-        console.log('🔑 Sign in successful - going to main app');
+        // Sign In flow: check if user exists
+        handleSignInUserCheck(address);
+      } else {
+        // Get Started flow: check if wallet is already registered
+        handleGetStartedUserCheck(address);
+      }
+    } else if (!selectedAccount?.publicKey) {
+      // Clear wallet address when disconnected
+      console.log('🔌 Wallet disconnected - clearing address');
+      setWalletAddress('');
+    }
+  }, [selectedAccount, currentStep, isSignInFlow, walletAddress]);
+
+  const handleSignInUserCheck = async (address: string) => {
+    try {
+      console.log('🔍 Sign In: Checking if user exists:', address);
+
+      const userExists = await userService.userExists(address);
+
+      if (userExists) {
+        console.log('✅ Existing user found - going to main app');
         onComplete();
       } else {
-        // Get Started flow: always go to social step
+        console.log('❌ User not found - redirecting to signup');
+        Alert.alert(
+          'Account Not Found',
+          'No account found for this wallet. Please sign up first.',
+          [
+            {
+              text: 'Sign Up',
+              onPress: () => {
+                setIsSignInFlow(false);
+                setCurrentStep('signup-form');
+              },
+            },
+            {
+              text: 'Cancel',
+              onPress: () => setCurrentStep('welcome'),
+              style: 'cancel',
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error checking user existence:', error);
+
+      let errorMessage = 'Failed to check account. Please try again.';
+      if (error instanceof ApiError) {
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert('Connection Error', errorMessage, [
+        {
+          text: 'Try Again',
+          onPress: () => handleSignInUserCheck(address),
+        },
+        {
+          text: 'Cancel',
+          onPress: () => setCurrentStep('welcome'),
+          style: 'cancel',
+        },
+      ]);
+    }
+  };
+
+  const handleGetStartedUserCheck = async (address: string) => {
+    try {
+      console.log(
+        '🔍 Get Started: Checking if wallet is already registered:',
+        address
+      );
+
+      const userExists = await userService.userExists(address);
+
+      if (userExists) {
+        console.log('⚠️ Wallet already registered - redirecting to sign in');
+        Alert.alert(
+          'Account Already Exists',
+          'This wallet is already registered. Would you like to sign in instead?',
+          [
+            {
+              text: 'Sign In',
+              onPress: () => {
+                console.log('✅ User chose to sign in - going to main app');
+                onComplete();
+              },
+            },
+            {
+              text: 'Use Different Wallet',
+              onPress: () => clearOnboardingStateAndGoToWelcome(),
+            },
+          ]
+        );
+      } else {
+        console.log('✅ Wallet not registered - continuing with signup flow');
         setCurrentStep('social-connection');
       }
-    }
-  }, [selectedAccount, currentStep, isSignInFlow, onComplete]);
+    } catch (error) {
+      console.error('❌ Error checking wallet registration:', error);
 
-  const handleGetStarted = () => {
+      let errorMessage =
+        'Failed to check wallet registration. Please try again.';
+      if (error instanceof ApiError) {
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert('Connection Error', errorMessage, [
+        {
+          text: 'Try Again',
+          onPress: () => handleGetStartedUserCheck(address),
+        },
+        {
+          text: 'Cancel',
+          onPress: () => setCurrentStep('welcome'),
+          style: 'cancel',
+        },
+      ]);
+    }
+  };
+
+  const handleGetStarted = async () => {
     // Go to signup form first, then connect wallet
     setIsSignInFlow(false);
     setCurrentStep('signup-form');
+
+    // Clear any previous onboarding completion flag when starting new signup
+    try {
+      await AsyncStorage.removeItem('onboarding_completed');
+      console.log('🗑️ Cleared previous onboarding completion flag');
+    } catch (error) {
+      console.error('Error clearing onboarding completion flag:', error);
+    }
   };
 
   const handleSignupFormSubmit = async (name: string) => {
@@ -205,6 +343,23 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setIsSignInFlow(false);
 
     console.log('❌ Onboarding cancelled - state cleared');
+  };
+
+  const clearOnboardingStateAndGoToWelcome = async () => {
+    // Clear all persistent state
+    await clearOnboardingState();
+
+    // Reset all local state
+    setCurrentStep('welcome');
+    setUserName('');
+    setWalletAddress('');
+    setSocialConnected(false);
+    setIsSignInFlow(false);
+
+    // we also have to disconnect from the wallet
+    await disconnect();
+
+    console.log('🔄 Cleared state and returned to welcome');
   };
 
   const handleBack = async () => {

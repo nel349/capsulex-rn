@@ -22,21 +22,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const { selectedAccount, isSupported } = useAuthorization();
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
 
-  // Check if user has completed onboarding before
-  useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const completed = await AsyncStorage.getItem('onboarding_completed');
-        setIsOnboardingComplete(completed === 'true');
-      } catch (error) {
-        console.error('Error checking onboarding status:', error);
-      }
-    };
-
-    checkOnboardingStatus();
-  }, []);
-
   const handleSetOnboardingComplete = async (complete: boolean) => {
+    console.log('🔄 Setting onboarding complete:', complete);
     setIsOnboardingComplete(complete);
     try {
       if (complete) {
@@ -48,6 +35,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Error saving onboarding status:', error);
     }
   };
+
+  // Clear onboarding completion when wallet disconnects
+  useEffect(() => {
+    if (!selectedAccount?.publicKey && isOnboardingComplete) {
+      console.log('🗑️ Wallet disconnected - clearing all onboarding state');
+      handleSetOnboardingComplete(false);
+
+      // Also clear onboarding flow state to ensure fresh start
+      AsyncStorage.multiRemove([
+        'onboarding_in_progress',
+        'onboarding_step',
+        'onboarding_user_name',
+        'onboarding_wallet_address',
+        'onboarding_social_connected',
+      ]).catch(error => {
+        console.error('Error clearing onboarding flow state:', error);
+      });
+    }
+  }, [selectedAccount?.publicKey, isOnboardingComplete]);
+
+  // Check if user has completed onboarding before
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const completed = await AsyncStorage.getItem('onboarding_completed');
+        console.log('🔍 Checking onboarding completion status:', completed);
+        setIsOnboardingComplete(completed === 'true');
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
 
   const value: AuthContextType = {
     isAuthenticated: !!selectedAccount?.publicKey,

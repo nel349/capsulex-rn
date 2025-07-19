@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 
+import { userService, ApiError } from '../../services';
+
 interface ProfileSetupScreenProps {
   walletAddress: string;
   initialName?: string;
@@ -34,9 +36,28 @@ export function ProfileSetupScreen({
 
     setIsLoading(true);
 
-    // Simulate account creation (no API integration for now)
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      console.log('🔄 Creating user account:', {
+        walletAddress,
+        name: name.trim(),
+      });
+
+      // Create user account via API
+      const authResponse = await userService.registerWalletUser(
+        walletAddress,
+        'wallet',
+        name.trim()
+      );
+
+      console.log(
+        '✅ Full API response:',
+        JSON.stringify(authResponse, null, 2)
+      );
+      console.log(
+        '✅ User account created successfully:',
+        authResponse.user?.user_id
+      );
+
       Alert.alert(
         'Welcome to CapsuleX!',
         `Hi ${name.trim()}, your account setup is complete!`,
@@ -47,7 +68,27 @@ export function ProfileSetupScreen({
           },
         ]
       );
-    }, 1500);
+    } catch (error) {
+      console.error('❌ Failed to create user account:', error);
+
+      let errorMessage = 'Failed to create your account. Please try again.';
+
+      if (error instanceof ApiError) {
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert('Account Creation Failed', errorMessage, [
+        {
+          text: 'Try Again',
+          onPress: () => setIsLoading(false),
+        },
+      ]);
+      return;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

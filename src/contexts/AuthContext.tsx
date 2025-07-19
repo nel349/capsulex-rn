@@ -60,7 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const checkOnboardingStatus = async () => {
       try {
         const completed = await AsyncStorage.getItem('onboarding_completed');
-        console.log('🔍 Checking onboarding completion status:', completed);
+        // console.log('🔍 Checking onboarding completion status:', completed);
         setIsOnboardingComplete(completed === 'true');
       } catch (error) {
         console.error('Error checking onboarding status:', error);

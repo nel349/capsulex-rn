@@ -124,12 +124,12 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   // Set wallet address when account is connected and handle flow
   useEffect(() => {
-    console.log('🔍 Wallet state change detected:', {
-      hasAccount: !!selectedAccount?.publicKey,
-      address: selectedAccount?.publicKey?.toBase58(),
-      currentStep,
-      isSignInFlow,
-    });
+    // console.log('🔍 Wallet state change detected:', {
+    //   hasAccount: !!selectedAccount?.publicKey,
+    //   address: selectedAccount?.publicKey?.toBase58(),
+    //   currentStep,
+    //   isSignInFlow,
+    // });
 
     if (selectedAccount?.publicKey && currentStep === 'connecting') {
       const address = selectedAccount.publicKey.toBase58();

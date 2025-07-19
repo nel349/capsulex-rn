@@ -9,7 +9,7 @@ import {
 import { Text, Card, FAB, IconButton, Chip } from 'react-native-paper';
 
 import { useAuthorization } from '../utils/useAuthorization';
-import { SolanaService } from '../services/solana';
+import { useSolanaService } from '../services/solana';
 import { Address } from '@solana/kit';
 
 interface Capsule {
@@ -31,17 +31,18 @@ export function HubScreen() {
     nextReveal: null as Date | null,
   });
   const [solBalance, setSolBalance] = useState<number | null>(null);
+  const { getBalance } = useSolanaService();
 
   // use effect to fetch solana balance
   useEffect(() => {
     if (selectedAccount) {
       const fetchSolanaBalance = async () => {
-        const balance = await new SolanaService().getBalance(selectedAccount.publicKey.toString() as Address);
+        const balance = await getBalance(selectedAccount.publicKey.toString() as Address);
         setSolBalance(balance);
       };
       fetchSolanaBalance();
     }
-  }, [selectedAccount]);
+  }, [selectedAccount, getBalance]);
 
   // Mock data for now
   useEffect(() => {

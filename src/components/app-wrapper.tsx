@@ -14,11 +14,11 @@ export function AppWrapper() {
     setOnboardingComplete,
   } = useAuth();
 
-  console.log('🔍 AppWrapper state:', {
-    isAuthenticated,
-    isSupported,
-    isOnboardingComplete,
-  });
+  // console.log('🔍 AppWrapper state:', {
+  //   isAuthenticated,
+  //   isSupported,
+  //   isOnboardingComplete,
+  // });
 
   // iOS users (no wallet support) go straight to main app
   if (!isSupported) {
@@ -31,15 +31,15 @@ export function AppWrapper() {
   // 2. Wallet + completed full signup = Main app
   // 3. Wallet + NOT completed signup = Continue onboarding
   if (isAuthenticated && isOnboardingComplete) {
-    console.log(
-      '✅ Wallet connected AND full signup completed - showing main app'
-    );
+    // console.log(
+    //   '✅ Wallet connected AND full signup completed - showing main app'
+    // );
     return <HomeNavigator />;
   }
 
-  console.log(
-    '🔄 Showing onboarding - either no wallet OR signup not completed'
-  );
+  // console.log(
+  //   '🔄 Showing onboarding - either no wallet OR signup not completed'
+  // );
   return <OnboardingFlow onComplete={() => {
     setOnboardingComplete(true);
 

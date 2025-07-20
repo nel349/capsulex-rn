@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button, Text, Card, ActivityIndicator } from 'react-native-paper';
+import { Button, Text, Card } from 'react-native-paper';
+
+import { useSnackbar } from '../../hooks/useSnackbar';
+import { twitterService } from '../../services/twitterService';
+import { AppSnackbar } from '../ui/AppSnackbar';
 
 interface SocialConnectionScreenProps {
   onConnect: () => Promise<void>;
@@ -18,13 +22,31 @@ export function SocialConnectionScreen({
   isOptional = true,
 }: SocialConnectionScreenProps) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
 
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      await onConnect();
+      console.log('🐦 Starting Twitter connection...');
+
+      // Test: Show what redirect URI we're using
+      console.log('🔍 About to start OAuth - check logs for redirect URI');
+
+      // Use Twitter service to authenticate
+      const result = await twitterService.authenticate();
+
+      console.log('✅ Twitter connected:', result.username);
+      showSuccess(`Connected to Twitter as @${result.username}!`);
+
+      // Call the onConnect callback and continue onboarding
+      setTimeout(async () => {
+        await onConnect();
+      }, 1500);
     } catch (error) {
-      console.error('Social connection failed:', error);
+      console.error('❌ Twitter connection failed:', error);
+      showError(
+        `Twitter connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     } finally {
       setIsConnecting(false);
     }
@@ -57,13 +79,13 @@ export function SocialConnectionScreen({
 
             <View style={styles.benefitsList}>
               <Text variant="bodyMedium" style={styles.benefitItem}>
-                • Share capsules directly to X
+                • Auto-post capsules when they reveal
               </Text>
               <Text variant="bodyMedium" style={styles.benefitItem}>
-                • Import your X profile and connections
+                • Secure OAuth connection
               </Text>
               <Text variant="bodyMedium" style={styles.benefitItem}>
-                • Discover capsules from your X network
+                • Share your time capsules with the world
               </Text>
             </View>
           </Card.Content>
@@ -126,6 +148,14 @@ export function SocialConnectionScreen({
           {isConnecting ? 'Connecting...' : 'Connect X'}
         </Button>
       </View>
+
+      {/* Snackbar for notifications */}
+      <AppSnackbar
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        onDismiss={hideSnackbar}
+      />
     </View>
   );
 }

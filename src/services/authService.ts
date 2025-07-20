@@ -24,7 +24,7 @@ export function useAuthService() {
       console.log('🔑 Storing auth token:', {
         tokenPrefix: response.data.token.substring(0, 20) + '...',
         userId: response.data.user.user_id,
-        walletAddress: response.data.user.wallet_address
+        walletAddress: response.data.user.wallet_address,
       });
       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, response.data.token);
       await AsyncStorage.setItem(

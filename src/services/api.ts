@@ -52,7 +52,7 @@ class ApiService {
           hasToken: !!token,
           tokenPrefix: token ? token.substring(0, 20) + '...' : 'none',
           url: config.url,
-          method: config.method
+          method: config.method,
         });
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;

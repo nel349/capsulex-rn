@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
-import { AppSnackbar } from '../ui/AppSnackbar';
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { userService } from '../../services';
 import { useAuthService } from '../../services/authService';
 import { ApiError } from '../../types/api';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useMobileWallet } from '../../utils/useMobileWallet';
+import { AppSnackbar } from '../ui/AppSnackbar';
 
 import { ProfileSetupScreen } from './profile-setup-screen';
 import { ProgressIndicator } from './progress-indicator';
@@ -80,6 +80,28 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               address,
               savedSocialConnected === 'true'
             );
+          }
+
+          // Re-authenticate if restored to steps that require authentication
+          if (
+            selectedAccount?.publicKey &&
+            (savedStep === 'social-connection' || savedStep === 'profile-setup') &&
+            savedWalletAddress
+          ) {
+            console.log('🔐 Re-authenticating user for restored step:', savedStep);
+            try {
+              await authenticateUser({
+                wallet_address: savedWalletAddress,
+                auth_type: 'wallet',
+                name: savedUserName || 'User',
+              });
+              console.log('✅ User re-authenticated successfully');
+            } catch (authError) {
+              console.error('❌ Re-authentication failed:', authError);
+              showError('Session expired. Please start over.');
+              setCurrentStep('welcome');
+              await AsyncStorage.removeItem('onboarding_step');
+            }
           }
         }
       } catch (error) {
@@ -219,7 +241,9 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       const userExists = await userService.userExists(address);
 
       if (userExists) {
-        console.log('⚠️ Wallet already registered - automatically signing in...');
+        console.log(
+          '⚠️ Wallet already registered - automatically signing in...'
+        );
         showInfo('Account already exists. Signing you in...');
         try {
           await authenticateUser({
@@ -235,8 +259,31 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           setCurrentStep('welcome');
         }
       } else {
-        console.log('✅ Wallet not registered - continuing with signup flow');
-        setCurrentStep('social-connection');
+        console.log('✅ Wallet not registered - registering new user...');
+        try {
+          // Step 1: Register user in database immediately
+          const registrationResponse = await userService.registerWalletUser(
+            address,
+            'wallet',
+            userName || 'User' // Use name from signup form or default
+          );
+          console.log('✅ User registered in database:', registrationResponse.user.user_id);
+
+          // Step 2: Authenticate and store JWT token  
+          const authResponse = await authenticateUser({
+            wallet_address: address,
+            auth_type: 'wallet',
+            name: userName || 'User',
+          });
+          console.log('✅ User authenticated and token stored:', authResponse.user.user_id);
+
+          // Step 3: Continue to social connection (user is now authenticated)
+          setCurrentStep('social-connection');
+        } catch (registrationError) {
+          console.error('❌ User registration failed:', registrationError);
+          showError('Failed to register user. Please try again.');
+          setCurrentStep('welcome');
+        }
       }
     } catch (error) {
       console.error('❌ Error checking wallet registration:', error);
@@ -332,26 +379,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setIsSignInFlow(false);
 
     console.log('❌ Onboarding cancelled - state cleared');
-  };
-
-  const clearOnboardingStateAndGoToWelcome = async () => {
-    // Clear all persistent state
-    await clearOnboardingState();
-
-    // Clear authentication
-    await clearAuth();
-
-    // Reset all local state
-    setCurrentStep('welcome');
-    setUserName('');
-    setWalletAddress('');
-    setSocialConnected(false);
-    setIsSignInFlow(false);
-
-    // we also have to disconnect from the wallet
-    await disconnect();
-
-    console.log('🔄 Cleared state and returned to welcome');
   };
 
   const handleBack = async () => {
@@ -495,7 +522,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   return (
     <View style={{ flex: 1 }}>
       {renderCurrentStep()}
-      
+
       {/* Snackbar for notifications */}
       <AppSnackbar
         visible={snackbar.visible}

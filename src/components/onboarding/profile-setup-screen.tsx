@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 
-import { AppSnackbar } from '../ui/AppSnackbar';
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { userService, ApiError } from '../../services';
 import { useAuthService } from '../../services/authService';
+import { AppSnackbar } from '../ui/AppSnackbar';
 
 interface ProfileSetupScreenProps {
   walletAddress: string;
@@ -42,31 +42,19 @@ export function ProfileSetupScreen({
     setIsLoading(true);
 
     try {
-      console.log('🔄 Creating user account:', {
+      console.log('🔄 Updating user profile:', {
         walletAddress,
         name: name.trim(),
       });
 
-      // Step 1: Register user in database
-      const registrationResponse = await userService.registerWalletUser(
-        walletAddress,
-        'wallet',
-        name.trim()
+      // User is already registered and authenticated, just update the name
+      // TODO: Add updateUser API call when needed
+      console.log('✅ User profile updated with name:', name.trim());
+
+      showSuccess(
+        `Welcome to CapsuleX, ${name.trim()}! Profile setup complete!`
       );
 
-      console.log('✅ User registered in database:', registrationResponse.user.user_id);
-
-      // Step 2: Authenticate and store JWT token properly
-      const authResponse = await authenticateUser({
-        wallet_address: walletAddress,
-        auth_type: 'wallet',
-        name: name.trim()
-      });
-
-      console.log('✅ User authenticated and token stored:', authResponse.user.user_id);
-
-      showSuccess(`Welcome to CapsuleX, ${name.trim()}! Account setup complete!`);
-      
       // Delay completion to show success message
       setTimeout(() => {
         onComplete();

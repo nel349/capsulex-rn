@@ -4,12 +4,12 @@ import type {
   TransactionSignature,
   VersionedTransaction,
 } from '@solana/web3.js';
+import type { Web3MobileWallet } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 import { useCallback, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 
 import type { Account } from './useAuthorization';
 import { useAuthorization } from './useAuthorization';
-import { Web3MobileWallet } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 
 // Conditional imports based on platform
 let transact: any;
@@ -179,6 +179,13 @@ export function useMobileWallet() {
       signTransactions,
       isSupported: true, // Now supports both Android (MWA) and iOS (Privy)
     }),
-    [connect, signIn, disconnect, signAndSendTransaction, signMessage, signTransactions]
+    [
+      connect,
+      signIn,
+      disconnect,
+      signAndSendTransaction,
+      signMessage,
+      signTransactions,
+    ]
   );
 }

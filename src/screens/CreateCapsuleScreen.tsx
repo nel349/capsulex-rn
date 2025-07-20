@@ -1,5 +1,15 @@
+import * as anchor from '@coral-xyz/anchor';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import type { Address } from '@solana/kit';
+import * as Crypto from 'expo-crypto';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Alert, Platform, Pressable } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  Platform,
+  Pressable,
+} from 'react-native';
 import {
   Text,
   TextInput,
@@ -8,15 +18,15 @@ import {
   Chip,
   Portal,
   Modal,
+  Snackbar,
 } from 'react-native-paper';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import * as anchor from "@coral-xyz/anchor";
 
-import { useAuthorization } from '../utils/useAuthorization';
-import { useCapsulexProgram } from '../solana/useCapsulexProgram';
-import * as Crypto from 'expo-crypto';
+import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { useSnackbar } from '../hooks/useSnackbar';
+import { useCapsuleService } from '../services/capsuleService';
 import { useSolanaService } from '../services/solana';
-import { Address } from '@solana/kit';
+import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import { useAuthorization } from '../utils/useAuthorization';
 
 interface SOLBalance {
   balance: number;
@@ -27,6 +37,7 @@ interface SOLBalance {
 export function CreateCapsuleScreen() {
   const { selectedAccount } = useAuthorization();
   const { createCapsule } = useCapsulexProgram();
+  const { createCapsule: createCapsuleInDB } = useCapsuleService();
   const [content, setContent] = useState('something:for testing');
   const [selectedPlatform, setSelectedPlatform] = useState<
     'twitter' | 'instagram'
@@ -41,7 +52,8 @@ export function CreateCapsuleScreen() {
     sufficient: true,
     required: 0.00005,
   });
-
+  const { snackbar, showError, showSuccess, showInfo, hideSnackbar } =
+    useSnackbar();
   const { getBalance } = useSolanaService();
 
   const platforms = [
@@ -54,7 +66,9 @@ export function CreateCapsuleScreen() {
   }, [getBalance, selectedAccount]);
 
   const checkSOLBalance = async () => {
-    const balance = await getBalance(selectedAccount?.publicKey.toString() as Address);
+    const balance = await getBalance(
+      selectedAccount?.publicKey.toString() as Address
+    );
     const required = 0.00005;
 
     setSolBalance({
@@ -86,17 +100,17 @@ export function CreateCapsuleScreen() {
 
   const handleCreateCapsule = async () => {
     if (!content.trim()) {
-      Alert.alert('Error', 'Please enter content for your capsule');
+      showError('Please enter content for your capsule');
       return;
     }
 
     if (!revealDateTime) {
-      Alert.alert('Error', 'Please select a reveal date and time');
+      showError('Please select a reveal date and time');
       return;
     }
 
     if (!selectedAccount) {
-      Alert.alert('Error', 'Please connect your wallet first');
+      showError('Please connect your wallet first');
       return;
     }
 
@@ -109,12 +123,18 @@ export function CreateCapsuleScreen() {
 
     try {
       // Convert to Unix timestamp (seconds) and then to Anchor BN
-      const revealDateBN = new anchor.BN(Math.floor(revealDateTime.getTime() / 1000));
+      const revealDateBN = new anchor.BN(
+        Math.floor(revealDateTime.getTime() / 1000)
+      );
 
-      const contentStorage = { text: {} }; 
-      const contentHash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, content);
+      const contentStorage = { text: {} };
+      const contentHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        content
+      );
 
-      await createCapsule.mutateAsync({
+      // Step 1: Create capsule on-chain
+      const txResult = await createCapsule.mutateAsync({
         encryptedContent: content,
         contentStorage: contentStorage,
         contentIntegrityHash: contentHash,
@@ -122,22 +142,51 @@ export function CreateCapsuleScreen() {
         isGamified: false,
       });
 
-      Alert.alert(
-        'Success!',
-        'Your time capsule has been created successfully',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setContent('');
-              setRevealDateTime(new Date()); // Reset to current date/time
-            },
-          },
-        ]
-      );
+      console.log('✅ Capsule created on-chain:', txResult);
+
+      // Step 2: Save capsule to Supabase database
+      try {
+        const capsuleData = await createCapsuleInDB({
+          content_encrypted: content,
+          content_hash: contentHash,
+          has_media: false,
+          media_urls: [],
+          reveal_date: revealDateTime.toISOString(),
+          on_chain_tx:
+            typeof txResult === 'string'
+              ? txResult
+              : (txResult as any)?.signature || JSON.stringify(txResult),
+          sol_fee_amount: solBalance.required,
+          is_gamified: false,
+        });
+
+        console.log('✅ Capsule saved to database:', capsuleData);
+
+        showSuccess(
+          '🎉 Time capsule created successfully and saved to blockchain!'
+        );
+
+        // Reset form after short delay
+        setTimeout(() => {
+          setContent('');
+          setRevealDateTime(new Date());
+        }, 2000);
+      } catch (dbError) {
+        console.error('❌ Database save failed:', dbError);
+        showError(
+          '⚠️ Capsule created on blockchain but database save failed. Please contact support.'
+        );
+
+        setTimeout(() => {
+          setContent('');
+          setRevealDateTime(new Date());
+        }, 3000);
+      }
     } catch (error) {
-      console.error('Error creating capsule:', error);
-      Alert.alert('Error', `Failed to create capsule: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('❌ Error creating capsule:', error);
+      showError(
+        `Failed to create capsule: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +194,7 @@ export function CreateCapsuleScreen() {
 
   const handleBuySOL = () => {
     setShowSOLModal(false);
-    Alert.alert('Buy SOL', 'This will open the SOL onramp modal');
+    showInfo('SOL onramp feature coming soon!');
   };
 
   if (!selectedAccount) {
@@ -258,7 +307,10 @@ export function CreateCapsuleScreen() {
               <TextInput
                 mode="outlined"
                 label="Time"
-                value={revealDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                value={revealDateTime.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
                 editable={false}
                 pointerEvents="none"
               />
@@ -312,10 +364,17 @@ export function CreateCapsuleScreen() {
           mode="contained"
           onPress={handleCreateCapsule}
           loading={isLoading || createCapsule.isPending}
-          disabled={isLoading || createCapsule.isPending || !content.trim() || !revealDateTime}
+          disabled={
+            isLoading ||
+            createCapsule.isPending ||
+            !content.trim() ||
+            !revealDateTime
+          }
           style={styles.createButton}
         >
-          {isLoading || createCapsule.isPending ? 'Creating Capsule...' : 'Create Time Capsule'}
+          {isLoading || createCapsule.isPending
+            ? 'Creating Capsule...'
+            : 'Create Time Capsule'}
         </Button>
       </ScrollView>
 
@@ -354,6 +413,14 @@ export function CreateCapsuleScreen() {
           </View>
         </Modal>
       </Portal>
+
+      {/* Snackbar for notifications */}
+      <AppSnackbar
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        onDismiss={hideSnackbar}
+      />
     </View>
   );
 }
@@ -485,4 +552,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-

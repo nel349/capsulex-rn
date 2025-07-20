@@ -1,9 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 
-import { userService, ApiError } from '../../services';
+import { AppSnackbar } from '../ui/AppSnackbar';
+import { useSnackbar } from '../../hooks/useSnackbar';
+import { userService } from '../../services';
+import { useAuthService } from '../../services/authService';
+import { ApiError } from '../../types/api';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useMobileWallet } from '../../utils/useMobileWallet';
 
@@ -33,6 +37,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [isSignInFlow, setIsSignInFlow] = useState<boolean>(false);
   const { selectedAccount } = useAuthorization();
   const { connect, disconnect } = useMobileWallet();
+  const { authenticateUser, clearAuth } = useAuthService();
+  const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
 
   // Restore onboarding state after app restart (deep linking)
   useEffect(() => {
@@ -134,13 +140,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     if (selectedAccount?.publicKey && currentStep === 'connecting') {
       const address = selectedAccount.publicKey.toBase58();
       console.log('🔗 New wallet connected:', address);
-      
+
       // Prevent duplicate API calls by checking if we already have this address
       if (walletAddress === address) {
         console.log('⚠️ Wallet already processed, skipping duplicate check');
         return;
       }
-      
+
       setWalletAddress(address);
 
       if (isSignInFlow) {
@@ -164,50 +170,42 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       const userExists = await userService.userExists(address);
 
       if (userExists) {
-        console.log('✅ Existing user found - going to main app');
-        onComplete();
+        console.log('✅ Existing user found - authenticating...');
+
+        // Authenticate the user with their wallet
+        try {
+          await authenticateUser({
+            wallet_address: address,
+            auth_type: 'wallet',
+            name: userName || 'User', // Use stored name or default
+          });
+          console.log('🔐 User authenticated successfully');
+          onComplete();
+        } catch (authError) {
+          console.error('❌ Authentication failed:', authError);
+          showError('Authentication failed. Please try again.');
+          setCurrentStep('welcome');
+        }
       } else {
         console.log('❌ User not found - redirecting to signup');
-        Alert.alert(
-          'Account Not Found',
-          'No account found for this wallet. Please sign up first.',
-          [
-            {
-              text: 'Sign Up',
-              onPress: () => {
-                setIsSignInFlow(false);
-                setCurrentStep('signup-form');
-              },
-            },
-            {
-              text: 'Cancel',
-              onPress: () => setCurrentStep('welcome'),
-              style: 'cancel',
-            },
-          ]
-        );
+        showInfo('No account found for this wallet. Redirecting to sign up...');
+        setTimeout(() => {
+          setIsSignInFlow(false);
+          setCurrentStep('signup-form');
+        }, 2000);
       }
     } catch (error) {
       console.error('❌ Error checking user existence:', error);
 
       let errorMessage = 'Failed to check account. Please try again.';
       if (error instanceof ApiError) {
-        errorMessage = error.message;
+        errorMessage = (error as ApiError).message;
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
 
-      Alert.alert('Connection Error', errorMessage, [
-        {
-          text: 'Try Again',
-          onPress: () => handleSignInUserCheck(address),
-        },
-        {
-          text: 'Cancel',
-          onPress: () => setCurrentStep('welcome'),
-          style: 'cancel',
-        },
-      ]);
+      showError(`Connection error: ${errorMessage}`);
+      setCurrentStep('welcome');
     }
   };
 
@@ -221,24 +219,21 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       const userExists = await userService.userExists(address);
 
       if (userExists) {
-        console.log('⚠️ Wallet already registered - redirecting to sign in');
-        Alert.alert(
-          'Account Already Exists',
-          'This wallet is already registered. Would you like to sign in instead?',
-          [
-            {
-              text: 'Sign In',
-              onPress: () => {
-                console.log('✅ User chose to sign in - going to main app');
-                onComplete();
-              },
-            },
-            {
-              text: 'Use Different Wallet',
-              onPress: () => clearOnboardingStateAndGoToWelcome(),
-            },
-          ]
-        );
+        console.log('⚠️ Wallet already registered - automatically signing in...');
+        showInfo('Account already exists. Signing you in...');
+        try {
+          await authenticateUser({
+            wallet_address: address,
+            auth_type: 'wallet',
+            name: userName || 'User',
+          });
+          console.log('🔐 User authenticated successfully');
+          onComplete();
+        } catch (authError) {
+          console.error('❌ Authentication failed:', authError);
+          showError('Authentication failed. Please try again.');
+          setCurrentStep('welcome');
+        }
       } else {
         console.log('✅ Wallet not registered - continuing with signup flow');
         setCurrentStep('social-connection');
@@ -249,22 +244,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       let errorMessage =
         'Failed to check wallet registration. Please try again.';
       if (error instanceof ApiError) {
-        errorMessage = error.message;
+        errorMessage = (error as ApiError).message;
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
 
-      Alert.alert('Connection Error', errorMessage, [
-        {
-          text: 'Try Again',
-          onPress: () => handleGetStartedUserCheck(address),
-        },
-        {
-          text: 'Cancel',
-          onPress: () => setCurrentStep('welcome'),
-          style: 'cancel',
-        },
-      ]);
+      showError(`Connection error: ${errorMessage}`);
+      setCurrentStep('welcome');
     }
   };
 
@@ -335,6 +321,9 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     // Clear all persistent state
     await clearOnboardingState();
 
+    // Clear authentication
+    await clearAuth();
+
     // Reset all local state
     setCurrentStep('welcome');
     setUserName('');
@@ -348,6 +337,9 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const clearOnboardingStateAndGoToWelcome = async () => {
     // Clear all persistent state
     await clearOnboardingState();
+
+    // Clear authentication
+    await clearAuth();
 
     // Reset all local state
     setCurrentStep('welcome');
@@ -500,7 +492,19 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
   };
 
-  return renderCurrentStep();
+  return (
+    <View style={{ flex: 1 }}>
+      {renderCurrentStep()}
+      
+      {/* Snackbar for notifications */}
+      <AppSnackbar
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        onDismiss={hideSnackbar}
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

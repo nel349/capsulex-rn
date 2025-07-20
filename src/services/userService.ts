@@ -1,6 +1,13 @@
 // User Service - Handles all user-related API calls
-import type { User, AuthResponse, CreateUserRequest, ApiResponse } from './api';
-import { apiService, ApiError } from './api';
+import { ApiError } from '../types/api';
+import type {
+  User,
+  AuthResponse,
+  CreateUserRequest,
+  ApiResponse,
+} from '../types/api';
+
+import { apiService } from './api';
 
 type WalletType = 'wallet' | 'privy';
 
@@ -76,7 +83,7 @@ export class UserService {
 
       return response.data;
     } catch (error) {
-      console.error('UserService: Get user profile error:', error);
+      console.warn('UserService: Get user profile error:', error);
       throw error;
     }
   }

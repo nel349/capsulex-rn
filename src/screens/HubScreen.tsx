@@ -1,3 +1,4 @@
+import type { Address } from '@solana/kit';
 import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
@@ -8,9 +9,8 @@ import {
 } from 'react-native';
 import { Text, Card, FAB, IconButton, Chip } from 'react-native-paper';
 
-import { useAuthorization } from '../utils/useAuthorization';
 import { useSolanaService } from '../services/solana';
-import { Address } from '@solana/kit';
+import { useAuthorization } from '../utils/useAuthorization';
 
 interface Capsule {
   id: string;
@@ -37,7 +37,9 @@ export function HubScreen() {
   useEffect(() => {
     if (selectedAccount) {
       const fetchSolanaBalance = async () => {
-        const balance = await getBalance(selectedAccount.publicKey.toString() as Address);
+        const balance = await getBalance(
+          selectedAccount.publicKey.toString() as Address
+        );
         setSolBalance(balance);
       };
       fetchSolanaBalance();

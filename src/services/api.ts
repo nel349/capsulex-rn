@@ -15,48 +15,13 @@ const API_CONFIG = {
   TIMEOUT: 10000, // 10 seconds
 };
 
-// Response Types
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
+// Import types from dedicated types file
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export interface User {
-  user_id: string;
-  wallet_address: string;
-  auth_type: 'wallet' | 'privy';
-  email?: string;
-  name?: string;
-  created_at: string;
-}
+import type { ApiResponse } from '../types/api';
+import { ApiError } from '../types/api';
 
-export interface AuthResponse {
-  user: User;
-  token: string;
-}
-
-// Request Types
-export interface CreateUserRequest {
-  wallet_address: string;
-  auth_type: 'wallet' | 'privy';
-  privy_user_id?: string;
-  email?: string;
-  name?: string;
-}
-
-// API Error Class
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public statusCode?: number,
-    public response?: any
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
+const TOKEN_STORAGE_KEY = 'auth-token';
 
 // API Service using Axios
 class ApiService {
@@ -77,6 +42,27 @@ class ApiService {
         'Content-Type': 'application/json',
       },
     });
+
+    // Add request interceptor to include auth token
+    this.axiosInstance.interceptors.request.use(
+      async config => {
+        // Add auth token if available
+        const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+        console.log('🔑 API Request - Token check:', {
+          hasToken: !!token,
+          tokenPrefix: token ? token.substring(0, 20) + '...' : 'none',
+          url: config.url,
+          method: config.method
+        });
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      error => {
+        return Promise.reject(error);
+      }
+    );
 
     // Add response interceptor for error handling
     this.axiosInstance.interceptors.response.use(
@@ -192,6 +178,3 @@ class ApiService {
 
 // Export singleton instance
 export const apiService = new ApiService();
-
-// Export types for convenience
-export type { AxiosResponse };

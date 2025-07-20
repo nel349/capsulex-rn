@@ -1,14 +1,15 @@
-import { transact } from "@solana-mobile/mobile-wallet-adapter-protocol";
-import { Web3MobileWallet } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
-import {
-  Keypair,
+import type {
   PublicKey,
   Transaction,
   VersionedTransaction,
-} from "@solana/web3.js";
-import { useMemo } from "react";
-import { useMobileWallet } from "./useMobileWallet";
-import { useAuthorization } from "./useAuthorization";
+} from '@solana/web3.js';
+import { Keypair } from '@solana/web3.js';
+import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol';
+import { Web3MobileWallet } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
+import { useMemo } from 'react';
+
+import { useAuthorization } from './useAuthorization';
+import { useMobileWallet } from './useMobileWallet';
 
 export interface AnchorWallet {
   publicKey: PublicKey;
@@ -32,7 +33,9 @@ export function useAnchorWallet(): AnchorWallet | undefined {
       signTransaction: async <T extends Transaction | VersionedTransaction>(
         transaction: T
       ) => {
-        const signedTransaction = await mobileWallet.signTransactions([transaction]);
+        const signedTransaction = await mobileWallet.signTransactions([
+          transaction,
+        ]);
         return signedTransaction[0];
       },
       signAllTransactions: async <T extends Transaction | VersionedTransaction>(

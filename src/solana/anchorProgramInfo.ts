@@ -6,7 +6,8 @@ export const CAPSULEX_PROGRAM_CONFIG = {
   programId: 'J1r7tHjxEuCcSYVrikUKxzyeeccuC3QbyHjUbY8Pw7uH',
   authority: 'FnnLFxD5jZh9dhMbPBYvon3nBWm2gmJDaQnXJhYD2G12',
   vaultPda: '2c9QnE9n793XdjzmbWTAjbUFnhLzdgTAWBeV1o5WytXB',
-  initializationTx: '51mxMwtmpuCUaArR68mm3b5H9T7GPhrVUfmn1tWp88L5VADVmorsKoETnXnJfqBJPM4Rrr5eXtP7WMNrjAcDz7wq',
+  initializationTx:
+    '51mxMwtmpuCUaArR68mm3b5H9T7GPhrVUfmn1tWp88L5VADVmorsKoETnXnJfqBJPM4Rrr5eXtP7WMNrjAcDz7wq',
 } as const;
 
 // Program Constants as PublicKey objects
@@ -33,8 +34,4 @@ export const CURRENT_PROGRAM_STATUS: ProgramStatus = {
 };
 
 // Export individual constants for convenience
-export const {
-  PROGRAM_ID,
-  AUTHORITY,
-  VAULT_PDA,
-} = PROGRAM_CONSTANTS;
+export const { PROGRAM_ID, AUTHORITY, VAULT_PDA } = PROGRAM_CONSTANTS;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import {
   Button,
   Text,
@@ -8,7 +8,10 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 
+import { AppSnackbar } from '../ui/AppSnackbar';
+import { useSnackbar } from '../../hooks/useSnackbar';
 import { userService, ApiError } from '../../services';
+import { useAuthService } from '../../services/authService';
 
 interface ProfileSetupScreenProps {
   walletAddress: string;
@@ -27,10 +30,12 @@ export function ProfileSetupScreen({
 }: ProfileSetupScreenProps) {
   const [name, setName] = useState(initialName);
   const [isLoading, setIsLoading] = useState(false);
+  const { authenticateUser } = useAuthService();
+  const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      showError('Please enter your name');
       return;
     }
 
@@ -42,32 +47,30 @@ export function ProfileSetupScreen({
         name: name.trim(),
       });
 
-      // Create user account via API
-      const authResponse = await userService.registerWalletUser(
+      // Step 1: Register user in database
+      const registrationResponse = await userService.registerWalletUser(
         walletAddress,
         'wallet',
         name.trim()
       );
 
-      console.log(
-        '✅ Full API response:',
-        JSON.stringify(authResponse, null, 2)
-      );
-      console.log(
-        '✅ User account created successfully:',
-        authResponse.user?.user_id
-      );
+      console.log('✅ User registered in database:', registrationResponse.user.user_id);
 
-      Alert.alert(
-        'Welcome to CapsuleX!',
-        `Hi ${name.trim()}, your account setup is complete!`,
-        [
-          {
-            text: 'Continue',
-            onPress: onComplete,
-          },
-        ]
-      );
+      // Step 2: Authenticate and store JWT token properly
+      const authResponse = await authenticateUser({
+        wallet_address: walletAddress,
+        auth_type: 'wallet',
+        name: name.trim()
+      });
+
+      console.log('✅ User authenticated and token stored:', authResponse.user.user_id);
+
+      showSuccess(`Welcome to CapsuleX, ${name.trim()}! Account setup complete!`);
+      
+      // Delay completion to show success message
+      setTimeout(() => {
+        onComplete();
+      }, 2000);
     } catch (error) {
       console.error('❌ Failed to create user account:', error);
 
@@ -79,12 +82,7 @@ export function ProfileSetupScreen({
         errorMessage = error.message;
       }
 
-      Alert.alert('Account Creation Failed', errorMessage, [
-        {
-          text: 'Try Again',
-          onPress: () => setIsLoading(false),
-        },
-      ]);
+      showError(`Account creation failed: ${errorMessage}`);
       return;
     } finally {
       setIsLoading(false);
@@ -179,6 +177,14 @@ export function ProfileSetupScreen({
           </Card>
         </View>
       )}
+
+      {/* Snackbar for notifications */}
+      <AppSnackbar
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        onDismiss={hideSnackbar}
+      />
     </View>
   );
 }

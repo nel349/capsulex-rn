@@ -2,18 +2,7 @@
 import type { AxiosInstance, AxiosResponse } from 'axios';
 import axios from 'axios';
 import { Platform } from 'react-native';
-
-// API Configuration
-const API_CONFIG = {
-  BASE_URL: __DEV__
-    ? Platform.select({
-        ios: 'http://192.168.1.157:3001/api', // Use Mac's IP for iOS device/simulator
-        android: 'http://192.168.1.157:3001/api', // Use Mac's IP for Android device/emulator
-        default: 'http://192.168.1.157:3001/api',
-      })
-    : 'https://api.capsulex.com/api', // Production URL
-  TIMEOUT: 10000, // 10 seconds
-};
+import { API_CONFIG } from '../config/api';
 
 // Import types from dedicated types file
 import AsyncStorage from '@react-native-async-storage/async-storage';

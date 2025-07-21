@@ -15,6 +15,8 @@ import { useMobileWallet } from '../utils/useMobileWallet';
 import { twitterService } from '../services/twitterService';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { useAuthService } from '../services/authService';
+import { apiService } from '../services/api';
 
 interface UserProfile {
   wallet: string;
@@ -29,6 +31,7 @@ interface UserProfile {
     notifications: boolean;
     publicProfile: boolean;
     autoReveal: boolean;
+    mockTwitterApi: boolean;
   };
 }
 
@@ -47,14 +50,34 @@ export function ProfileScreen() {
       notifications: true,
       publicProfile: false,
       autoReveal: true,
+      mockTwitterApi: false,
     },
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isTwitterConnecting, setIsTwitterConnecting] = useState(false);
 
+  const { getStoredToken } = useAuthService();
   useEffect(() => {
     checkTwitterConnection();
+    loadAppSettings();
   }, []);
+
+  const loadAppSettings = async () => {
+    try {
+      const response = await apiService.get('/social/settings');
+      if (response.success) {
+        setProfile(prev => ({
+          ...prev,
+          settings: {
+            ...prev.settings,
+            mockTwitterApi: response.data.mock_twitter_api,
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load app settings:', error);
+    }
+  };
 
   const checkTwitterConnection = async () => {
     try {
@@ -192,10 +215,11 @@ export function ProfileScreen() {
     );
   };
 
-  const updateSetting = (
+  const updateSetting = async (
     key: keyof UserProfile['settings'],
     value: boolean
   ) => {
+    // Update local state immediately
     setProfile(prev => ({
       ...prev,
       settings: {
@@ -203,6 +227,22 @@ export function ProfileScreen() {
         [key]: value,
       },
     }));
+
+    // If updating mockTwitterApi, sync with backend
+    if (key === 'mockTwitterApi') {
+      try {
+        const response = await apiService.post('/social/settings', {
+          mock_twitter_api: value,
+        });
+
+        if (response.success) {
+          showSuccess(value ? 'Twitter mock mode enabled' : 'Twitter mock mode disabled');
+        }
+      } catch (error) {
+        console.error('Failed to update mock Twitter setting:', error);
+        showError('Failed to update Twitter mock setting');
+      }
+    }
   };
 
   const formatWalletAddress = (address: string) => {
@@ -387,6 +427,20 @@ export function ProfileScreen() {
                 <Switch
                   value={profile.settings.autoReveal}
                   onValueChange={value => updateSetting('autoReveal', value)}
+                />
+              )}
+            />
+
+            <Divider />
+
+            <List.Item
+              title="Mock Twitter API"
+              description="Use mock Twitter posting for development/demos"
+              left={props => <List.Icon {...props} icon="api" />}
+              right={() => (
+                <Switch
+                  value={profile.settings.mockTwitterApi}
+                  onValueChange={value => updateSetting('mockTwitterApi', value)}
                 />
               )}
             />

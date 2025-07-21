@@ -66,7 +66,7 @@ class TwitterService {
     // Create a new auth request
     const request = new AuthSession.AuthRequest({
       clientId: TWITTER_CLIENT_ID,
-      scopes: ['tweet.read', 'tweet.write', 'users.read', 'offline.access'],
+      scopes: ['tweet.read', 'tweet.write', 'users.read', 'media.write', 'offline.access'],
       redirectUri: redirectUri,
       responseType: AuthSession.ResponseType.Code,
       codeChallengeMethod: AuthSession.CodeChallengeMethod.S256,

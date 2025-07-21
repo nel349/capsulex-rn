@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import {
   Text,
@@ -12,6 +12,9 @@ import {
 
 import { useAuthorization } from '../utils/useAuthorization';
 import { useMobileWallet } from '../utils/useMobileWallet';
+import { twitterService } from '../services/twitterService';
+import { useSnackbar } from '../hooks/useSnackbar';
+import { AppSnackbar } from '../components/ui/AppSnackbar';
 
 interface UserProfile {
   wallet: string;
@@ -30,6 +33,8 @@ interface UserProfile {
 }
 
 export function ProfileScreen() {
+  const { snackbar, showSuccess, showError, showInfo, hideSnackbar } = useSnackbar();
+
   const { selectedAccount } = useAuthorization();
   const { disconnect } = useMobileWallet();
   const [profile, setProfile] = useState<UserProfile>({
@@ -45,6 +50,29 @@ export function ProfileScreen() {
     },
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isTwitterConnecting, setIsTwitterConnecting] = useState(false);
+
+  useEffect(() => {
+    checkTwitterConnection();
+  }, []);
+
+  const checkTwitterConnection = async () => {
+    try {
+      const connected = await twitterService.isTwitterConnected();
+      if (connected) {
+        const connectionInfo = await twitterService.getTwitterConnection();
+        setProfile(prev => ({
+          ...prev,
+          socialAccounts: {
+            ...prev.socialAccounts,
+            twitter: connectionInfo?.platform_username ? `@${connectionInfo.platform_username}` : '@connected',
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to check Twitter connection:', error);
+    }
+  };
 
   const handleConnectPrivy = async () => {
     setIsLoading(true);
@@ -72,47 +100,56 @@ export function ProfileScreen() {
   };
 
   const handleDisconnectPrivy = () => {
-    Alert.alert(
-      'Disconnect Privy',
-      'Are you sure you want to disconnect your Privy account?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Disconnect',
-          style: 'destructive',
-          onPress: () => {
-            setProfile(prev => ({
-              ...prev,
-              privyConnected: false,
-              email: undefined,
-            }));
-          },
-        },
-      ]
-    );
+    showInfo('Are you sure you want to disconnect your Privy account?');
+    setProfile(prev => ({
+      ...prev,
+      privyConnected: false,
+      email: undefined,
+    }));
+  };
+
+  const handleConnectTwitter = async () => {
+    try {
+      setIsTwitterConnecting(true);
+      await twitterService.authenticate();
+      
+      // Refresh connection status
+      await checkTwitterConnection();
+      
+      showSuccess('Twitter account connected successfully!');
+    } catch (error) {
+      console.error('Twitter connection failed:', error);
+      showError('Failed to connect Twitter account. Please try again.');
+    } finally {
+      setIsTwitterConnecting(false);
+    }
   };
 
   const handleConnectSocial = (platform: 'twitter' | 'instagram') => {
-    Alert.alert(
-      `Connect ${platform}`,
-      `This will connect your ${platform} account for posting capsules`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Connect',
-          onPress: () => {
-            // TODO: Implement social media connection
-            setProfile(prev => ({
-              ...prev,
-              socialAccounts: {
-                ...prev.socialAccounts,
-                [platform]: `@user_${platform}`,
-              },
-            }));
+    if (platform === 'twitter') {
+      handleConnectTwitter();
+    } else {
+      Alert.alert(
+        `Connect ${platform}`,
+        `This will connect your ${platform} account for posting capsules`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Connect',
+            onPress: () => {
+              // TODO: Implement Instagram connection
+              setProfile(prev => ({
+                ...prev,
+                socialAccounts: {
+                  ...prev.socialAccounts,
+                  [platform]: `@user_${platform}`,
+                },
+              }));
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleDisconnectSocial = (platform: 'twitter' | 'instagram') => {
@@ -268,9 +305,13 @@ export function ProfileScreen() {
                       ? handleDisconnectSocial('twitter')
                       : handleConnectSocial('twitter')
                   }
+                  loading={isTwitterConnecting}
+                  disabled={isTwitterConnecting}
                   compact
                 >
-                  {profile.socialAccounts.twitter ? 'Disconnect' : 'Connect'}
+                  {isTwitterConnecting 
+                    ? 'Connecting...' 
+                    : profile.socialAccounts.twitter ? 'Reconnect' : 'Connect'}
                 </Button>
               )}
             />
@@ -368,10 +409,7 @@ export function ProfileScreen() {
                   mode="outlined"
                   onPress={() => {
                     // TODO: Navigate to wallet details or buy SOL
-                    Alert.alert(
-                      'SOL Balance',
-                      'This will show wallet details and buy SOL options'
-                    );
+                    showInfo('This will show wallet details and buy SOL options');
                   }}
                   compact
                 >
@@ -484,6 +522,13 @@ export function ProfileScreen() {
           </Card.Content>
         </Card>
       </ScrollView>
+
+      <AppSnackbar
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        onDismiss={hideSnackbar}
+      />
     </View>
   );
 }

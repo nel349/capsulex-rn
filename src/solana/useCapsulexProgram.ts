@@ -2,7 +2,7 @@ import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import * as anchor from '@coral-xyz/anchor';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import type { Capsulex as CapsulexProgramType } from '../../assets/capsulex'; // Renamed to avoid conflict
@@ -122,10 +122,38 @@ export function useCapsulexProgram() {
     },
   });
 
+  // Fetch capsule on-chain
+  const fetchCapsule = async (capsuleId: string, revealDate: anchor.BN) => {
+    if (!capsulexProgram || !anchorWallet?.publicKey) {
+      throw Error('Capsulex program not instantiated or wallet not connected');
+    }
+
+    const creator = anchorWallet.publicKey;
+
+    // Derive PDAs
+    const [capsulePDA] = PublicKey.findProgramAddressSync(
+      [
+        anchor.utils.bytes.utf8.encode('capsule'),
+        creator.toBuffer(),
+        revealDate.toArrayLike(Buffer, 'le', 8), // i64 is 8 bytes, little-endian
+      ],
+      capsulexProgramId
+    );
+
+    const capsule = await capsulexProgram.account.capsule.fetch(capsulePDA);
+
+    console.log('Capsule', capsule);
+
+    return capsule;
+
+  }
+        
+
   return {
     capsulexProgram,
     capsulexProgramId,
     createCapsule,
+    fetchCapsule,
     // Add other mutations/queries as needed for other instructions
   };
 }

@@ -1,130 +1,231 @@
 import type { Address } from '@solana/kit';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   RefreshControl,
   Alert,
+  Animated,
+  Dimensions,
+  Vibration,
+  AppState,
 } from 'react-native';
-import { Text, Card, FAB, IconButton, Chip } from 'react-native-paper';
+import { 
+  Text, 
+  Card, 
+  FAB, 
+  IconButton, 
+  Chip, 
+  ProgressBar, 
+  Button,
+  ActivityIndicator,
+  Surface,
+  Avatar
+} from 'react-native-paper';
 
 import { useSolanaService } from '../services/solana';
 import { useAuthorization } from '../utils/useAuthorization';
+import { capsuleApi, CapsuleWithStatus, WalletCapsulesResponse, CapsuleApiService } from '../services/capsuleApi';
 
-interface Capsule {
-  id: string;
-  content: string;
-  revealDate: Date;
-  status: 'pending' | 'revealed';
-  platform: 'twitter' | 'instagram';
-  createdAt: Date;
+const { width } = Dimensions.get('window');
+
+interface HubStats {
+  totalCapsules: number;
+  pendingCapsules: number;
+  readyToReveal: number;
+  revealed: number;
+  nextRevealTime: number | null;
 }
 
 export function HubScreen() {
   const { selectedAccount } = useAuthorization();
-  const [capsules, setCapsules] = useState<Capsule[]>([]);
+  const [capsuleData, setCapsuleData] = useState<WalletCapsulesResponse['data'] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState({
-    totalCapsules: 0,
-    pendingCapsules: 0,
-    nextReveal: null as Date | null,
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
   const { getBalance } = useSolanaService();
 
-  // use effect to fetch solana balance
+  // Animation values
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
+
+  // Real-time ticker for countdown updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Math.floor(Date.now() / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!refreshing && selectedAccount) {
+        fetchCapsuleData();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [selectedAccount, refreshing]);
+
+  // App state change handling
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active' && selectedAccount) {
+        fetchCapsuleData();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [selectedAccount]);
+
+  // Pulsing animation for ready-to-reveal capsules
+  useEffect(() => {
+    const pulseAnimation = () => {
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]).start(pulseAnimation);
+    };
+
+    if (capsuleData && capsuleData.summary.ready_to_reveal > 0) {
+      pulseAnimation();
+    }
+
+    return () => pulseAnim.stopAnimation();
+  }, [capsuleData?.summary.ready_to_reveal]);
+
+  // Glow animation for ready cards
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.3,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  // Fetch SOL balance
   useEffect(() => {
     if (selectedAccount) {
       const fetchSolanaBalance = async () => {
-        const balance = await getBalance(
-          selectedAccount.publicKey.toString() as Address
-        );
-        setSolBalance(balance);
+        try {
+          const balance = await getBalance(
+            selectedAccount.publicKey.toString() as Address
+          );
+          setSolBalance(balance);
+        } catch (error) {
+          console.error('Error fetching SOL balance:', error);
+        }
       };
       fetchSolanaBalance();
     }
   }, [selectedAccount, getBalance]);
 
-  // Mock data for now
+  // Fetch capsule data from blockchain
+  const fetchCapsuleData = useCallback(async () => {
+    if (!selectedAccount) return;
+
+    try {
+      setError(null);
+      const response = await capsuleApi.getCapsulesByWallet(
+        selectedAccount.publicKey.toString()
+      );
+      
+      if (response.success) {
+        setCapsuleData(response.data);
+        
+        // Vibrate if there are newly ready capsules
+        if (response.data.summary.ready_to_reveal > 0) {
+          Vibration.vibrate([100, 50, 100]);
+        }
+      } else {
+        setError('Failed to load capsules');
+      }
+    } catch (error) {
+      console.error('Error fetching capsule data:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedAccount]);
+
+  // Initial load
   useEffect(() => {
-    const mockCapsules: Capsule[] = [
-      {
-        id: '1',
-        content:
-          'Just launched my new project! So excited to share this with the world 🚀',
-        revealDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-        status: 'pending',
-        platform: 'twitter',
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      },
-      {
-        id: '2',
-        content: "Behind the scenes from today's photoshoot ✨",
-        revealDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Next week
-        status: 'pending',
-        platform: 'instagram',
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      },
-      {
-        id: '3',
-        content:
-          'Reflecting on this amazing journey. Thank you all for your support! 🙏',
-        revealDate: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
-        status: 'revealed',
-        platform: 'twitter',
-        createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
-      },
-    ];
+    if (selectedAccount) {
+      fetchCapsuleData();
+    }
+  }, [selectedAccount, fetchCapsuleData]);
 
-    setCapsules(mockCapsules);
-
-    const pending = mockCapsules.filter(c => c.status === 'pending');
-    const nextReveal =
-      pending.length > 0
-        ? pending.reduce((earliest, current) =>
-            earliest.revealDate < current.revealDate ? earliest : current
-          ).revealDate
-        : null;
-
-    setStats({
-      totalCapsules: mockCapsules.length,
-      pendingCapsules: pending.length,
-      nextReveal,
-    });
-  }, []);
-
-  const onRefresh = async () => {
+  // Pull to refresh
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // TODO: Fetch real data from backend
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    Vibration.vibrate(50); // Haptic feedback
+    await fetchCapsuleData();
+    setRefreshing(false);
+  }, [fetchCapsuleData]);
+
+  // Handle reveal capsule
+  const handleRevealCapsule = (capsule: CapsuleWithStatus) => {
+    Alert.alert(
+      '🎉 Reveal Capsule',
+      `Ready to reveal your time capsule?\n\nThis will:\n• Sign blockchain transaction\n• Decrypt your content\n• Post to Twitter automatically`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Reveal Now!', 
+          style: 'default',
+          onPress: () => {
+            // TODO: Implement actual reveal transaction
+            Alert.alert('🚀 Success!', 'Capsule revealed and posted to Twitter!');
+          }
+        },
+      ]
+    );
   };
 
-  const formatTimeUntil = (date: Date) => {
-    const now = new Date();
-    const diff = date.getTime() - now.getTime();
-
-    if (diff < 0) return 'Revealed';
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ${hours % 24}h`;
-    if (hours > 0)
-      return `${hours}h ${Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))}m`;
-    return `${Math.floor(diff / (1000 * 60))}m`;
-  };
-
+  // Handle create capsule
   const handleCreateCapsule = () => {
-    // TODO: Navigate to create capsule screen
     Alert.alert('Create Capsule', 'Navigate to capsule creation screen');
   };
 
+  // Render loading state
+  if (loading) {
+    return (
+      <View style={[styles.screenContainer, styles.centered]}>
+        <ActivityIndicator size="large" />
+        <Text style={styles.loadingText}>Loading your capsules...</Text>
+      </View>
+    );
+  }
+
+  // Render not connected state
   if (!selectedAccount) {
     return (
-      <View style={styles.screenContainer}>
+      <View style={[styles.screenContainer, styles.centered]}>
+        <Avatar.Icon size={80} icon="wallet" style={styles.walletIcon} />
         <Text variant="headlineMedium" style={styles.title}>
           Welcome to CapsuleX
         </Text>
@@ -135,108 +236,223 @@ export function HubScreen() {
     );
   }
 
+  // Render error state
+  if (error) {
+    return (
+      <View style={[styles.screenContainer, styles.centered]}>
+        <Text variant="headlineSmall" style={styles.errorTitle}>
+          Something went wrong
+        </Text>
+        <Text variant="bodyMedium" style={styles.errorSubtitle}>
+          {error}
+        </Text>
+        <Button mode="contained" onPress={fetchCapsuleData} style={styles.retryButton}>
+          Try Again
+        </Button>
+      </View>
+    );
+  }
+
+  const stats = capsuleData?.summary || { pending: 0, ready_to_reveal: 0, revealed: 0 };
+  const readyCapsules = capsuleData?.capsules.ready_to_reveal || [];
+  const pendingCapsules = capsuleData?.capsules.pending || [];
+  const revealedCapsules = capsuleData?.capsules.revealed || [];
+
   return (
     <View style={styles.screenContainer}>
       <ScrollView
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <View style={styles.header}>
           <Text variant="headlineMedium" style={styles.title}>
-            Your Capsules
+            Your Capsules 🗂️
           </Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
-            {stats.pendingCapsules} pending • {stats.totalCapsules} total
+            {stats.ready_to_reveal > 0 ? 
+              `🔥 ${stats.ready_to_reveal} ready to reveal!` : 
+              `${stats.pending} pending • ${capsuleData?.total_capsules || 0} total`
+            }
           </Text>
         </View>
 
-        {/* Stats Cards */}
+        {/* Quick Stats */}
         <View style={styles.statsContainer}>
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <Text variant="labelLarge" style={styles.statLabel}>
-                Next Reveal
-              </Text>
-              <Text variant="headlineSmall" style={styles.statValue}>
-                {stats.nextReveal ? formatTimeUntil(stats.nextReveal) : 'None'}
-              </Text>
-            </Card.Content>
-          </Card>
-
           <Card style={styles.statCard}>
             <Card.Content>
               <Text variant="labelLarge" style={styles.statLabel}>
                 SOL Balance
               </Text>
               <Text variant="headlineSmall" style={styles.statValue}>
-                {solBalance !== null ? `${solBalance.toFixed(4)} SOL` : 'N/A'}
+                {solBalance !== null ? `${solBalance.toFixed(4)}` : 'N/A'}
+              </Text>
+            </Card.Content>
+          </Card>
+
+          <Card style={styles.statCard}>
+            <Card.Content>
+              <Text variant="labelLarge" style={styles.statLabel}>
+                Ready Now
+              </Text>
+              <Text variant="headlineSmall" style={[styles.statValue, { color: '#FF6B35' }]}>
+                {stats.ready_to_reveal}
               </Text>
             </Card.Content>
           </Card>
         </View>
 
-        {/* Capsule List */}
-        <View style={styles.capsulesContainer}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Recent Capsules
-          </Text>
+        {/* Ready to Reveal Section */}
+        {readyCapsules.length > 0 && (
+          <View style={styles.section}>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <Text variant="titleLarge" style={styles.sectionTitleReady}>
+                🔥 Ready to Reveal ({readyCapsules.length})
+              </Text>
+            </Animated.View>
+            
+            {readyCapsules.map((capsule) => (
+              <Animated.View 
+                key={capsule.publicKey}
+                style={[
+                  styles.readyCard,
+                  {
+                    shadowColor: '#FF6B35',
+                    shadowOpacity: glowAnim,
+                    elevation: 8,
+                  }
+                ]}
+              >
+                <Card style={[styles.capsuleCard, styles.readyCardInner]}>
+                  <Card.Content>
+                    <View style={styles.capsuleHeader}>
+                      <Chip 
+                        mode="flat" 
+                        style={styles.readyChip}
+                        textStyle={styles.readyChipText}
+                      >
+                        🔥 READY NOW
+                      </Chip>
+                      <Text variant="bodySmall" style={styles.timeText}>
+                        {new Date(capsule.account.revealDate * 1000).toLocaleDateString()}
+                      </Text>
+                    </View>
 
-          {capsules.map(capsule => (
-            <Card key={capsule.id} style={styles.capsuleCard}>
-              <Card.Content>
-                <View style={styles.capsuleHeader}>
-                  <Chip
-                    mode="outlined"
-                    style={[
-                      styles.statusChip,
-                      capsule.status === 'pending'
-                        ? styles.pendingChip
-                        : styles.revealedChip,
-                    ]}
-                  >
-                    {capsule.status === 'pending' ? 'Pending' : 'Revealed'}
-                  </Chip>
-                  <Text variant="bodySmall" style={styles.platform}>
-                    {capsule.platform}
+                    <Text variant="bodyMedium" style={styles.capsuleContent}>
+                      Content: {capsule.account.encryptedContent.substring(0, 50)}...
+                    </Text>
+
+                    <Button
+                      mode="contained"
+                      onPress={() => handleRevealCapsule(capsule)}
+                      style={styles.revealButton}
+                      contentStyle={styles.revealButtonContent}
+                    >
+                      🚀 REVEAL NOW!
+                    </Button>
+                  </Card.Content>
+                </Card>
+              </Animated.View>
+            ))}
+          </View>
+        )}
+
+        {/* Pending Capsules Section */}
+        {pendingCapsules.length > 0 && (
+          <View style={styles.section}>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              ⏳ Pending ({pendingCapsules.length})
+            </Text>
+            
+            {pendingCapsules.map((capsule) => {
+              const timeLeft = capsule.timeToReveal || 0;
+              const progress = CapsuleApiService.getCountdownProgress(
+                capsule.account.createdAt, 
+                capsule.account.revealDate
+              );
+              
+              return (
+                <Card key={capsule.publicKey} style={styles.capsuleCard}>
+                  <Card.Content>
+                    <View style={styles.capsuleHeader}>
+                      <Chip mode="outlined" style={styles.pendingChip}>
+                        ⏳ Pending
+                      </Chip>
+                      <Text variant="bodySmall" style={styles.timeText}>
+                        {new Date(capsule.account.revealDate * 1000).toLocaleDateString()}
+                      </Text>
+                    </View>
+
+                    <Text variant="bodyMedium" style={styles.capsuleContent}>
+                      Content: {capsule.account.encryptedContent.substring(0, 50)}...
+                    </Text>
+
+                    <View style={styles.countdownContainer}>
+                      <Text variant="bodySmall" style={styles.countdownLabel}>
+                        Reveals in: {CapsuleApiService.formatTimeUntil(timeLeft)}
+                      </Text>
+                      <ProgressBar 
+                        progress={progress} 
+                        style={styles.progressBar}
+                        color="#2196F3"
+                      />
+                    </View>
+                  </Card.Content>
+                </Card>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Revealed Capsules Section */}
+        {revealedCapsules.length > 0 && (
+          <View style={styles.section}>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              ✅ Revealed ({revealedCapsules.length})
+            </Text>
+            
+            {revealedCapsules.map((capsule) => (
+              <Card key={capsule.publicKey} style={styles.capsuleCard}>
+                <Card.Content>
+                  <View style={styles.capsuleHeader}>
+                    <Chip mode="flat" style={styles.revealedChip}>
+                      ✅ Revealed
+                    </Chip>
+                    <IconButton
+                      icon="share"
+                      size={20}
+                      onPress={() => Alert.alert('Share', 'Open Twitter post')}
+                    />
+                  </View>
+
+                  <Text variant="bodyMedium" style={styles.capsuleContent}>
+                    Content: {capsule.account.encryptedContent.substring(0, 50)}...
                   </Text>
-                </View>
 
-                <Text variant="bodyMedium" style={styles.capsuleContent}>
-                  {capsule.content}
-                </Text>
-
-                <View style={styles.capsuleFooter}>
-                  <Text variant="bodySmall" style={styles.revealTime}>
-                    {capsule.status === 'pending'
-                      ? `Reveals in ${formatTimeUntil(capsule.revealDate)}`
-                      : `Revealed ${formatTimeUntil(capsule.revealDate)} ago`}
+                  <Text variant="bodySmall" style={styles.revealedText}>
+                    Revealed on {new Date(capsule.account.revealDate * 1000).toLocaleDateString()}
                   </Text>
-                  <IconButton
-                    icon="dots-vertical"
-                    size={16}
-                    onPress={() => {
-                      // TODO: Show capsule options
-                    }}
-                  />
-                </View>
-              </Card.Content>
-            </Card>
-          ))}
-        </View>
+                </Card.Content>
+              </Card>
+            ))}
+          </View>
+        )}
 
         {/* Empty State */}
-        {capsules.length === 0 && (
+        {(!capsuleData || capsuleData.total_capsules === 0) && (
           <View style={styles.emptyState}>
             <Text variant="headlineSmall" style={styles.emptyTitle}>
-              No capsules yet
+              No capsules yet 📭
             </Text>
             <Text variant="bodyMedium" style={styles.emptySubtitle}>
               Create your first time capsule to get started
             </Text>
           </View>
         )}
+
+        <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* Create FAB */}
@@ -253,10 +469,15 @@ export function HubScreen() {
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
   },
   header: {
-    padding: 16,
+    padding: 20,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -264,9 +485,31 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: 'bold',
     marginBottom: 4,
+    color: '#1a1a1a',
   },
   subtitle: {
     color: '#666',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#666',
+  },
+  walletIcon: {
+    backgroundColor: '#2196F3',
+    marginBottom: 16,
+  },
+  errorTitle: {
+    color: '#d32f2f',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSubtitle: {
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#2196F3',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -275,6 +518,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
+    backgroundColor: 'white',
   },
   statLabel: {
     color: '#666',
@@ -284,15 +528,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2196F3',
   },
-  capsulesContainer: {
-    padding: 16,
+  section: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   sectionTitle: {
     marginBottom: 12,
     fontWeight: 'bold',
+    color: '#1a1a1a',
+  },
+  sectionTitleReady: {
+    marginBottom: 12,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    fontSize: 20,
   },
   capsuleCard: {
     marginBottom: 12,
+    backgroundColor: 'white',
+  },
+  readyCard: {
+    marginBottom: 12,
+    borderRadius: 12,
+  },
+  readyCardInner: {
+    backgroundColor: '#FFF8F6',
+    borderColor: '#FF6B35',
+    borderWidth: 2,
   },
   capsuleHeader: {
     flexDirection: 'row',
@@ -300,30 +562,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  statusChip: {
-    alignSelf: 'flex-start',
+  readyChip: {
+    backgroundColor: '#FF6B35',
+  },
+  readyChipText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
   pendingChip: {
     backgroundColor: '#FFF3E0',
+    borderColor: '#FF9800',
   },
   revealedChip: {
     backgroundColor: '#E8F5E8',
+    color: '#4CAF50',
   },
-  platform: {
+  timeText: {
     color: '#666',
-    textTransform: 'capitalize',
   },
   capsuleContent: {
     marginBottom: 12,
     lineHeight: 20,
+    color: '#333',
   },
-  capsuleFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  countdownContainer: {
+    marginTop: 8,
   },
-  revealTime: {
+  countdownLabel: {
     color: '#666',
+    marginBottom: 4,
+  },
+  progressBar: {
+    height: 4,
+    borderRadius: 2,
+  },
+  revealButton: {
+    backgroundColor: '#FF6B35',
+    marginTop: 8,
+  },
+  revealButtonContent: {
+    paddingVertical: 4,
+  },
+  revealedText: {
+    color: '#4CAF50',
+    marginTop: 4,
   },
   emptyState: {
     alignItems: 'center',
@@ -332,10 +614,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     marginBottom: 8,
     fontWeight: 'bold',
+    color: '#1a1a1a',
   },
   emptySubtitle: {
     color: '#666',
     textAlign: 'center',
+  },
+  bottomSpacing: {
+    height: 100,
   },
   fab: {
     position: 'absolute',

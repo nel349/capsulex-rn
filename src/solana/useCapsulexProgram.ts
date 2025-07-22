@@ -28,6 +28,7 @@ export function useCapsulexProgram() {
     return new AnchorProvider(connection, anchorWallet, {
       preflightCommitment: 'confirmed',
       commitment: 'processed',
+      skipPreflight: true
     });
   }, [anchorWallet, connection]);
 
@@ -149,10 +150,66 @@ export function useCapsulexProgram() {
   }
         
 
+  // Mutation for revealCapsule instruction
+  const revealCapsule = useMutation({
+    mutationKey: ['capsule', 'reveal'],
+    mutationFn: async ({
+      revealDate,
+      creator,
+    }: {
+      revealDate: anchor.BN;
+      creator?: PublicKey; // Optional, defaults to current wallet
+    }) => {
+      if (!capsulexProgram || !anchorWallet?.publicKey) {
+        throw Error(
+          'Capsulex program not instantiated or wallet not connected'
+        );
+      }
+
+      const revealer = anchorWallet.publicKey;
+      const capsuleCreator = creator || revealer; // Default to current wallet if not specified
+
+      // Derive capsule PDA
+      const [capsulePDA] = PublicKey.findProgramAddressSync(
+        [
+          anchor.utils.bytes.utf8.encode('capsule'),
+          capsuleCreator.toBuffer(),
+          revealDate.toArrayLike(Buffer, 'le', 8), // i64 is 8 bytes, little-endian
+        ],
+        capsulexProgramId
+      );
+
+      return await capsulexProgram.methods
+        .revealCapsule(revealDate)
+        .accounts({
+          revealer: revealer,
+          capsule: capsulePDA,
+        } as any)
+        .rpc({
+          skipPreflight: true
+        });
+    },
+    onSuccess: (signature: string) => {
+      console.log('Capsule Revealed!', `Transaction: ${signature}`);
+      alertAndLog('🎉 Capsule Revealed!', `Transaction confirmed: ${signature.slice(0, 8)}...`);
+    },
+    onError: (error: any) => {
+      console.error('Reveal transaction failed:', error);
+      if (error.logs) {
+        console.error('Transaction logs:', error.logs);
+      }
+      if (error.error?.errorMessage) {
+        console.error('Program error message:', error.error.errorMessage);
+      }
+      alertAndLog('❌ Reveal Failed', error.message || 'Transaction failed');
+    },
+  });
+
   return {
     capsulexProgram,
     capsulexProgramId,
     createCapsule,
+    revealCapsule,
     fetchCapsule,
     // Add other mutations/queries as needed for other instructions
   };

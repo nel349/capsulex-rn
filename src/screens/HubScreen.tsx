@@ -27,6 +27,8 @@ import {
 import { useSolanaService } from '../services/solana';
 import { useAuthorization } from '../utils/useAuthorization';
 import { capsuleApi, CapsuleWithStatus, WalletCapsulesResponse, CapsuleApiService } from '../services/capsuleApi';
+import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import * as anchor from '@coral-xyz/anchor';
 
 const { width } = Dimensions.get('window');
 
@@ -46,7 +48,9 @@ export function HubScreen() {
   const [error, setError] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
+  const [revealingCapsules, setRevealingCapsules] = useState<Set<string>>(new Set());
   const { getBalance } = useSolanaService();
+  const { revealCapsule } = useCapsulexProgram();
 
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -189,17 +193,79 @@ export function HubScreen() {
 
   // Handle reveal capsule
   const handleRevealCapsule = (capsule: CapsuleWithStatus) => {
+    const isRevealing = revealingCapsules.has(capsule.publicKey);
+    
+    if (isRevealing) {
+      Alert.alert('⏳ Transaction in Progress', 'Please wait for the current reveal to complete.');
+      return;
+    }
+
     Alert.alert(
       '🎉 Reveal Capsule',
-      `Ready to reveal your time capsule?\n\nThis will:\n• Sign blockchain transaction\n• Decrypt your content\n• Post to Twitter automatically`,
+      `Ready to reveal your time capsule?\n\nThis will:\n• Sign blockchain transaction\n• Mark capsule as revealed on-chain\n• You can then share the content`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Reveal Now!', 
           style: 'default',
-          onPress: () => {
-            // TODO: Implement actual reveal transaction
-            Alert.alert('🚀 Success!', 'Capsule revealed and posted to Twitter!');
+          onPress: async () => {
+            try {
+              // Add to revealing set to show loading state
+              setRevealingCapsules(prev => new Set(prev).add(capsule.publicKey));
+              
+              // Convert reveal date to BN
+              const revealDateBN = new anchor.BN(capsule.account.revealDate);
+              
+              // Call the reveal transaction
+              const signature = await revealCapsule.mutateAsync({
+                revealDate: revealDateBN,
+                creator: new anchor.web3.PublicKey(capsule.account.creator),
+              });
+              
+              // Success! Refresh the data and show success message
+              Vibration.vibrate([100, 50, 100, 50, 100]); // Celebration haptics
+              
+              Alert.alert(
+                '🚀 Success!', 
+                `Capsule revealed successfully!\n\nTransaction: ${signature.slice(0, 8)}...${signature.slice(-8)}\n\nYour content is now revealed on-chain!`,
+                [
+                  {
+                    text: 'View on Explorer',
+                    onPress: () => {
+                      // TODO: Open Solana explorer
+                      console.log(`https://explorer.solana.com/tx/${signature}?cluster=devnet`);
+                    }
+                  },
+                  { text: 'OK', style: 'default' }
+                ]
+              );
+              
+              // Refresh capsule data to show updated state
+              await fetchCapsuleData();
+              
+            } catch (error: any) {
+              console.error('Reveal failed:', error);
+              
+              let errorMessage = 'Transaction failed. Please try again.';
+              if (error.message?.includes('User rejected')) {
+                errorMessage = 'Transaction was cancelled by user.';
+              } else if (error.message?.includes('CapsuleNotReady')) {
+                errorMessage = 'Capsule is not ready to be revealed yet.';
+              } else if (error.message?.includes('CapsuleAlreadyRevealed')) {
+                errorMessage = 'This capsule has already been revealed.';
+              } else if (error.message?.includes('UnauthorizedRevealer')) {
+                errorMessage = 'You are not authorized to reveal this capsule.';
+              }
+              
+              Alert.alert('❌ Reveal Failed', errorMessage);
+            } finally {
+              // Remove from revealing set
+              setRevealingCapsules(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(capsule.publicKey);
+                return newSet;
+              });
+            }
           }
         },
       ]
@@ -322,7 +388,8 @@ export function HubScreen() {
                     shadowColor: '#FF6B35',
                     shadowOpacity: glowAnim,
                     elevation: 8,
-                  }
+                  },
+                  revealingCapsules.has(capsule.publicKey) && styles.revealingCard
                 ]}
               >
                 <Card style={[styles.capsuleCard, styles.readyCardInner]}>
@@ -349,8 +416,10 @@ export function HubScreen() {
                       onPress={() => handleRevealCapsule(capsule)}
                       style={styles.revealButton}
                       contentStyle={styles.revealButtonContent}
+                      loading={revealingCapsules.has(capsule.publicKey)}
+                      disabled={revealingCapsules.has(capsule.publicKey)}
                     >
-                      🚀 REVEAL NOW!
+                      {revealingCapsules.has(capsule.publicKey) ? '⏳ Revealing...' : '🚀 REVEAL NOW!'}
                     </Button>
                   </Card.Content>
                 </Card>
@@ -628,5 +697,9 @@ const styles = StyleSheet.create({
     right: 16,
     bottom: 16,
     backgroundColor: '#2196F3',
+  },
+  revealingCard: {
+    opacity: 0.7, // Make the card slightly transparent
+    backgroundColor: '#f0f0f0', // Slightly gray out the card
   },
 });

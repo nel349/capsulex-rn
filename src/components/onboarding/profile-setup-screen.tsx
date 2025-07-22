@@ -10,7 +10,6 @@ import {
 
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { ApiError } from '../../services';
-import { useAuthService } from '../../services/authService';
 import { AppSnackbar } from '../ui/AppSnackbar';
 
 interface ProfileSetupScreenProps {

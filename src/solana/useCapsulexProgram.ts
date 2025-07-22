@@ -2,7 +2,7 @@ import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import * as anchor from '@coral-xyz/anchor';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import type { Capsulex as CapsulexProgramType } from '../../assets/capsulex'; // Renamed to avoid conflict

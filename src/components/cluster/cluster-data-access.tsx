@@ -11,9 +11,13 @@ export interface Cluster {
 }
 
 export enum ClusterNetwork {
+  // eslint-disable-next-line no-unused-vars
   Mainnet = 'mainnet-beta',
+  // eslint-disable-next-line no-unused-vars
   Testnet = 'testnet',
+  // eslint-disable-next-line no-unused-vars
   Devnet = 'devnet',
+  // eslint-disable-next-line no-unused-vars
   Custom = 'custom',
 }
 export function toWalletAdapterNetwork(
@@ -47,8 +51,9 @@ export const defaultClusters: Readonly<Cluster[]> = [
 export interface ClusterProviderContext {
   selectedCluster: Cluster;
   clusters: Cluster[];
+  // eslint-disable-next-line no-unused-vars
   setSelectedCluster: (cluster: Cluster) => void;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line no-unused-vars
   getExplorerUrl(path: string): string;
 }
 

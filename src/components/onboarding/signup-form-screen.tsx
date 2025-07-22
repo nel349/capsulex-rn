@@ -3,7 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import { Button, Text, TextInput, Card } from 'react-native-paper';
 
 interface SignupFormScreenProps {
-  onSubmit: (_: string) => void;
+  // eslint-disable-next-line no-unused-vars
+  onSubmit: (name: string) => void;
   onBack: () => void;
   onCancel?: () => void;
 }

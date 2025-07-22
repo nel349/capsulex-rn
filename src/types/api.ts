@@ -63,7 +63,9 @@ export interface Capsule {
 export class ApiError extends Error {
   constructor(
     message: string,
+    // eslint-disable-next-line no-unused-vars
     public statusCode?: number,
+    // eslint-disable-next-line no-unused-vars
     public response?: any
   ) {
     super(message);

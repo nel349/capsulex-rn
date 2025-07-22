@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import type { CreateCapsuleRequest, Capsule, ApiResponse } from '../types/api';
+import type { CreateCapsuleRequest, Capsule } from '../types/api';
 
 import { apiService } from './api';
 

@@ -18,7 +18,6 @@ import {
   Chip,
   Portal,
   Modal,
-  Snackbar,
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { describe, it, expect, beforeAll, vi, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 
 import { userService, ApiError } from '../userService';
 // import nodeFetch, { Response as NodeFetchResponse } from 'node-fetch';

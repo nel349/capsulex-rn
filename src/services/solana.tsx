@@ -1,12 +1,6 @@
 import type { Address } from '@solana/kit';
-import {
-  airdropFactory,
-  createSolanaRpc,
-  createSolanaRpcSubscriptions,
-  generateKeyPairSigner,
-  lamports,
-} from '@solana/kit';
-import { useQuery, UseQueryResult } from '@tanstack/react-query';
+import { createSolanaRpc } from '@solana/kit';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { useCluster } from '../components/cluster/cluster-data-access';
@@ -66,7 +60,7 @@ export function useBalance(publicKey?: Address) {
   const { getRpc } = useSolanaService();
 
   return useQuery({
-    queryKey: ['solana-balance', publicKey?.toString()],
+    queryKey: ['solana-balance', publicKey],
     queryFn: async (): Promise<number> => {
       console.log('🔍 Fetching balance for:', publicKey?.toString());
 

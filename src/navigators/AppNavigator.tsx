@@ -10,7 +10,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Appearance, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
 import {
   MD3DarkTheme,
   MD3LightTheme,

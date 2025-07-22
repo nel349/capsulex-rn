@@ -12,8 +12,7 @@ import type {
 } from '@solana-mobile/mobile-wallet-adapter-protocol';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toUint8Array } from 'js-base64';
-import React, { useCallback, useMemo } from 'react';
-
+import { useCallback, useMemo } from 'react';
 // Import MWA types directly
 import { Platform } from 'react-native';
 
@@ -48,16 +47,19 @@ function getAuthorizationFromAuthorizationResult(
   let selectedAccount: Account;
   if (
     // We have yet to select an account.
-    previouslySelectedAccount == null ||
+    !previouslySelectedAccount ||
     // The previously selected account is no longer in the set of authorized addresses.
     !authorizationResult.accounts.some(
-      ({ address }: any) => address === previouslySelectedAccount.address
+      ({ address }: { address: string }) =>
+        address === previouslySelectedAccount.address
     )
   ) {
     const firstAccount = authorizationResult.accounts[0];
     selectedAccount = getAccountFromAuthorizedAccount(firstAccount);
-  } else {
+  } else if (previouslySelectedAccount) {
     selectedAccount = previouslySelectedAccount;
+  } else {
+    throw new Error('No account selected');
   }
   return {
     accounts: authorizationResult.accounts.map(getAccountFromAuthorizedAccount),
@@ -177,7 +179,7 @@ export function useAuthorization() {
         throw new Error('Deauthorization not supported on iOS with MWA');
       }
 
-      if (authorization?.authToken == null) {
+      if (!authorization?.authToken) {
         return;
       }
       await wallet.deauthorize({ auth_token: authorization.authToken });

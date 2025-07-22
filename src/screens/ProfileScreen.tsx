@@ -13,7 +13,6 @@ import {
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
-import { useAuthService } from '../services/authService';
 import { twitterService } from '../services/twitterService';
 import { useAuthorization } from '../utils/useAuthorization';
 import { useMobileWallet } from '../utils/useMobileWallet';
@@ -57,7 +56,6 @@ export function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTwitterConnecting, setIsTwitterConnecting] = useState(false);
 
-  const { getStoredToken } = useAuthService();
   useEffect(() => {
     checkTwitterConnection();
     loadAppSettings();
@@ -66,12 +64,12 @@ export function ProfileScreen() {
   const loadAppSettings = async () => {
     try {
       const response = await apiService.get('/social/settings');
-      if (response.success) {
+      if (response?.success) {
         setProfile(prev => ({
           ...prev,
           settings: {
             ...prev.settings,
-            mockTwitterApi: response.data.mock_twitter_api,
+            mockTwitterApi: (response.data as any).mock_twitter_api,
           },
         }));
       }

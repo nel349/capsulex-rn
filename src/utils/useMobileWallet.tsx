@@ -1,11 +1,11 @@
-import { useLoginWithOAuth, useLoginWithEmail } from '@privy-io/expo';
+import { useLoginWithOAuth } from '@privy-io/expo';
 import type {
   Transaction,
   TransactionSignature,
   VersionedTransaction,
 } from '@solana/web3.js';
 import type { Web3MobileWallet } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 
 import type { Account } from './useAuthorization';
@@ -13,15 +13,11 @@ import { useAuthorization } from './useAuthorization';
 
 // Conditional imports based on platform
 let transact: any;
-let SignInPayload: any;
 
 if (Platform.OS === 'android') {
   // Only import MWA on Android
   const mwaModule = require('@solana-mobile/mobile-wallet-adapter-protocol-web3js');
   transact = mwaModule.transact;
-
-  const mwaProtocol = require('@solana-mobile/mobile-wallet-adapter-protocol');
-  SignInPayload = mwaProtocol.SignInPayload;
 } else {
   // iOS fallback - create mock functions
   transact = () => {
@@ -29,7 +25,6 @@ if (Platform.OS === 'android') {
       'MWA not supported on iOS. Please use alternative wallet provider.'
     );
   };
-  SignInPayload = null;
 }
 
 export function useMobileWallet() {
@@ -42,7 +37,7 @@ export function useMobileWallet() {
     },
   });
 
-  const { sendCode, loginWithCode, state: emailState } = useLoginWithEmail();
+  // const { sendCode, loginWithCode, state: emailState } = useLoginWithEmail();
 
   // useEffect(() => {
   //   // console.log('🔄 Starting Privy OAuth login...');

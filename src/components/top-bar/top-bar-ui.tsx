@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Linking, Alert } from 'react-native';
-import { Button, IconButton, Menu, useTheme } from 'react-native-paper';
+import { Button, IconButton, Menu } from 'react-native-paper';
 
 import { ellipsify } from '../../utils/ellipsify';
 import type { Account } from '../../utils/useAuthorization';

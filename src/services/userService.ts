@@ -94,7 +94,8 @@ export class UserService {
   async userExists(walletAddress: string): Promise<boolean> {
     try {
       const data = await this.getUserProfile(walletAddress);
-      return true;
+      // console.log('🐛 Debug info: data', data);
+      return !!data;
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.statusCode === 404) {

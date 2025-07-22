@@ -5,9 +5,6 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 
 import { API_CONFIG } from '../config/api';
-
-// Import types from dedicated types file
-
 import type { ApiResponse } from '../types/api';
 import { ApiError } from '../types/api';
 

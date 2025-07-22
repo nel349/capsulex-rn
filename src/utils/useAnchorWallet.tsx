@@ -3,9 +3,6 @@ import type {
   Transaction,
   VersionedTransaction,
 } from '@solana/web3.js';
-import { Keypair } from '@solana/web3.js';
-import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol';
-import { Web3MobileWallet } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 import { useMemo } from 'react';
 
 import { useAuthorization } from './useAuthorization';
@@ -14,9 +11,11 @@ import { useMobileWallet } from './useMobileWallet';
 export interface AnchorWallet {
   publicKey: PublicKey;
   signTransaction<T extends Transaction | VersionedTransaction>(
+    // eslint-disable-next-line no-unused-vars
     transaction: T
   ): Promise<T>;
   signAllTransactions<T extends Transaction | VersionedTransaction>(
+    // eslint-disable-next-line no-unused-vars
     transactions: T[]
   ): Promise<T[]>;
 }

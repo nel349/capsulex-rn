@@ -9,6 +9,7 @@ interface AuthContextType {
   walletAddress: string | null;
   isSupported: boolean;
   isOnboardingComplete: boolean;
+  // eslint-disable-next-line no-unused-vars
   setOnboardingComplete: (complete: boolean) => void;
 }
 

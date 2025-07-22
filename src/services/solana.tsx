@@ -7,6 +7,7 @@ import {
   lamports,
 } from '@solana/kit';
 import { useMemo } from 'react';
+import { useQuery, UseQueryResult } from '@tanstack/react-query';
 
 import { useCluster } from '../components/cluster/cluster-data-access';
 
@@ -56,4 +57,45 @@ export function useSolanaService() {
   );
 
   return solanaService;
+}
+
+/**
+ * React Query hook for SOL balance with automatic refreshing
+ */
+export function useBalance(publicKey?: Address) {
+  const { getRpc } = useSolanaService();
+
+  return useQuery({
+    queryKey: ['solana-balance', publicKey?.toString()],
+    queryFn: async (): Promise<number> => {
+      console.log('🔍 Fetching balance for:', publicKey?.toString());
+      
+      if (!publicKey) throw new Error('Public key is required');
+      
+      try {
+        const rpc = getRpc();
+        
+        // Convert publicKey to string if it's an object
+        const publicKeyString = String(publicKey) as Address;
+        console.log('🔑 Using publicKey string:', publicKeyString);
+        
+        const response = await rpc.getBalance(publicKeyString).send();
+        console.log('📥 RPC response:', response);
+        
+        const { value } = response;
+        const balance = Number(value) / Number(LAMPORTS_PER_SOL);
+        
+        console.log('💰 Balance fetched:', balance, 'SOL');
+        return balance;
+      } catch (error) {
+        console.error('❌ Balance fetch failed:', error);
+        throw error;
+      }
+    },
+    enabled: !!publicKey,
+    // staleTime: 120000, // Consider data stale after 2 minutes
+    // refetchInterval: 120000, // Auto-refresh every 2 minutes
+    refetchOnWindowFocus: true, // Refresh when app comes back into focus
+    retry: 3,
+  });
 }

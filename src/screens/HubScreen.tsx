@@ -7,7 +7,6 @@ import {
   RefreshControl,
   Alert,
   Animated,
-  Dimensions,
   Vibration,
   AppState,
 } from 'react-native';
@@ -20,17 +19,14 @@ import {
   ProgressBar, 
   Button,
   ActivityIndicator,
-  Surface,
   Avatar
 } from 'react-native-paper';
 
-import { useSolanaService } from '../services/solana';
+import { useBalance } from '../services/solana';
 import { useAuthorization } from '../utils/useAuthorization';
 import { capsuleApi, CapsuleWithStatus, WalletCapsulesResponse, CapsuleApiService } from '../services/capsuleApi';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import * as anchor from '@coral-xyz/anchor';
-
-const { width } = Dimensions.get('window');
 
 interface HubStats {
   totalCapsules: number;
@@ -46,10 +42,11 @@ export function HubScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [solBalance, setSolBalance] = useState<number | null>(null);
+  // const [solBalance, setSolBalance] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
   const [revealingCapsules, setRevealingCapsules] = useState<Set<string>>(new Set());
-  const { getBalance } = useSolanaService();
+  // const { getBalance } = useSolanaService();
+  const { data: balance } = useBalance(selectedAccount?.publicKey as unknown as Address);
   const { revealCapsule } = useCapsulexProgram();
 
   // Animation values
@@ -132,21 +129,7 @@ export function HubScreen() {
   }, []);
 
   // Fetch SOL balance
-  useEffect(() => {
-    if (selectedAccount) {
-      const fetchSolanaBalance = async () => {
-        try {
-          const balance = await getBalance(
-            selectedAccount.publicKey.toString() as Address
-          );
-          setSolBalance(balance);
-        } catch (error) {
-          console.error('Error fetching SOL balance:', error);
-        }
-      };
-      fetchSolanaBalance();
-    }
-  }, [selectedAccount, getBalance]);
+
 
   // Fetch capsule data from blockchain
   const fetchCapsuleData = useCallback(async () => {
@@ -353,7 +336,7 @@ export function HubScreen() {
                 SOL Balance
               </Text>
               <Text variant="headlineSmall" style={styles.statValue}>
-                {solBalance !== null ? `${solBalance.toFixed(4)}` : 'N/A'}
+                {balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}
               </Text>
             </Card.Content>
           </Card>

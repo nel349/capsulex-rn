@@ -133,6 +133,11 @@ export function CreateCapsuleScreen() {
         content
       );
 
+      console.log('🐛 Debug info before createCapsule:');
+      console.log('- createCapsule object:', createCapsule);
+      console.log('- createCapsule.mutateAsync:', createCapsule?.mutateAsync);
+      console.log('- selectedAccount:', selectedAccount);
+
       // Step 1: Create capsule on-chain
       const txResult = await createCapsule.mutateAsync({
         encryptedContent: content,

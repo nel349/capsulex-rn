@@ -85,10 +85,14 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           // Re-authenticate if restored to steps that require authentication
           if (
             selectedAccount?.publicKey &&
-            (savedStep === 'social-connection' || savedStep === 'profile-setup') &&
+            (savedStep === 'social-connection' ||
+              savedStep === 'profile-setup') &&
             savedWalletAddress
           ) {
-            console.log('🔐 Re-authenticating user for restored step:', savedStep);
+            console.log(
+              '🔐 Re-authenticating user for restored step:',
+              savedStep
+            );
             try {
               await authenticateUser({
                 wallet_address: savedWalletAddress,
@@ -267,15 +271,21 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             'wallet',
             userName || 'User' // Use name from signup form or default
           );
-          console.log('✅ User registered in database:', registrationResponse.user.user_id);
+          console.log(
+            '✅ User registered in database:',
+            registrationResponse.user.user_id
+          );
 
-          // Step 2: Authenticate and store JWT token  
+          // Step 2: Authenticate and store JWT token
           const authResponse = await authenticateUser({
             wallet_address: address,
             auth_type: 'wallet',
             name: userName || 'User',
           });
-          console.log('✅ User authenticated and token stored:', authResponse.user.user_id);
+          console.log(
+            '✅ User authenticated and token stored:',
+            authResponse.user.user_id
+          );
 
           // Step 3: Continue to social connection (user is now authenticated)
           setCurrentStep('social-connection');

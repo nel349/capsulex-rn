@@ -5,8 +5,8 @@ const NETWORK_CONFIG = {
   // Development settings
   DEV_HOST: '192.168.1.157', // Change this to your Mac's IP address
   DEV_PORT: 3001,
-  
-  // Production settings  
+
+  // Production settings
   PROD_BASE_URL: 'https://api.capsulex.com',
 };
 

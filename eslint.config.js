@@ -133,6 +133,9 @@ export default [
       '**/*.config.js',
       'metro.config.cjs',
       'babel.config.cjs',
+      'assets/',
+      'assets/capsulex.json',
+      'assets/capsulex.ts',
     ],
   },
 ]; 

@@ -28,7 +28,7 @@ export function useCapsulexProgram() {
     return new AnchorProvider(connection, anchorWallet, {
       preflightCommitment: 'confirmed',
       commitment: 'processed',
-      skipPreflight: true
+      skipPreflight: true,
     });
   }, [anchorWallet, connection]);
 
@@ -146,9 +146,7 @@ export function useCapsulexProgram() {
     console.log('Capsule', capsule);
 
     return capsule;
-
-  }
-        
+  };
 
   // Mutation for revealCapsule instruction
   const revealCapsule = useMutation({
@@ -186,12 +184,15 @@ export function useCapsulexProgram() {
           capsule: capsulePDA,
         } as any)
         .rpc({
-          skipPreflight: true
+          skipPreflight: true,
         });
     },
     onSuccess: (signature: string) => {
       console.log('Capsule Revealed!', `Transaction: ${signature}`);
-      alertAndLog('🎉 Capsule Revealed!', `Transaction confirmed: ${signature.slice(0, 8)}...`);
+      alertAndLog(
+        '🎉 Capsule Revealed!',
+        `Transaction confirmed: ${signature.slice(0, 8)}...`
+      );
     },
     onError: (error: any) => {
       console.error('Reveal transaction failed:', error);

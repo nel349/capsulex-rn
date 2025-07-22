@@ -61,14 +61,18 @@ export class CapsuleApiService {
   /**
    * Get all capsules owned by a wallet address
    */
-  async getCapsulesByWallet(walletAddress: string): Promise<WalletCapsulesResponse> {
+  async getCapsulesByWallet(
+    walletAddress: string
+  ): Promise<WalletCapsulesResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/capsules/wallet/${walletAddress}`);
-      
+      const response = await fetch(
+        `${this.baseUrl}/capsules/wallet/${walletAddress}`
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
       console.error('Error fetching capsules by wallet:', error);
@@ -79,18 +83,20 @@ export class CapsuleApiService {
   /**
    * Get capsules ready for reveal
    */
-  async getRevealableCapsules(walletAddress?: string): Promise<RevealableCapsulesResponse> {
+  async getRevealableCapsules(
+    walletAddress?: string
+  ): Promise<RevealableCapsulesResponse> {
     try {
-      const url = walletAddress 
+      const url = walletAddress
         ? `${this.baseUrl}/capsules/check-reveals?wallet=${walletAddress}`
         : `${this.baseUrl}/capsules/check-reveals`;
-        
+
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
       console.error('Error fetching revealable capsules:', error);
@@ -127,4 +133,4 @@ export class CapsuleApiService {
 }
 
 // Export singleton instance
-export const capsuleApi = new CapsuleApiService(); 
+export const capsuleApi = new CapsuleApiService();

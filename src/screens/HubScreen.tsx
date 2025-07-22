@@ -1,5 +1,7 @@
+import * as anchor from '@coral-xyz/anchor';
 import type { Address } from '@solana/kit';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   StyleSheet,
   View,
@@ -10,58 +12,49 @@ import {
   Vibration,
   AppState,
 } from 'react-native';
-import { 
-  Text, 
-  Card, 
-  FAB, 
-  IconButton, 
-  Chip, 
-  ProgressBar, 
+import {
+  Text,
+  Card,
+  FAB,
+  IconButton,
+  Chip,
+  ProgressBar,
   Button,
   ActivityIndicator,
-  Avatar
+  Avatar,
 } from 'react-native-paper';
 
+import type {
+  CapsuleWithStatus,
+  WalletCapsulesResponse,
+} from '../services/capsuleApi';
+import { capsuleApi, CapsuleApiService } from '../services/capsuleApi';
 import { useBalance } from '../services/solana';
-import { useAuthorization } from '../utils/useAuthorization';
-import { capsuleApi, CapsuleWithStatus, WalletCapsulesResponse, CapsuleApiService } from '../services/capsuleApi';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
-import * as anchor from '@coral-xyz/anchor';
-
-interface HubStats {
-  totalCapsules: number;
-  pendingCapsules: number;
-  readyToReveal: number;
-  revealed: number;
-  nextRevealTime: number | null;
-}
+import { useAuthorization } from '../utils/useAuthorization';
 
 export function HubScreen() {
   const { selectedAccount } = useAuthorization();
-  const [capsuleData, setCapsuleData] = useState<WalletCapsulesResponse['data'] | null>(null);
+  const [capsuleData, setCapsuleData] = useState<
+    WalletCapsulesResponse['data'] | null
+  >(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // const [solBalance, setSolBalance] = useState<number | null>(null);
-  const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
-  const [revealingCapsules, setRevealingCapsules] = useState<Set<string>>(new Set());
+  const [revealingCapsules, setRevealingCapsules] = useState<Set<string>>(
+    new Set()
+  );
   // const { getBalance } = useSolanaService();
-  const { data: balance } = useBalance(selectedAccount?.publicKey as unknown as Address);
+  const { data: balance } = useBalance(
+    selectedAccount?.publicKey as unknown as Address
+  );
   const { revealCapsule } = useCapsulexProgram();
+  const queryClient = useQueryClient();
 
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
-
-  // Real-time ticker for countdown updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(Math.floor(Date.now() / 1000));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -82,7 +75,10 @@ export function HubScreen() {
       }
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange
+    );
     return () => subscription?.remove();
   }, [selectedAccount]);
 
@@ -130,7 +126,6 @@ export function HubScreen() {
 
   // Fetch SOL balance
 
-
   // Fetch capsule data from blockchain
   const fetchCapsuleData = useCallback(async () => {
     if (!selectedAccount) return;
@@ -140,10 +135,10 @@ export function HubScreen() {
       const response = await capsuleApi.getCapsulesByWallet(
         selectedAccount.publicKey.toString()
       );
-      
+
       if (response.success) {
         setCapsuleData(response.data);
-        
+
         // Vibrate if there are newly ready capsules
         if (response.data.summary.ready_to_reveal > 0) {
           Vibration.vibrate([100, 50, 100]);
@@ -171,15 +166,19 @@ export function HubScreen() {
     setRefreshing(true);
     Vibration.vibrate(50); // Haptic feedback
     await fetchCapsuleData();
+    await queryClient.invalidateQueries({ queryKey: ['solana-balance'] });
     setRefreshing(false);
-  }, [fetchCapsuleData]);
+  }, [fetchCapsuleData, queryClient]);
 
   // Handle reveal capsule
   const handleRevealCapsule = (capsule: CapsuleWithStatus) => {
     const isRevealing = revealingCapsules.has(capsule.publicKey);
-    
+
     if (isRevealing) {
-      Alert.alert('⏳ Transaction in Progress', 'Please wait for the current reveal to complete.');
+      Alert.alert(
+        '⏳ Transaction in Progress',
+        'Please wait for the current reveal to complete.'
+      );
       return;
     }
 
@@ -188,47 +187,50 @@ export function HubScreen() {
       `Ready to reveal your time capsule?\n\nThis will:\n• Sign blockchain transaction\n• Mark capsule as revealed on-chain\n• You can then share the content`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Reveal Now!', 
+        {
+          text: 'Reveal Now!',
           style: 'default',
           onPress: async () => {
             try {
               // Add to revealing set to show loading state
-              setRevealingCapsules(prev => new Set(prev).add(capsule.publicKey));
-              
+              setRevealingCapsules(prev =>
+                new Set(prev).add(capsule.publicKey)
+              );
+
               // Convert reveal date to BN
               const revealDateBN = new anchor.BN(capsule.account.revealDate);
-              
+
               // Call the reveal transaction
               const signature = await revealCapsule.mutateAsync({
                 revealDate: revealDateBN,
                 creator: new anchor.web3.PublicKey(capsule.account.creator),
               });
-              
+
               // Success! Refresh the data and show success message
               Vibration.vibrate([100, 50, 100, 50, 100]); // Celebration haptics
-              
+
               Alert.alert(
-                '🚀 Success!', 
+                '🚀 Success!',
                 `Capsule revealed successfully!\n\nTransaction: ${signature.slice(0, 8)}...${signature.slice(-8)}\n\nYour content is now revealed on-chain!`,
                 [
                   {
                     text: 'View on Explorer',
                     onPress: () => {
                       // TODO: Open Solana explorer
-                      console.log(`https://explorer.solana.com/tx/${signature}?cluster=devnet`);
-                    }
+                      console.log(
+                        `https://explorer.solana.com/tx/${signature}?cluster=devnet`
+                      );
+                    },
                   },
-                  { text: 'OK', style: 'default' }
+                  { text: 'OK', style: 'default' },
                 ]
               );
-              
+
               // Refresh capsule data to show updated state
               await fetchCapsuleData();
-              
             } catch (error: any) {
               console.error('Reveal failed:', error);
-              
+
               let errorMessage = 'Transaction failed. Please try again.';
               if (error.message?.includes('User rejected')) {
                 errorMessage = 'Transaction was cancelled by user.';
@@ -239,7 +241,7 @@ export function HubScreen() {
               } else if (error.message?.includes('UnauthorizedRevealer')) {
                 errorMessage = 'You are not authorized to reveal this capsule.';
               }
-              
+
               Alert.alert('❌ Reveal Failed', errorMessage);
             } finally {
               // Remove from revealing set
@@ -249,7 +251,7 @@ export function HubScreen() {
                 return newSet;
               });
             }
-          }
+          },
         },
       ]
     );
@@ -295,14 +297,22 @@ export function HubScreen() {
         <Text variant="bodyMedium" style={styles.errorSubtitle}>
           {error}
         </Text>
-        <Button mode="contained" onPress={fetchCapsuleData} style={styles.retryButton}>
+        <Button
+          mode="contained"
+          onPress={fetchCapsuleData}
+          style={styles.retryButton}
+        >
           Try Again
         </Button>
       </View>
     );
   }
 
-  const stats = capsuleData?.summary || { pending: 0, ready_to_reveal: 0, revealed: 0 };
+  const stats = capsuleData?.summary || {
+    pending: 0,
+    ready_to_reveal: 0,
+    revealed: 0,
+  };
   const readyCapsules = capsuleData?.capsules.ready_to_reveal || [];
   const pendingCapsules = capsuleData?.capsules.pending || [];
   const revealedCapsules = capsuleData?.capsules.revealed || [];
@@ -321,10 +331,9 @@ export function HubScreen() {
             Your Capsules 🗂️
           </Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
-            {stats.ready_to_reveal > 0 ? 
-              `🔥 ${stats.ready_to_reveal} ready to reveal!` : 
-              `${stats.pending} pending • ${capsuleData?.total_capsules || 0} total`
-            }
+            {stats.ready_to_reveal > 0
+              ? `🔥 ${stats.ready_to_reveal} ready to reveal!`
+              : `${stats.pending} pending • ${capsuleData?.total_capsules || 0} total`}
           </Text>
         </View>
 
@@ -346,7 +355,10 @@ export function HubScreen() {
               <Text variant="labelLarge" style={styles.statLabel}>
                 Ready Now
               </Text>
-              <Text variant="headlineSmall" style={[styles.statValue, { color: '#FF6B35' }]}>
+              <Text
+                variant="headlineSmall"
+                style={[styles.statValue, { color: '#FF6B35' }]}
+              >
                 {stats.ready_to_reveal}
               </Text>
             </Card.Content>
@@ -361,9 +373,9 @@ export function HubScreen() {
                 🔥 Ready to Reveal ({readyCapsules.length})
               </Text>
             </Animated.View>
-            
-            {readyCapsules.map((capsule) => (
-              <Animated.View 
+
+            {readyCapsules.map(capsule => (
+              <Animated.View
                 key={capsule.publicKey}
                 style={[
                   styles.readyCard,
@@ -372,26 +384,30 @@ export function HubScreen() {
                     shadowOpacity: glowAnim,
                     elevation: 8,
                   },
-                  revealingCapsules.has(capsule.publicKey) && styles.revealingCard
+                  revealingCapsules.has(capsule.publicKey) &&
+                    styles.revealingCard,
                 ]}
               >
                 <Card style={[styles.capsuleCard, styles.readyCardInner]}>
                   <Card.Content>
                     <View style={styles.capsuleHeader}>
-                      <Chip 
-                        mode="flat" 
+                      <Chip
+                        mode="flat"
                         style={styles.readyChip}
                         textStyle={styles.readyChipText}
                       >
                         🔥 READY NOW
                       </Chip>
                       <Text variant="bodySmall" style={styles.timeText}>
-                        {new Date(capsule.account.revealDate * 1000).toLocaleDateString()}
+                        {new Date(
+                          capsule.account.revealDate * 1000
+                        ).toLocaleDateString()}
                       </Text>
                     </View>
 
                     <Text variant="bodyMedium" style={styles.capsuleContent}>
-                      Content: {capsule.account.encryptedContent.substring(0, 50)}...
+                      Content:{' '}
+                      {capsule.account.encryptedContent.substring(0, 50)}...
                     </Text>
 
                     <Button
@@ -402,7 +418,9 @@ export function HubScreen() {
                       loading={revealingCapsules.has(capsule.publicKey)}
                       disabled={revealingCapsules.has(capsule.publicKey)}
                     >
-                      {revealingCapsules.has(capsule.publicKey) ? '⏳ Revealing...' : '🚀 REVEAL NOW!'}
+                      {revealingCapsules.has(capsule.publicKey)
+                        ? '⏳ Revealing...'
+                        : '🚀 REVEAL NOW!'}
                     </Button>
                   </Card.Content>
                 </Card>
@@ -417,14 +435,14 @@ export function HubScreen() {
             <Text variant="titleMedium" style={styles.sectionTitle}>
               ⏳ Pending ({pendingCapsules.length})
             </Text>
-            
-            {pendingCapsules.map((capsule) => {
+
+            {pendingCapsules.map(capsule => {
               const timeLeft = capsule.timeToReveal || 0;
               const progress = CapsuleApiService.getCountdownProgress(
-                capsule.account.createdAt, 
+                capsule.account.createdAt,
                 capsule.account.revealDate
               );
-              
+
               return (
                 <Card key={capsule.publicKey} style={styles.capsuleCard}>
                   <Card.Content>
@@ -433,20 +451,24 @@ export function HubScreen() {
                         ⏳ Pending
                       </Chip>
                       <Text variant="bodySmall" style={styles.timeText}>
-                        {new Date(capsule.account.revealDate * 1000).toLocaleDateString()}
+                        {new Date(
+                          capsule.account.revealDate * 1000
+                        ).toLocaleDateString()}
                       </Text>
                     </View>
 
                     <Text variant="bodyMedium" style={styles.capsuleContent}>
-                      Content: {capsule.account.encryptedContent.substring(0, 50)}...
+                      Content:{' '}
+                      {capsule.account.encryptedContent.substring(0, 50)}...
                     </Text>
 
                     <View style={styles.countdownContainer}>
                       <Text variant="bodySmall" style={styles.countdownLabel}>
-                        Reveals in: {CapsuleApiService.formatTimeUntil(timeLeft)}
+                        Reveals in:{' '}
+                        {CapsuleApiService.formatTimeUntil(timeLeft)}
                       </Text>
-                      <ProgressBar 
-                        progress={progress} 
+                      <ProgressBar
+                        progress={progress}
                         style={styles.progressBar}
                         color="#2196F3"
                       />
@@ -464,8 +486,8 @@ export function HubScreen() {
             <Text variant="titleMedium" style={styles.sectionTitle}>
               ✅ Revealed ({revealedCapsules.length})
             </Text>
-            
-            {revealedCapsules.map((capsule) => (
+
+            {revealedCapsules.map(capsule => (
               <Card key={capsule.publicKey} style={styles.capsuleCard}>
                 <Card.Content>
                   <View style={styles.capsuleHeader}>
@@ -480,11 +502,15 @@ export function HubScreen() {
                   </View>
 
                   <Text variant="bodyMedium" style={styles.capsuleContent}>
-                    Content: {capsule.account.encryptedContent.substring(0, 50)}...
+                    Content: {capsule.account.encryptedContent.substring(0, 50)}
+                    ...
                   </Text>
 
                   <Text variant="bodySmall" style={styles.revealedText}>
-                    Revealed on {new Date(capsule.account.revealDate * 1000).toLocaleDateString()}
+                    Revealed on{' '}
+                    {new Date(
+                      capsule.account.revealDate * 1000
+                    ).toLocaleDateString()}
                   </Text>
                 </Card.Content>
               </Card>

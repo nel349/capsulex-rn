@@ -1,11 +1,12 @@
 // API Configuration and Base Service
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AxiosInstance, AxiosResponse } from 'axios';
 import axios from 'axios';
 import { Platform } from 'react-native';
+
 import { API_CONFIG } from '../config/api';
 
 // Import types from dedicated types file
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { ApiResponse } from '../types/api';
 import { ApiError } from '../types/api';

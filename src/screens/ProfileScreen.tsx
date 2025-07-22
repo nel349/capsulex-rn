@@ -10,13 +10,13 @@ import {
   Avatar,
 } from 'react-native-paper';
 
+import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { useSnackbar } from '../hooks/useSnackbar';
+import { apiService } from '../services/api';
+import { useAuthService } from '../services/authService';
+import { twitterService } from '../services/twitterService';
 import { useAuthorization } from '../utils/useAuthorization';
 import { useMobileWallet } from '../utils/useMobileWallet';
-import { twitterService } from '../services/twitterService';
-import { useSnackbar } from '../hooks/useSnackbar';
-import { AppSnackbar } from '../components/ui/AppSnackbar';
-import { useAuthService } from '../services/authService';
-import { apiService } from '../services/api';
 
 interface UserProfile {
   wallet: string;
@@ -36,7 +36,8 @@ interface UserProfile {
 }
 
 export function ProfileScreen() {
-  const { snackbar, showSuccess, showError, showInfo, hideSnackbar } = useSnackbar();
+  const { snackbar, showSuccess, showError, showInfo, hideSnackbar } =
+    useSnackbar();
 
   const { selectedAccount } = useAuthorization();
   const { disconnect } = useMobileWallet();
@@ -88,7 +89,9 @@ export function ProfileScreen() {
           ...prev,
           socialAccounts: {
             ...prev.socialAccounts,
-            twitter: connectionInfo?.platform_username ? `@${connectionInfo.platform_username}` : '@connected',
+            twitter: connectionInfo?.platform_username
+              ? `@${connectionInfo.platform_username}`
+              : '@connected',
           },
         }));
       }
@@ -135,10 +138,10 @@ export function ProfileScreen() {
     try {
       setIsTwitterConnecting(true);
       await twitterService.authenticate();
-      
+
       // Refresh connection status
       await checkTwitterConnection();
-      
+
       showSuccess('Twitter account connected successfully!');
     } catch (error) {
       console.error('Twitter connection failed:', error);
@@ -236,7 +239,9 @@ export function ProfileScreen() {
         });
 
         if (response.success) {
-          showSuccess(value ? 'Twitter mock mode enabled' : 'Twitter mock mode disabled');
+          showSuccess(
+            value ? 'Twitter mock mode enabled' : 'Twitter mock mode disabled'
+          );
         }
       } catch (error) {
         console.error('Failed to update mock Twitter setting:', error);
@@ -349,9 +354,11 @@ export function ProfileScreen() {
                   disabled={isTwitterConnecting}
                   compact
                 >
-                  {isTwitterConnecting 
-                    ? 'Connecting...' 
-                    : profile.socialAccounts.twitter ? 'Reconnect' : 'Connect'}
+                  {isTwitterConnecting
+                    ? 'Connecting...'
+                    : profile.socialAccounts.twitter
+                      ? 'Reconnect'
+                      : 'Connect'}
                 </Button>
               )}
             />
@@ -440,7 +447,9 @@ export function ProfileScreen() {
               right={() => (
                 <Switch
                   value={profile.settings.mockTwitterApi}
-                  onValueChange={value => updateSetting('mockTwitterApi', value)}
+                  onValueChange={value =>
+                    updateSetting('mockTwitterApi', value)
+                  }
                 />
               )}
             />
@@ -463,7 +472,9 @@ export function ProfileScreen() {
                   mode="outlined"
                   onPress={() => {
                     // TODO: Navigate to wallet details or buy SOL
-                    showInfo('This will show wallet details and buy SOL options');
+                    showInfo(
+                      'This will show wallet details and buy SOL options'
+                    );
                   }}
                   compact
                 >

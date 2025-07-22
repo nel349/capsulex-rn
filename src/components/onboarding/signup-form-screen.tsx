@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Button, Text, TextInput, Card } from 'react-native-paper';
 
 interface SignupFormScreenProps {
-  onSubmit: (name: string) => void;
+  onSubmit: (_: string) => void;
   onBack: () => void;
   onCancel?: () => void;
 }

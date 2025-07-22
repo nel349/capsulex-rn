@@ -9,7 +9,7 @@ import {
 } from 'react-native-paper';
 
 import { useSnackbar } from '../../hooks/useSnackbar';
-import { userService, ApiError } from '../../services';
+import { ApiError } from '../../services';
 import { useAuthService } from '../../services/authService';
 import { AppSnackbar } from '../ui/AppSnackbar';
 
@@ -30,7 +30,6 @@ export function ProfileSetupScreen({
 }: ProfileSetupScreenProps) {
   const [name, setName] = useState(initialName);
   const [isLoading, setIsLoading] = useState(false);
-  const { authenticateUser } = useAuthService();
   const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
 
   const handleSubmit = async () => {

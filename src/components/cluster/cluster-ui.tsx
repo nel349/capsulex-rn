@@ -1,5 +1,5 @@
-import { View, StyleSheet } from 'react-native';
-import { List, RadioButton, Text } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { List, RadioButton } from 'react-native-paper';
 
 import type { Cluster } from './cluster-data-access';
 

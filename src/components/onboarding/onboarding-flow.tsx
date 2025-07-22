@@ -36,7 +36,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [socialConnected, setSocialConnected] = useState<boolean>(false);
   const [isSignInFlow, setIsSignInFlow] = useState<boolean>(false);
   const { selectedAccount } = useAuthorization();
-  const { connect, disconnect } = useMobileWallet();
+  const { connect } = useMobileWallet();
   const { authenticateUser, clearAuth } = useAuthService();
   const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
 
@@ -345,7 +345,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setCurrentStep('connecting');
 
     try {
-      const account = await connect();
+      await connect();
       // Let the useEffect handle the flow after connection
     } catch (error) {
       // Wallet connection failed, stay on welcome

@@ -1,4 +1,3 @@
-export * from './HomeScreen';
 export * from './SettingsScreen';
 export * from './HubScreen';
 export * from './CreateCapsuleScreen';

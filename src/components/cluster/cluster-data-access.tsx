@@ -1,7 +1,7 @@
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { clusterApiUrl } from '@solana/web3.js';
 import type { ReactNode } from 'react';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 
 export interface Cluster {
   name: string;
@@ -48,6 +48,7 @@ export interface ClusterProviderContext {
   selectedCluster: Cluster;
   clusters: Cluster[];
   setSelectedCluster: (cluster: Cluster) => void;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getExplorerUrl(path: string): string;
 }
 
@@ -80,6 +81,7 @@ export function useCluster() {
   return useContext(Context);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getClusterUrlParam(cluster: Cluster): string {
   let suffix = '';
   switch (cluster.network) {

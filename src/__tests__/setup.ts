@@ -1,4 +1,4 @@
-import { beforeEach, vi } from 'vitest';
+import { vi } from 'vitest';
 
 // Mock React Native modules
 vi.mock('react-native', () => ({

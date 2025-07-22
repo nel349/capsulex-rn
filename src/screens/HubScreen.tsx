@@ -1,7 +1,7 @@
 import * as anchor from '@coral-xyz/anchor';
 import type { Address } from '@solana/kit';
-import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,

@@ -38,6 +38,23 @@ import { HomeNavigator } from './HomeNavigator';
 type RootStackParamList = {
   Home: undefined;
   Settings: undefined;
+  CapsuleDetails: {
+    capsule: {
+      capsule_id: string;
+      content_encrypted: string;
+      content_hash: string;
+      has_media: boolean;
+      media_urls: string[];
+      reveal_date: string;
+      created_at: string;
+      on_chain_tx: string;
+      sol_fee_amount: number;
+      status?: string;
+      revealed_at?: string;
+      social_post_id?: string;
+      posted_to_social?: boolean;
+    };
+  };
   // 🔥 Your screens go here
 };
 
@@ -64,6 +81,14 @@ const AppStack = () => {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="Settings" component={Screens.SettingsScreen} />
+      <Stack.Screen
+        name="CapsuleDetails"
+        component={Screens.CapsuleDetailsScreen}
+        options={{
+          title: 'Capsule Details',
+          headerShown: true,
+        }}
+      />
       {/** 🔥 Your screens go here */}
     </Stack.Navigator>
   );

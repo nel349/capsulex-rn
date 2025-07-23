@@ -26,6 +26,7 @@ import { useCapsuleService } from '../services/capsuleService';
 import { useSolanaService } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import { useAuthorization } from '../utils/useAuthorization';
+import { VaultKeyManager } from '../utils/vaultKey';
 
 interface SOLBalance {
   balance: number;
@@ -132,14 +133,37 @@ export function CreateCapsuleScreen() {
         content
       );
 
-      console.log('🐛 Debug info before createCapsule:');
-      console.log('- createCapsule object:', createCapsule);
-      console.log('- createCapsule.mutateAsync:', createCapsule?.mutateAsync);
-      console.log('- selectedAccount:', selectedAccount);
+      // console.log('🐛 Debug info before createCapsule:');
+      // console.log('- createCapsule object:', createCapsule);
+      // console.log('- createCapsule.mutateAsync:', createCapsule?.mutateAsync);
+      // console.log('- selectedAccount:', selectedAccount);
 
-      // Step 1: Create capsule on-chain
+      // Step 1: Encrypt content using device vault key (no wallet signing required!)
+      showInfo('Encrypting your content with your device vault key...');
+
+      let encryptedContent;
+      try {
+        encryptedContent = await VaultKeyManager.encryptContent(
+          content,
+          selectedAccount.address
+        );
+        console.log('🔐 Content encrypted with device vault key');
+      } catch (encryptionError) {
+        console.error('❌ Vault encryption failed:', encryptionError);
+        showError(
+          'Failed to encrypt content with vault key. Please try again.'
+        );
+        return;
+      }
+
+      // Step 2: Create capsule on blockchain (ONLY wallet signature needed!)
+      const blockchainPlaceholder = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        `ENCRYPTED_CONTENT_${selectedAccount.address}_${Date.now()}`
+      );
+
       const txResult = await createCapsule.mutateAsync({
-        encryptedContent: content,
+        encryptedContent: blockchainPlaceholder, // Placeholder hash on blockchain
         contentStorage: contentStorage,
         contentIntegrityHash: contentHash,
         revealDate: revealDateBN,
@@ -148,10 +172,10 @@ export function CreateCapsuleScreen() {
 
       console.log('✅ Capsule created on-chain:', txResult);
 
-      // Step 2: Save capsule to Supabase database
+      // Step 3: Save capsule to Supabase database
       try {
         const capsuleData = await createCapsuleInDB({
-          content_encrypted: content,
+          content_encrypted: JSON.stringify(encryptedContent), // Store wallet-encrypted content with metadata
           content_hash: contentHash,
           has_media: false,
           media_urls: [],
@@ -166,10 +190,35 @@ export function CreateCapsuleScreen() {
 
         console.log('✅ Capsule saved to database:', capsuleData);
 
-        showSuccess(
-          '🎉 Time capsule created successfully and saved to blockchain!'
-        );
+        // Step 3: Post audience notification to Twitter
+        // try {
+        //   console.log('📢 Posting audience notification...');
+        //   const notificationResponse = await apiService.post('/social/notify-audience', {
+        //     capsule_id: capsuleData.capsule_id,
+        //     reveal_date: revealDateTime.toISOString(),
+        //     hint_text: `🔮 I just created an encrypted time capsule that will be revealed on`,
+        //     include_capsule_link: true,
+        //   });
 
+        //   if (notificationResponse.success) {
+        //     console.log('✅ Audience notification posted:', notificationResponse.data);
+        //     showSuccess(
+        //       '🎉 Encrypted time capsule created and announced to your audience!'
+        //     );
+        //   } else {
+        //     console.warn('⚠️ Audience notification failed:', notificationResponse.error);
+        //     showSuccess(
+        //       '🎉 Time capsule created successfully! (Audience notification failed)'
+        //     );
+        //   }
+        // } catch (notificationError) {
+        //   console.warn('⚠️ Audience notification error:', notificationError);
+        //   showSuccess(
+        //     '🎉 Time capsule created successfully! (Check Twitter connection for announcements)'
+        //   );
+        // }
+
+        showSuccess('🎉 Time capsule created successfully');
         // Reset form after short delay
         setTimeout(() => {
           setContent('');
@@ -205,10 +254,8 @@ export function CreateCapsuleScreen() {
     return (
       <View style={styles.screenContainer}>
         <View style={styles.connectPrompt}>
-          <Text variant="headlineMedium" style={styles.title}>
-            Connect Your Wallet
-          </Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>
+          <Text style={styles.title}>Connect Your Wallet</Text>
+          <Text style={styles.subtitle}>
             You need to connect your wallet to create time capsules
           </Text>
         </View>
@@ -221,10 +268,8 @@ export function CreateCapsuleScreen() {
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <View style={styles.header}>
-          <Text variant="headlineMedium" style={styles.title}>
-            Create Time Capsule
-          </Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
+          <Text style={styles.title}>Create Time Capsule</Text>
+          <Text style={styles.subtitle}>
             Schedule your content for future reveal
           </Text>
         </View>
@@ -238,12 +283,12 @@ export function CreateCapsuleScreen() {
         >
           <Card.Content>
             <View style={styles.balanceHeader}>
-              <Text variant="titleMedium">SOL Balance</Text>
-              <Text variant="bodyMedium" style={styles.balanceAmount}>
+              <Text>SOL Balance</Text>
+              <Text style={styles.balanceAmount}>
                 {solBalance.balance.toFixed(6)} SOL
               </Text>
             </View>
-            <Text variant="bodySmall" style={styles.balanceInfo}>
+            <Text style={styles.balanceInfo}>
               {solBalance.sufficient
                 ? '✅ Sufficient balance for capsule creation'
                 : '⚠️ Insufficient balance. You need at least 0.00005 SOL'}
@@ -253,9 +298,7 @@ export function CreateCapsuleScreen() {
 
         {/* Platform Selection */}
         <View style={styles.section}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Choose Platform
-          </Text>
+          <Text style={styles.sectionTitle}>Choose Platform</Text>
           <View style={styles.platformContainer}>
             {platforms.map(platform => (
               <Chip
@@ -275,9 +318,7 @@ export function CreateCapsuleScreen() {
 
         {/* Content Input */}
         <View style={styles.section}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Your Message
-          </Text>
+          <Text style={styles.sectionTitle}>Your Message</Text>
           <TextInput
             mode="outlined"
             placeholder="What would you like to share in the future?"
@@ -287,16 +328,14 @@ export function CreateCapsuleScreen() {
             numberOfLines={4}
             style={styles.contentInput}
           />
-          <Text variant="bodySmall" style={styles.characterCount}>
+          <Text style={styles.characterCount}>
             {content.length}/280 characters
           </Text>
         </View>
 
         {/* Reveal Date & Time */}
         <View style={styles.section}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            When to Reveal
-          </Text>
+          <Text style={styles.sectionTitle}>When to Reveal</Text>
           <View style={styles.dateTimeContainer}>
             <Pressable onPress={showDatepicker} style={styles.dateInput}>
               <TextInput
@@ -345,20 +384,18 @@ export function CreateCapsuleScreen() {
         {/* Cost Breakdown */}
         <Card style={styles.costCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.costTitle}>
-              Transaction Cost
-            </Text>
+            <Text style={styles.costTitle}>Transaction Cost</Text>
             <View style={styles.costRow}>
-              <Text variant="bodyMedium">Capsule Creation</Text>
-              <Text variant="bodyMedium">~0.00005 SOL</Text>
+              <Text>Capsule Creation</Text>
+              <Text>~0.00005 SOL</Text>
             </View>
             <View style={styles.costRow}>
-              <Text variant="bodyMedium">Network Fee</Text>
-              <Text variant="bodyMedium">~0.000005 SOL</Text>
+              <Text>Network Fee</Text>
+              <Text>~0.000005 SOL</Text>
             </View>
             <View style={[styles.costRow, styles.totalRow]}>
-              <Text variant="titleMedium">Total</Text>
-              <Text variant="titleMedium">~0.000055 SOL</Text>
+              <Text>Total</Text>
+              <Text>~0.000055 SOL</Text>
             </View>
           </Card.Content>
         </Card>
@@ -390,10 +427,8 @@ export function CreateCapsuleScreen() {
           contentContainerStyle={styles.modalContainer}
         >
           <View style={styles.modalContent}>
-            <Text variant="headlineMedium" style={styles.modalTitle}>
-              Insufficient SOL Balance
-            </Text>
-            <Text variant="bodyMedium" style={styles.modalDescription}>
+            <Text style={styles.modalTitle}>Insufficient SOL Balance</Text>
+            <Text style={styles.modalDescription}>
               You need at least {solBalance.required} SOL to create a time
               capsule. Your current balance is {solBalance.balance.toFixed(6)}{' '}
               SOL.

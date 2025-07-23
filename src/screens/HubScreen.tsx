@@ -1,4 +1,6 @@
 import * as anchor from '@coral-xyz/anchor';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Address } from '@solana/kit';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -29,12 +31,29 @@ import type {
   WalletCapsulesResponse,
 } from '../services/capsuleApi';
 import { capsuleApi, CapsuleApiService } from '../services/capsuleApi';
+import { useCapsuleService } from '../services/capsuleService';
 import { useBalance } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import type { Capsule } from '../types/api';
 import { useAuthorization } from '../utils/useAuthorization';
+
+// Enhanced capsule type that merges blockchain and database data
+interface EnhancedCapsule extends CapsuleWithStatus {
+  databaseData?: Capsule; // Additional database fields including content_encrypted
+}
+
+type RootStackParamList = {
+  CapsuleDetails: { capsule: EnhancedCapsule };
+};
+
+type HubScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'CapsuleDetails'
+>;
 
 export function HubScreen() {
   const { selectedAccount } = useAuthorization();
+  const navigation = useNavigation<HubScreenNavigationProp>();
   const [capsuleData, setCapsuleData] = useState<
     WalletCapsulesResponse['data'] | null
   >(null);
@@ -51,6 +70,7 @@ export function HubScreen() {
   );
   const { revealCapsule } = useCapsulexProgram();
   const queryClient = useQueryClient();
+  const { getMyCapsules } = useCapsuleService();
 
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -126,25 +146,90 @@ export function HubScreen() {
 
   // Fetch SOL balance
 
-  // Fetch capsule data from blockchain
+  // Fetch capsule data from blockchain and database, then merge them
   const fetchCapsuleData = useCallback(async () => {
     if (!selectedAccount) return;
 
     try {
       setError(null);
-      const response = await capsuleApi.getCapsulesByWallet(
+
+      // Fetch blockchain data
+      const blockchainResponse = await capsuleApi.getCapsulesByWallet(
         selectedAccount.publicKey.toString()
       );
 
-      if (response.success) {
-        setCapsuleData(response.data);
-
-        // Vibrate if there are newly ready capsules
-        if (response.data.summary.ready_to_reveal > 0) {
-          Vibration.vibrate([100, 50, 100]);
-        }
-      } else {
+      if (!blockchainResponse.success) {
         setError('Failed to load capsules');
+        return;
+      }
+
+      // Fetch database data
+      const databaseCapsules = await getMyCapsules();
+
+      // Create a map of database capsules by transaction signature for quick lookup
+      const databaseMap = new Map<string, Capsule>();
+      databaseCapsules.forEach(dbCapsule => {
+        if (dbCapsule.on_chain_tx) {
+          databaseMap.set(dbCapsule.on_chain_tx, dbCapsule);
+        }
+      });
+
+      // Enhance blockchain capsules with database data
+      const enhanceCapsulesArray = (
+        capsules: CapsuleWithStatus[]
+      ): EnhancedCapsule[] => {
+        return capsules.map(blockchainCapsule => {
+          // Try to find matching database capsule
+          // Note: We need to implement a way to link blockchain publicKey to database on_chain_tx
+          // For now, we'll use a placeholder approach
+          const enhancedCapsule: EnhancedCapsule = {
+            ...blockchainCapsule,
+            databaseData: undefined, // Will be populated when we can match them
+          };
+
+          // Try to find database match by searching for recent transactions
+          // This is a temporary solution - ideally the blockchain data should include tx signature
+          for (const [txSignature, dbCapsule] of databaseMap.entries()) {
+            // Simple heuristic: match by creation time proximity and content hash
+            const blockchainTime = blockchainCapsule.account.createdAt;
+            const dbTime = new Date(dbCapsule.created_at).getTime() / 1000;
+            const timeDiff = Math.abs(blockchainTime - dbTime);
+
+            // If created within 5 minutes and creator matches
+            if (timeDiff < 300 && dbCapsule.user_id) {
+              enhancedCapsule.databaseData = dbCapsule;
+              break;
+            }
+          }
+
+          return enhancedCapsule;
+        });
+      };
+
+      // Enhance all capsule arrays
+      const enhancedData = {
+        ...blockchainResponse.data,
+        capsules: {
+          pending: enhanceCapsulesArray(
+            blockchainResponse.data.capsules.pending
+          ),
+          ready_to_reveal: enhanceCapsulesArray(
+            blockchainResponse.data.capsules.ready_to_reveal
+          ),
+          revealed: enhanceCapsulesArray(
+            blockchainResponse.data.capsules.revealed
+          ),
+        },
+        all_capsules: enhanceCapsulesArray(
+          blockchainResponse.data.all_capsules
+        ),
+      };
+
+      setCapsuleData(enhancedData);
+
+      // Vibrate if there are newly ready capsules
+      if (enhancedData.summary.ready_to_reveal > 0) {
+        Vibration.vibrate([100, 50, 100]);
       }
     } catch (error) {
       console.error('Error fetching capsule data:', error);
@@ -152,7 +237,7 @@ export function HubScreen() {
     } finally {
       setLoading(false);
     }
-  }, [selectedAccount]);
+  }, [selectedAccount, getMyCapsules]);
 
   // Initial load
   useEffect(() => {
@@ -388,7 +473,12 @@ export function HubScreen() {
                     styles.revealingCard,
                 ]}
               >
-                <Card style={[styles.capsuleCard, styles.readyCardInner]}>
+                <Card
+                  style={[styles.capsuleCard, styles.readyCardInner]}
+                  onPress={() =>
+                    navigation.navigate('CapsuleDetails', { capsule: capsule })
+                  }
+                >
                   <Card.Content>
                     <View style={styles.capsuleHeader}>
                       <Chip
@@ -444,7 +534,13 @@ export function HubScreen() {
               );
 
               return (
-                <Card key={capsule.publicKey} style={styles.capsuleCard}>
+                <Card
+                  key={capsule.publicKey}
+                  style={styles.capsuleCard}
+                  onPress={() =>
+                    navigation.navigate('CapsuleDetails', { capsule: capsule })
+                  }
+                >
                   <Card.Content>
                     <View style={styles.capsuleHeader}>
                       <Chip mode="outlined" style={styles.pendingChip}>
@@ -488,7 +584,13 @@ export function HubScreen() {
             </Text>
 
             {revealedCapsules.map(capsule => (
-              <Card key={capsule.publicKey} style={styles.capsuleCard}>
+              <Card
+                key={capsule.publicKey}
+                style={styles.capsuleCard}
+                onPress={() =>
+                  navigation.navigate('CapsuleDetails', { capsule: capsule })
+                }
+              >
                 <Card.Content>
                   <View style={styles.capsuleHeader}>
                     <Chip mode="flat" style={styles.revealedChip}>

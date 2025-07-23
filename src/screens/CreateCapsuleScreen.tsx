@@ -19,12 +19,15 @@ import {
   Chip,
   Portal,
   Modal,
+  Switch,
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
+import { apiService } from '../services/api';
 import { useCapsuleService } from '../services/capsuleService';
 import { useSolanaService } from '../services/solana';
+import { twitterService } from '../services/twitterService';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import { useAuthorization } from '../utils/useAuthorization';
 import { VaultKeyManager } from '../utils/vaultKey';
@@ -55,6 +58,8 @@ export function CreateCapsuleScreen() {
   });
   const [showVaultKeyInfo, setShowVaultKeyInfo] = useState(false);
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
+  const [notifyAudience, setNotifyAudience] = useState(false);
+  const [isTwitterConnected, setIsTwitterConnected] = useState(false);
   const { snackbar, showError, showSuccess, showInfo, hideSnackbar } =
     useSnackbar();
   const { getBalance } = useSolanaService();
@@ -83,14 +88,27 @@ export function CreateCapsuleScreen() {
     }
   };
 
+  // Check Twitter connection status
+  const checkTwitterConnection = async () => {
+    try {
+      const connected = await twitterService.isTwitterConnected();
+      setIsTwitterConnected(connected);
+    } catch (error) {
+      console.error('Failed to check Twitter connection:', error);
+      setIsTwitterConnected(false);
+    }
+  };
+
   useEffect(() => {
     checkFirstTimeUser();
+    checkTwitterConnection();
   }, [selectedAccount]);
 
   // Refresh vault key status when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       checkFirstTimeUser();
+      checkTwitterConnection();
     }, [selectedAccount])
   );
 
@@ -219,43 +237,57 @@ export function CreateCapsuleScreen() {
 
         console.log('✅ Capsule saved to database:', capsuleData);
 
-        // Step 3: Post audience notification to Twitter
-        // try {
-        //   console.log('📢 Posting audience notification...');
-        //   const notificationResponse = await apiService.post('/social/notify-audience', {
-        //     capsule_id: capsuleData.capsule_id,
-        //     reveal_date: revealDateTime.toISOString(),
-        //     hint_text: `🔮 I just created an encrypted time capsule that will be revealed on`,
-        //     include_capsule_link: true,
-        //   });
+        // Step 3: Post audience notification to Twitter (if enabled)
+        let twitterPostSuccess = false;
+        if (notifyAudience && isTwitterConnected) {
+          try {
+            console.log('📢 Posting audience notification...');
+            const notificationResponse = await apiService.post(
+              '/social/notify-audience',
+              {
+                capsule_id: capsuleData.capsule_id,
+                reveal_date: revealDateTime.toISOString(),
+                hint_text: `🔮 I just created an encrypted time capsule that will be revealed on`,
+                include_capsule_link: true,
+              }
+            );
 
-        //   if (notificationResponse.success) {
-        //     console.log('✅ Audience notification posted:', notificationResponse.data);
-        //     showSuccess(
-        //       '🎉 Encrypted time capsule created and announced to your audience!'
-        //     );
-        //   } else {
-        //     console.warn('⚠️ Audience notification failed:', notificationResponse.error);
-        //     showSuccess(
-        //       '🎉 Time capsule created successfully! (Audience notification failed)'
-        //     );
-        //   }
-        // } catch (notificationError) {
-        //   console.warn('⚠️ Audience notification error:', notificationError);
-        //   showSuccess(
-        //     '🎉 Time capsule created successfully! (Check Twitter connection for announcements)'
-        //   );
-        // }
+            if (notificationResponse.success) {
+              console.log(
+                '✅ Audience notification posted:',
+                notificationResponse.data
+              );
+              twitterPostSuccess = true;
+            } else {
+              console.warn(
+                '⚠️ Audience notification failed:',
+                notificationResponse.error
+              );
+            }
+          } catch (notificationError) {
+            console.warn('⚠️ Audience notification error:', notificationError);
+          }
+        }
 
         // Show success message with backup reminder for first-time users
-        if (isFirstTimeUser) {
-          showSuccess(
-            '🎉 Time capsule created successfully! Remember to backup your encryption key in Profile settings.'
-          );
-          setIsFirstTimeUser(false); // No longer first-time user
-        } else {
-          showSuccess('🎉 Time capsule created successfully');
+        let successMessage = '🎉 Time capsule created successfully';
+
+        if (notifyAudience && isTwitterConnected) {
+          if (twitterPostSuccess) {
+            successMessage += ' and announced to your audience!';
+          } else {
+            successMessage +=
+              '! (Audience notification failed - check Twitter connection)';
+          }
         }
+
+        if (isFirstTimeUser) {
+          successMessage +=
+            ' Remember to backup your encryption key in Profile settings.';
+          setIsFirstTimeUser(false); // No longer first-time user
+        }
+
+        showSuccess(successMessage);
 
         // Reset form after short delay
         setTimeout(() => {
@@ -400,6 +432,36 @@ export function CreateCapsuleScreen() {
           <Text style={styles.characterCount}>
             {content.length}/280 characters
           </Text>
+        </View>
+
+        {/* Twitter Audience Notification Toggle */}
+        <View style={styles.section}>
+          <View style={styles.notificationHeader}>
+            <View style={styles.notificationTitleContainer}>
+              <Text style={styles.sectionTitle}>Notify Your Audience</Text>
+              {!isTwitterConnected && (
+                <Text style={styles.twitterWarning}>
+                  Connect Twitter in Profile to enable notifications
+                </Text>
+              )}
+            </View>
+            <Switch
+              value={notifyAudience}
+              onValueChange={setNotifyAudience}
+              disabled={!isTwitterConnected}
+            />
+          </View>
+          {notifyAudience && isTwitterConnected && (
+            <Card style={styles.notificationInfoCard}>
+              <Card.Content>
+                <Text style={styles.notificationInfoText}>
+                  📢 This will post a teaser about your time capsule to your
+                  Twitter account, letting your followers know when to expect
+                  the reveal.
+                </Text>
+              </Card.Content>
+            </Card>
+          )}
         </View>
 
         {/* Reveal Date & Time */}
@@ -699,5 +761,32 @@ const styles = StyleSheet.create({
   },
   dismissButton: {
     alignSelf: 'flex-start',
+  },
+  // Twitter Notification Styles
+  notificationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  notificationTitleContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  twitterWarning: {
+    fontSize: 12,
+    color: '#FF5722',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  notificationInfoCard: {
+    backgroundColor: '#E8F5E8',
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  notificationInfoText: {
+    fontSize: 14,
+    color: '#2E7D32',
+    lineHeight: 20,
   },
 });

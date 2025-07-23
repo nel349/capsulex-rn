@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Share } from 'react-native';
 import {
   Text,
   Card,
@@ -8,6 +8,7 @@ import {
   Switch,
   Divider,
   Avatar,
+  Chip,
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
@@ -16,6 +17,7 @@ import { apiService } from '../services/api';
 import { twitterService } from '../services/twitterService';
 import { useAuthorization } from '../utils/useAuthorization';
 import { useMobileWallet } from '../utils/useMobileWallet';
+import { VaultKeyManager } from '../utils/vaultKey';
 
 interface UserProfile {
   wallet: string;
@@ -55,10 +57,13 @@ export function ProfileScreen() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isTwitterConnecting, setIsTwitterConnecting] = useState(false);
+  const [vaultKeyExists, setVaultKeyExists] = useState(false);
+  const [vaultKeyLoading, setVaultKeyLoading] = useState(false);
 
   useEffect(() => {
     checkTwitterConnection();
     loadAppSettings();
+    checkVaultKeyStatus();
   }, []);
 
   const loadAppSettings = async () => {
@@ -95,6 +100,17 @@ export function ProfileScreen() {
       }
     } catch (error) {
       console.error('Failed to check Twitter connection:', error);
+    }
+  };
+
+  const checkVaultKeyStatus = async () => {
+    if (!selectedAccount?.address) return;
+
+    try {
+      const exists = await VaultKeyManager.hasVaultKey(selectedAccount.address);
+      setVaultKeyExists(exists);
+    } catch (error) {
+      console.error('Failed to check vault key status:', error);
     }
   };
 
@@ -210,6 +226,140 @@ export function ProfileScreen() {
           style: 'destructive',
           onPress: () => {
             disconnect();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCreateVaultKey = async () => {
+    if (!selectedAccount?.address) {
+      showError('No wallet connected');
+      return;
+    }
+
+    Alert.alert(
+      'Create Vault Key',
+      'This will create a new encryption key on your device to secure your time capsule content. The key will be stored securely and can be backed up.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Create',
+          onPress: async () => {
+            try {
+              setVaultKeyLoading(true);
+              await VaultKeyManager.generateVaultKey(selectedAccount.address);
+              setVaultKeyExists(true);
+              showSuccess('Vault key created successfully! Your content will now be encrypted.');
+            } catch (error) {
+              console.error('Failed to create vault key:', error);
+              showError('Failed to create vault key');
+            } finally {
+              setVaultKeyLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleBackupVaultKey = async () => {
+    if (!selectedAccount?.address) {
+      showError('No wallet connected');
+      return;
+    }
+
+    try {
+      setVaultKeyLoading(true);
+      const backupData = await VaultKeyManager.exportVaultKey(selectedAccount.address);
+      
+      Alert.alert(
+        'Backup Vault Key',
+        'Choose how you want to back up your vault key. Keep this backup safe - you\'ll need it to decrypt your content if you lose access to this device.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Share Backup',
+            onPress: async () => {
+              try {
+                await Share.share({
+                  message: `CapsuleX Vault Key Backup\n\nWallet: ${selectedAccount.address}\nBackup Data: ${backupData}\n\n⚠️ Keep this backup secure and private!`,
+                  title: 'CapsuleX Vault Key Backup'
+                });
+              } catch (error) {
+                console.error('Failed to share backup:', error);
+                showError('Failed to share backup');
+              }
+            },
+          },
+          {
+            text: 'Copy to Clipboard',
+            onPress: async () => {
+              // TODO: Copy to clipboard when @react-native-clipboard/clipboard is available
+              Alert.alert(
+                'Backup Data',
+                `Wallet: ${selectedAccount.address}\n\nBackup: ${backupData}\n\n⚠️ Save this information securely!`,
+                [{ text: 'OK' }]
+              );
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to backup vault key:', error);
+      showError('Failed to create backup');
+    } finally {
+      setVaultKeyLoading(false);
+    }
+  };
+
+  const handleRestoreVaultKey = async () => {
+    Alert.alert(
+      'Restore Vault Key',
+      'Enter your vault key backup data to restore access to your encrypted content.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Enter Backup',
+          onPress: () => {
+            // TODO: Implement input dialog for backup data
+            Alert.alert(
+              'Restore Key', 
+              'This feature requires a text input dialog. For now, please contact support to restore your vault key.',
+              [{ text: 'OK' }]
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteVaultKey = async () => {
+    if (!selectedAccount?.address) {
+      showError('No wallet connected');
+      return;
+    }
+
+    Alert.alert(
+      'Delete Vault Key',
+      '⚠️ WARNING: This will permanently delete your vault key from this device. You will lose access to all encrypted content unless you have a backup. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setVaultKeyLoading(true);
+              await VaultKeyManager.deleteVaultKey(selectedAccount.address);
+              setVaultKeyExists(false);
+              showInfo('Vault key deleted. Create a new key to encrypt future content.');
+            } catch (error) {
+              console.error('Failed to delete vault key:', error);
+              showError('Failed to delete vault key');
+            } finally {
+              setVaultKeyLoading(false);
+            }
           },
         },
       ]
@@ -524,6 +674,141 @@ export function ProfileScreen() {
           </Card.Content>
         </Card>
 
+        {/* Vault Key Management */}
+        <Card style={styles.section}>
+          <Card.Content>
+            <View style={styles.sectionHeaderWithStatus}>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Vault Key Management
+              </Text>
+              <Chip
+                style={[
+                  styles.statusChip,
+                  { backgroundColor: vaultKeyExists ? '#4CAF50' : '#FF9800' },
+                ]}
+                textStyle={{ color: 'white', fontSize: 12 }}
+              >
+                {vaultKeyExists ? 'Active' : 'Not Set'}
+              </Chip>
+            </View>
+
+            <Text variant="bodySmall" style={styles.sectionDescription}>
+              Your vault key encrypts time capsule content on your device. This key is required to decrypt your own content.
+            </Text>
+
+            {vaultKeyExists ? (
+              <>
+                <List.Item
+                  title="Vault Key Status"
+                  description="Your device has an active vault key for encryption"
+                  left={props => <List.Icon {...props} icon="shield-check" />}
+                  right={() => (
+                    <Chip
+                      style={styles.activeChip}
+                      textStyle={{ color: 'white' }}
+                    >
+                      ✓ Active
+                    </Chip>
+                  )}
+                />
+
+                <Divider />
+
+                <List.Item
+                  title="Backup Vault Key"
+                  description="Create a secure backup of your encryption key"
+                  left={props => <List.Icon {...props} icon="backup-restore" />}
+                  right={() => (
+                    <Button
+                      mode="outlined"
+                      onPress={handleBackupVaultKey}
+                      loading={vaultKeyLoading}
+                      disabled={vaultKeyLoading}
+                      compact
+                    >
+                      Backup
+                    </Button>
+                  )}
+                />
+
+                <Divider />
+
+                <List.Item
+                  title="Delete Vault Key"
+                  description="⚠️ Permanently remove key from this device"
+                  left={props => <List.Icon {...props} icon="delete-forever" />}
+                  right={() => (
+                    <Button
+                      mode="outlined"
+                      onPress={handleDeleteVaultKey}
+                      loading={vaultKeyLoading}
+                      disabled={vaultKeyLoading}
+                      compact
+                      textColor="#FF5722"
+                    >
+                      Delete
+                    </Button>
+                  )}
+                />
+              </>
+            ) : (
+              <>
+                <List.Item
+                  title="No Vault Key"
+                  description="Create a vault key to encrypt your time capsule content"
+                  left={props => <List.Icon {...props} icon="shield-alert" />}
+                  right={() => (
+                    <Chip
+                      style={styles.warningChip}
+                      textStyle={{ color: 'white' }}
+                    >
+                      ⚠️ Not Set
+                    </Chip>
+                  )}
+                />
+
+                <Divider />
+
+                <List.Item
+                  title="Create Vault Key"
+                  description="Generate a new encryption key for your content"
+                  left={props => <List.Icon {...props} icon="shield-plus" />}
+                  right={() => (
+                    <Button
+                      mode="contained"
+                      onPress={handleCreateVaultKey}
+                      loading={vaultKeyLoading}
+                      disabled={vaultKeyLoading}
+                      compact
+                    >
+                      Create
+                    </Button>
+                  )}
+                />
+
+                <Divider />
+
+                <List.Item
+                  title="Restore Vault Key"
+                  description="Restore from a previous backup"
+                  left={props => <List.Icon {...props} icon="backup-restore" />}
+                  right={() => (
+                    <Button
+                      mode="outlined"
+                      onPress={handleRestoreVaultKey}
+                      loading={vaultKeyLoading}
+                      disabled={vaultKeyLoading}
+                      compact
+                    >
+                      Restore
+                    </Button>
+                  )}
+                />
+              </>
+            )}
+          </Card.Content>
+        </Card>
+
         {/* App Info */}
         <Card style={styles.section}>
           <Card.Content>
@@ -653,5 +938,27 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontWeight: 'bold',
     marginBottom: 8,
+  },
+  sectionHeaderWithStatus: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionDescription: {
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  statusChip: {
+    borderRadius: 12,
+  },
+  activeChip: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+  },
+  warningChip: {
+    backgroundColor: '#FF9800',
+    borderRadius: 12,
   },
 });

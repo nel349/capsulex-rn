@@ -1,8 +1,15 @@
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 
-const VAULT_KEY_STORAGE_KEY = 'capsulex_vault_key';
-const VAULT_KEY_INFO_KEY = 'capsulex_vault_key_info';
+// SecureStore keys must only contain alphanumeric characters, ".", "-", and "_"
+const sanitizeWalletAddress = (walletAddress: string): string => {
+  return walletAddress.replace(/[^a-zA-Z0-9._-]/g, '_');
+};
+
+const getVaultKeyStorageKey = (walletAddress: string) => 
+  `capsulex_vault_key_${sanitizeWalletAddress(walletAddress)}`;
+const getVaultKeyInfoKey = (walletAddress: string) => 
+  `capsulex_vault_key_info_${sanitizeWalletAddress(walletAddress)}`;
 
 export interface VaultKeyInfo {
   keyId: string;
@@ -27,7 +34,7 @@ export class VaultKeyManager {
   /**
    * Generate a new vault key and store it securely on device
    */
-  static async generateVaultKey(walletAddress?: string): Promise<VaultKeyInfo> {
+  static async generateVaultKey(walletAddress: string): Promise<VaultKeyInfo> {
     // Generate 256-bit random key
     const keyBytes = await Crypto.getRandomBytesAsync(32);
     const keyHex = Array.from(keyBytes)
@@ -49,8 +56,8 @@ export class VaultKeyManager {
     };
 
     // Store key securely
-    await SecureStore.setItemAsync(VAULT_KEY_STORAGE_KEY, keyHex);
-    await SecureStore.setItemAsync(VAULT_KEY_INFO_KEY, JSON.stringify(keyInfo));
+    await SecureStore.setItemAsync(getVaultKeyStorageKey(walletAddress), keyHex);
+    await SecureStore.setItemAsync(getVaultKeyInfoKey(walletAddress), JSON.stringify(keyInfo));
 
     console.log('🔐 Vault key generated:', keyInfo.keyId);
     return keyInfo;
@@ -59,9 +66,9 @@ export class VaultKeyManager {
   /**
    * Get the current vault key info (metadata only, not the actual key)
    */
-  static async getVaultKeyInfo(): Promise<VaultKeyInfo | null> {
+  static async getVaultKeyInfo(walletAddress: string): Promise<VaultKeyInfo | null> {
     try {
-      const infoJson = await SecureStore.getItemAsync(VAULT_KEY_INFO_KEY);
+      const infoJson = await SecureStore.getItemAsync(getVaultKeyInfoKey(walletAddress));
       return infoJson ? JSON.parse(infoJson) : null;
     } catch (error) {
       console.error('Failed to get vault key info:', error);
@@ -72,9 +79,9 @@ export class VaultKeyManager {
   /**
    * Check if vault key exists
    */
-  static async hasVaultKey(): Promise<boolean> {
+  static async hasVaultKey(walletAddress: string): Promise<boolean> {
     try {
-      const keyHex = await SecureStore.getItemAsync(VAULT_KEY_STORAGE_KEY);
+      const keyHex = await SecureStore.getItemAsync(getVaultKeyStorageKey(walletAddress));
       return !!keyHex;
     } catch (error) {
       console.error('Failed to check vault key existence:', error);
@@ -86,15 +93,15 @@ export class VaultKeyManager {
    * Get or create vault key
    */
   static async getOrCreateVaultKey(
-    walletAddress?: string
+    walletAddress: string
   ): Promise<Uint8Array> {
     try {
-      let keyHex = await SecureStore.getItemAsync(VAULT_KEY_STORAGE_KEY);
+      let keyHex = await SecureStore.getItemAsync(getVaultKeyStorageKey(walletAddress));
 
       if (!keyHex) {
         console.log('🔐 No vault key found, generating new one...');
         await this.generateVaultKey(walletAddress);
-        keyHex = await SecureStore.getItemAsync(VAULT_KEY_STORAGE_KEY);
+        keyHex = await SecureStore.getItemAsync(getVaultKeyStorageKey(walletAddress));
       }
 
       if (!keyHex) {
@@ -121,7 +128,7 @@ export class VaultKeyManager {
     walletAddress: string
   ): Promise<EncryptedContent> {
     const vaultKey = await this.getOrCreateVaultKey(walletAddress);
-    const keyInfo = await this.getVaultKeyInfo();
+    const keyInfo = await this.getVaultKeyInfo(walletAddress);
 
     // XOR encryption
     const dataBytes = new TextEncoder().encode(content);
@@ -151,7 +158,7 @@ export class VaultKeyManager {
   static async decryptContent(
     encryptedContent: EncryptedContent
   ): Promise<string> {
-    const vaultKey = await this.getOrCreateVaultKey();
+    const vaultKey = await this.getOrCreateVaultKey(encryptedContent.walletAddress);
 
     // Convert hex to bytes
     const encryptedBytes = new Uint8Array(
@@ -175,9 +182,9 @@ export class VaultKeyManager {
   /**
    * Export vault key for backup (show to user for manual backup)
    */
-  static async exportVaultKey(): Promise<string | null> {
+  static async exportVaultKey(walletAddress: string): Promise<string | null> {
     try {
-      const keyHex = await SecureStore.getItemAsync(VAULT_KEY_STORAGE_KEY);
+      const keyHex = await SecureStore.getItemAsync(getVaultKeyStorageKey(walletAddress));
       return keyHex;
     } catch (error) {
       console.error('Failed to export vault key:', error);
@@ -190,7 +197,7 @@ export class VaultKeyManager {
    */
   static async importVaultKey(
     keyHex: string,
-    walletAddress?: string
+    walletAddress: string
   ): Promise<VaultKeyInfo> {
     // Validate key format
     if (!/^[0-9a-f]{64}$/i.test(keyHex)) {
@@ -212,8 +219,8 @@ export class VaultKeyManager {
     };
 
     // Store imported key
-    await SecureStore.setItemAsync(VAULT_KEY_STORAGE_KEY, keyHex);
-    await SecureStore.setItemAsync(VAULT_KEY_INFO_KEY, JSON.stringify(keyInfo));
+    await SecureStore.setItemAsync(getVaultKeyStorageKey(walletAddress), keyHex);
+    await SecureStore.setItemAsync(getVaultKeyInfoKey(walletAddress), JSON.stringify(keyInfo));
 
     console.log('🔐 Vault key imported:', keyInfo.keyId);
     return keyInfo;
@@ -222,10 +229,10 @@ export class VaultKeyManager {
   /**
    * Delete vault key (WARNING: This will make encrypted content unreadable!)
    */
-  static async deleteVaultKey(): Promise<void> {
+  static async deleteVaultKey(walletAddress: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(VAULT_KEY_STORAGE_KEY);
-      await SecureStore.deleteItemAsync(VAULT_KEY_INFO_KEY);
+      await SecureStore.deleteItemAsync(getVaultKeyStorageKey(walletAddress));
+      await SecureStore.deleteItemAsync(getVaultKeyInfoKey(walletAddress));
       console.log('🗑️ Vault key deleted');
     } catch (error) {
       console.error('Failed to delete vault key:', error);
@@ -236,12 +243,12 @@ export class VaultKeyManager {
   /**
    * Mark vault key as backed up
    */
-  static async markAsBackedUp(): Promise<void> {
-    const keyInfo = await this.getVaultKeyInfo();
+  static async markAsBackedUp(walletAddress: string): Promise<void> {
+    const keyInfo = await this.getVaultKeyInfo(walletAddress);
     if (keyInfo) {
       keyInfo.isBackedUp = true;
       await SecureStore.setItemAsync(
-        VAULT_KEY_INFO_KEY,
+        getVaultKeyInfoKey(walletAddress),
         JSON.stringify(keyInfo)
       );
     }

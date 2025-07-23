@@ -162,7 +162,9 @@ export function CapsuleDetailsScreen() {
       }
 
       // Check if we have the vault key on this device
-      const hasVaultKey = await VaultKeyManager.hasVaultKey();
+      const hasVaultKey = await VaultKeyManager.hasVaultKey(
+        selectedAccount.address
+      );
       if (!hasVaultKey) {
         Alert.alert(
           'Vault Key Not Found',

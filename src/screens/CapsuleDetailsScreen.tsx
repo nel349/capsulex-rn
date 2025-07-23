@@ -26,12 +26,6 @@ interface EnhancedCapsule extends CapsuleWithStatus {
   databaseData?: Capsule; // Additional database fields including content_encrypted
 }
 
-interface EncryptedContent {
-  encryptedData: string;
-  nonce: string;
-  walletAddress: string;
-}
-
 type RootStackParamList = {
   CapsuleDetails: { capsule: EnhancedCapsule };
 };
@@ -296,16 +290,16 @@ export function CapsuleDetailsScreen() {
                   {isDecrypting
                     ? 'Decrypting...'
                     : fullCapsuleData?.content_encrypted
-                    ? '🔒 Content is encrypted with your device vault key. Click the eye icon to decrypt and view.'
-                    : '⚠️ Encrypted content not available. This capsule may have been created with an older system.'}
+                      ? '🔒 Content is encrypted with your device vault key. Click the eye icon to decrypt and view.'
+                      : '⚠️ Encrypted content not available. This capsule may have been created with an older system.'}
                 </Text>
               )}
             </View>
 
-            {selectedAccount && selectedAccount.address && (
+            {selectedAccount?.address && (
               <Text variant="bodySmall" style={styles.walletInfo}>
-                Wallet: {selectedAccount.address.slice(0, 8)}...
-                {selectedAccount.address.slice(-8)}
+                Wallet: {selectedAccount?.address?.slice(0, 8)}...
+                {selectedAccount?.address?.slice(-8)}
               </Text>
             )}
           </Card.Content>

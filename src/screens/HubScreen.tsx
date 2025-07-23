@@ -189,7 +189,7 @@ export function HubScreen() {
 
           // Try to find database match by searching for recent transactions
           // This is a temporary solution - ideally the blockchain data should include tx signature
-          for (const [txSignature, dbCapsule] of databaseMap.entries()) {
+          for (const [, dbCapsule] of databaseMap.entries()) {
             // Simple heuristic: match by creation time proximity and content hash
             const blockchainTime = blockchainCapsule.account.createdAt;
             const dbTime = new Date(dbCapsule.created_at).getTime() / 1000;

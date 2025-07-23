@@ -6,9 +6,9 @@ const sanitizeWalletAddress = (walletAddress: string): string => {
   return walletAddress.replace(/[^a-zA-Z0-9._-]/g, '_');
 };
 
-const getVaultKeyStorageKey = (walletAddress: string) => 
+const getVaultKeyStorageKey = (walletAddress: string) =>
   `capsulex_vault_key_${sanitizeWalletAddress(walletAddress)}`;
-const getVaultKeyInfoKey = (walletAddress: string) => 
+const getVaultKeyInfoKey = (walletAddress: string) =>
   `capsulex_vault_key_info_${sanitizeWalletAddress(walletAddress)}`;
 
 export interface VaultKeyInfo {
@@ -56,8 +56,14 @@ export class VaultKeyManager {
     };
 
     // Store key securely
-    await SecureStore.setItemAsync(getVaultKeyStorageKey(walletAddress), keyHex);
-    await SecureStore.setItemAsync(getVaultKeyInfoKey(walletAddress), JSON.stringify(keyInfo));
+    await SecureStore.setItemAsync(
+      getVaultKeyStorageKey(walletAddress),
+      keyHex
+    );
+    await SecureStore.setItemAsync(
+      getVaultKeyInfoKey(walletAddress),
+      JSON.stringify(keyInfo)
+    );
 
     console.log('🔐 Vault key generated:', keyInfo.keyId);
     return keyInfo;
@@ -66,9 +72,13 @@ export class VaultKeyManager {
   /**
    * Get the current vault key info (metadata only, not the actual key)
    */
-  static async getVaultKeyInfo(walletAddress: string): Promise<VaultKeyInfo | null> {
+  static async getVaultKeyInfo(
+    walletAddress: string
+  ): Promise<VaultKeyInfo | null> {
     try {
-      const infoJson = await SecureStore.getItemAsync(getVaultKeyInfoKey(walletAddress));
+      const infoJson = await SecureStore.getItemAsync(
+        getVaultKeyInfoKey(walletAddress)
+      );
       return infoJson ? JSON.parse(infoJson) : null;
     } catch (error) {
       console.error('Failed to get vault key info:', error);
@@ -81,10 +91,17 @@ export class VaultKeyManager {
    */
   static async hasVaultKey(walletAddress: string): Promise<boolean> {
     try {
-      const keyHex = await SecureStore.getItemAsync(getVaultKeyStorageKey(walletAddress));
-      return !!keyHex;
+      const keyStorageKey = getVaultKeyStorageKey(walletAddress);
+      console.log('🔍 Checking vault key existence for wallet:', walletAddress);
+      console.log('🔍 Key storage key:', keyStorageKey);
+
+      const keyHex = await SecureStore.getItemAsync(keyStorageKey);
+      const exists = !!keyHex;
+
+      console.log('🔑 Vault key exists:', exists);
+      return exists;
     } catch (error) {
-      console.error('Failed to check vault key existence:', error);
+      console.error('❌ Failed to check vault key existence:', error);
       return false;
     }
   }
@@ -92,16 +109,18 @@ export class VaultKeyManager {
   /**
    * Get or create vault key
    */
-  static async getOrCreateVaultKey(
-    walletAddress: string
-  ): Promise<Uint8Array> {
+  static async getOrCreateVaultKey(walletAddress: string): Promise<Uint8Array> {
     try {
-      let keyHex = await SecureStore.getItemAsync(getVaultKeyStorageKey(walletAddress));
+      let keyHex = await SecureStore.getItemAsync(
+        getVaultKeyStorageKey(walletAddress)
+      );
 
       if (!keyHex) {
         console.log('🔐 No vault key found, generating new one...');
         await this.generateVaultKey(walletAddress);
-        keyHex = await SecureStore.getItemAsync(getVaultKeyStorageKey(walletAddress));
+        keyHex = await SecureStore.getItemAsync(
+          getVaultKeyStorageKey(walletAddress)
+        );
       }
 
       if (!keyHex) {
@@ -158,7 +177,9 @@ export class VaultKeyManager {
   static async decryptContent(
     encryptedContent: EncryptedContent
   ): Promise<string> {
-    const vaultKey = await this.getOrCreateVaultKey(encryptedContent.walletAddress);
+    const vaultKey = await this.getOrCreateVaultKey(
+      encryptedContent.walletAddress
+    );
 
     // Convert hex to bytes
     const encryptedBytes = new Uint8Array(
@@ -184,7 +205,9 @@ export class VaultKeyManager {
    */
   static async exportVaultKey(walletAddress: string): Promise<string | null> {
     try {
-      const keyHex = await SecureStore.getItemAsync(getVaultKeyStorageKey(walletAddress));
+      const keyHex = await SecureStore.getItemAsync(
+        getVaultKeyStorageKey(walletAddress)
+      );
       return keyHex;
     } catch (error) {
       console.error('Failed to export vault key:', error);
@@ -219,8 +242,14 @@ export class VaultKeyManager {
     };
 
     // Store imported key
-    await SecureStore.setItemAsync(getVaultKeyStorageKey(walletAddress), keyHex);
-    await SecureStore.setItemAsync(getVaultKeyInfoKey(walletAddress), JSON.stringify(keyInfo));
+    await SecureStore.setItemAsync(
+      getVaultKeyStorageKey(walletAddress),
+      keyHex
+    );
+    await SecureStore.setItemAsync(
+      getVaultKeyInfoKey(walletAddress),
+      JSON.stringify(keyInfo)
+    );
 
     console.log('🔐 Vault key imported:', keyInfo.keyId);
     return keyInfo;
@@ -231,11 +260,23 @@ export class VaultKeyManager {
    */
   static async deleteVaultKey(walletAddress: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(getVaultKeyStorageKey(walletAddress));
-      await SecureStore.deleteItemAsync(getVaultKeyInfoKey(walletAddress));
-      console.log('🗑️ Vault key deleted');
+      const keyStorageKey = getVaultKeyStorageKey(walletAddress);
+      const keyInfoKey = getVaultKeyInfoKey(walletAddress);
+
+      console.log('🗑️ Deleting vault key for wallet:', walletAddress);
+      console.log('🗑️ Key storage key:', keyStorageKey);
+      console.log('🗑️ Key info key:', keyInfoKey);
+
+      await SecureStore.deleteItemAsync(keyStorageKey);
+      await SecureStore.deleteItemAsync(keyInfoKey);
+
+      console.log('✅ Vault key deleted successfully');
+
+      // Verify deletion
+      const stillExists = await SecureStore.getItemAsync(keyStorageKey);
+      console.log('🔍 Verification - key still exists:', !!stillExists);
     } catch (error) {
-      console.error('Failed to delete vault key:', error);
+      console.error('❌ Failed to delete vault key:', error);
       throw new Error('Failed to delete vault key');
     }
   }

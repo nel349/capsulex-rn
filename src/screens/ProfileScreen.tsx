@@ -66,6 +66,11 @@ export function ProfileScreen() {
     checkVaultKeyStatus();
   }, []);
 
+  // Re-check vault key status when wallet changes (sign in/out)
+  useEffect(() => {
+    checkVaultKeyStatus();
+  }, [selectedAccount]);
+
   const loadAppSettings = async () => {
     try {
       const response = await apiService.get('/social/settings');
@@ -104,13 +109,19 @@ export function ProfileScreen() {
   };
 
   const checkVaultKeyStatus = async () => {
-    if (!selectedAccount?.address) return;
+    if (!selectedAccount?.address) {
+      setVaultKeyExists(false);
+      return;
+    }
 
     try {
+      console.log('🔍 Checking vault key status for:', selectedAccount.address);
       const exists = await VaultKeyManager.hasVaultKey(selectedAccount.address);
+      console.log('🔑 Vault key exists:', exists);
       setVaultKeyExists(exists);
     } catch (error) {
       console.error('Failed to check vault key status:', error);
+      setVaultKeyExists(false); // Default to false on error
     }
   };
 
@@ -249,8 +260,13 @@ export function ProfileScreen() {
             try {
               setVaultKeyLoading(true);
               await VaultKeyManager.generateVaultKey(selectedAccount.address);
-              setVaultKeyExists(true);
-              showSuccess('Vault key created successfully! Your content will now be encrypted.');
+
+              // Force refresh the vault key status
+              await checkVaultKeyStatus();
+
+              showSuccess(
+                'Vault key created successfully! Your content will now be encrypted.'
+              );
             } catch (error) {
               console.error('Failed to create vault key:', error);
               showError('Failed to create vault key');
@@ -271,11 +287,13 @@ export function ProfileScreen() {
 
     try {
       setVaultKeyLoading(true);
-      const backupData = await VaultKeyManager.exportVaultKey(selectedAccount.address);
-      
+      const backupData = await VaultKeyManager.exportVaultKey(
+        selectedAccount.address
+      );
+
       Alert.alert(
         'Backup Vault Key',
-        'Choose how you want to back up your vault key. Keep this backup safe - you\'ll need it to decrypt your content if you lose access to this device.',
+        "Choose how you want to back up your vault key. Keep this backup safe - you'll need it to decrypt your content if you lose access to this device.",
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -284,7 +302,7 @@ export function ProfileScreen() {
               try {
                 await Share.share({
                   message: `CapsuleX Vault Key Backup\n\nWallet: ${selectedAccount.address}\nBackup Data: ${backupData}\n\n⚠️ Keep this backup secure and private!`,
-                  title: 'CapsuleX Vault Key Backup'
+                  title: 'CapsuleX Vault Key Backup',
                 });
               } catch (error) {
                 console.error('Failed to share backup:', error);
@@ -324,7 +342,7 @@ export function ProfileScreen() {
           onPress: () => {
             // TODO: Implement input dialog for backup data
             Alert.alert(
-              'Restore Key', 
+              'Restore Key',
               'This feature requires a text input dialog. For now, please contact support to restore your vault key.',
               [{ text: 'OK' }]
             );
@@ -352,8 +370,13 @@ export function ProfileScreen() {
             try {
               setVaultKeyLoading(true);
               await VaultKeyManager.deleteVaultKey(selectedAccount.address);
-              setVaultKeyExists(false);
-              showInfo('Vault key deleted. Create a new key to encrypt future content.');
+
+              // Force refresh the vault key status
+              await checkVaultKeyStatus();
+
+              showInfo(
+                'Vault key deleted. Create a new key to encrypt future content.'
+              );
             } catch (error) {
               console.error('Failed to delete vault key:', error);
               showError('Failed to delete vault key');
@@ -693,7 +716,8 @@ export function ProfileScreen() {
             </View>
 
             <Text variant="bodySmall" style={styles.sectionDescription}>
-              Your vault key encrypts time capsule content on your device. This key is required to decrypt your own content.
+              Your vault key encrypts time capsule content on your device. This
+              key is required to decrypt your own content.
             </Text>
 
             {vaultKeyExists ? (

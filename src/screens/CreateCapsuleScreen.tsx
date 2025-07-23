@@ -1,8 +1,9 @@
 import * as anchor from '@coral-xyz/anchor';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 import type { Address } from '@solana/kit';
 import * as Crypto from 'expo-crypto';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -52,6 +53,8 @@ export function CreateCapsuleScreen() {
     sufficient: true,
     required: 0.00005,
   });
+  const [showVaultKeyInfo, setShowVaultKeyInfo] = useState(false);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const { snackbar, showError, showSuccess, showInfo, hideSnackbar } =
     useSnackbar();
   const { getBalance } = useSolanaService();
@@ -64,6 +67,32 @@ export function CreateCapsuleScreen() {
   useEffect(() => {
     checkSOLBalance();
   }, [getBalance, selectedAccount]);
+
+  // Check if user is creating their first capsule (no vault key yet)
+  const checkFirstTimeUser = async () => {
+    if (!selectedAccount?.address) return;
+
+    try {
+      const hasVaultKey = await VaultKeyManager.hasVaultKey(
+        selectedAccount.address
+      );
+      setIsFirstTimeUser(!hasVaultKey);
+      setShowVaultKeyInfo(!hasVaultKey); // Show info card for first-time users
+    } catch (error) {
+      console.error('Failed to check vault key status:', error);
+    }
+  };
+
+  useEffect(() => {
+    checkFirstTimeUser();
+  }, [selectedAccount]);
+
+  // Refresh vault key status when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      checkFirstTimeUser();
+    }, [selectedAccount])
+  );
 
   const checkSOLBalance = async () => {
     const balance = await getBalance(
@@ -218,7 +247,16 @@ export function CreateCapsuleScreen() {
         //   );
         // }
 
-        showSuccess('🎉 Time capsule created successfully');
+        // Show success message with backup reminder for first-time users
+        if (isFirstTimeUser) {
+          showSuccess(
+            '🎉 Time capsule created successfully! Remember to backup your encryption key in Profile settings.'
+          );
+          setIsFirstTimeUser(false); // No longer first-time user
+        } else {
+          showSuccess('🎉 Time capsule created successfully');
+        }
+
         // Reset form after short delay
         setTimeout(() => {
           setContent('');
@@ -273,6 +311,37 @@ export function CreateCapsuleScreen() {
             Schedule your content for future reveal
           </Text>
         </View>
+
+        {/* Vault Key Education Card - Show for first-time users */}
+        {showVaultKeyInfo && (
+          <Card style={styles.vaultKeyInfoCard}>
+            <Card.Content>
+              <View style={styles.vaultKeyHeader}>
+                <Text style={styles.vaultKeyIcon}>🔐</Text>
+                <View style={styles.vaultKeyTextContainer}>
+                  <Text style={styles.vaultKeyTitle}>
+                    Device Encryption Setup
+                  </Text>
+                  <Text style={styles.vaultKeyDescription}>
+                    Your content will be encrypted on this device for security.
+                    This requires one wallet signature to set up encryption.
+                  </Text>
+                  <Text style={styles.vaultKeyManagement}>
+                    💡 You can manage your encryption key in the Profile screen.
+                  </Text>
+                </View>
+                <Button
+                  mode="text"
+                  onPress={() => setShowVaultKeyInfo(false)}
+                  style={styles.dismissButton}
+                  compact
+                >
+                  Got It
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        )}
 
         {/* SOL Balance Card */}
         <Card
@@ -589,5 +658,46 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
+  },
+  // Vault Key Education Card Styles
+  vaultKeyInfoCard: {
+    margin: 16,
+    marginBottom: 8,
+    backgroundColor: '#E3F2FD', // Light blue background
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3', // Blue accent
+  },
+  vaultKeyHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  vaultKeyIcon: {
+    fontSize: 24,
+    marginRight: 12,
+    marginTop: 2,
+  },
+  vaultKeyTextContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  vaultKeyTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1565C0',
+    marginBottom: 4,
+  },
+  vaultKeyDescription: {
+    fontSize: 14,
+    color: '#424242',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  vaultKeyManagement: {
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  dismissButton: {
+    alignSelf: 'flex-start',
   },
 });

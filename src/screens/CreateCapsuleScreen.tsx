@@ -424,20 +424,19 @@ export function CreateCapsuleScreen() {
             <View style={styles.gamificationTitleContainer}>
               <Text style={styles.sectionTitle}>🎮 Gamify This Capsule</Text>
               <Text style={styles.gamificationDescription}>
-                Let others guess your secret before it's revealed and compete for points!
+                Let others guess your secret before it's revealed and compete
+                for points!
               </Text>
             </View>
-            <Switch
-              value={isGamified}
-              onValueChange={setIsGamified}
-            />
+            <Switch value={isGamified} onValueChange={setIsGamified} />
           </View>
           {isGamified && (
             <Card style={styles.gamificationInfoCard}>
               <Card.Content>
                 <Text style={styles.gamificationInfoText}>
-                  🏆 When enabled, other users can submit guesses about your capsule content. 
-                  Winners earn points on the leaderboard when your capsule is revealed!
+                  🏆 When enabled, other users can submit guesses about your
+                  capsule content. Winners earn points on the leaderboard when
+                  your capsule is revealed!
                 </Text>
               </Card.Content>
             </Card>

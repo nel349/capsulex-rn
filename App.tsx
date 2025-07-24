@@ -1,7 +1,5 @@
 // Polyfills
 import './src/polyfills';
-
-import { PrivyProvider } from '@privy-io/expo';
 import {
   DarkTheme as NavigationDarkTheme,
   DefaultTheme as NavigationDefaultTheme,
@@ -100,14 +98,9 @@ export default function App() {
                   : CombinedDefaultTheme
               }
             >
-              <PrivyProvider
-                appId={process.env.EXPO_PUBLIC_PRIVY_APP_ID}
-                clientId={process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID}
-              >
-                <AuthProvider>
-                  <AppNavigator />
-                </AuthProvider>
-              </PrivyProvider>
+              <AuthProvider>
+                <AppNavigator />
+              </AuthProvider>
             </PaperProvider>
           </SafeAreaView>
         </ConnectionProvider>

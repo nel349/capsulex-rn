@@ -1,4 +1,3 @@
-import { useLoginWithOAuth } from '@privy-io/expo';
 import type {
   Transaction,
   TransactionSignature,
@@ -28,15 +27,6 @@ if (Platform.OS === 'android') {
 }
 
 export function useMobileWallet() {
-  const { login, state } = useLoginWithOAuth({
-    onSuccess: (user: any) => {
-      console.log('✅ Privy OAuth login successful', user);
-    },
-    onError: (error: any) => {
-      console.error('❌ Privy OAuth login failed', error);
-    },
-  });
-
   // const { sendCode, loginWithCode, state: emailState } = useLoginWithEmail();
 
   // useEffect(() => {
@@ -51,41 +41,14 @@ export function useMobileWallet() {
 
   const connect = useCallback(async (): Promise<Account> => {
     if (Platform.OS !== 'android') {
-      // iOS: Use Privy OAuth login
-      console.log('🔄 Starting Privy OAuth login...');
-      console.log('📱 Login state:', state.status);
-
-      if (state.status === 'loading') {
-        throw new Error('Login already in progress');
-      }
-
-      try {
-        const user = await login({ provider: 'twitter' });
-        console.log('✅ Privy login completed', user?.id);
-
-        // Return a mock Account for now - you'll need to convert Privy user to Account format
-        return {
-          address: user?.id || '',
-          label: user?.id || 'Privy User',
-          publicKey: new Uint8Array() as any, // Temporary fix - need proper PublicKey type
-        };
-      } catch (error: any) {
-        console.error('❌ Privy login error:', error);
-        if (error.message?.includes('Embedded wallet proxy not initialized')) {
-          console.log(
-            '⚠️ Embedded wallet proxy error - this is usually non-fatal for OAuth login'
-          );
-          // You might want to retry or use a fallback authentication method
-        }
-        throw error;
-      }
+      console.log('🔄 Starting Dynamic OAuth login...');
     }
 
     // Android: Use Mobile Wallet Adapter
     return await transact(async (wallet: any) => {
       return await authorizeSession(wallet);
     });
-  }, [authorizeSession, login]);
+  }, [authorizeSession]);
 
   const signIn = useCallback(
     async (signInPayload: any): Promise<Account> => {

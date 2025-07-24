@@ -21,8 +21,6 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
     "@ethersproject/shims": "^5.8.0",
-    "@privy-io/expo": "^0.55.6",
-    "@privy-io/expo-native-extensions": "^0.0.5",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/datetimepicker": "^7.6.2",
     "@react-navigation/bottom-tabs": "^6.5.16",

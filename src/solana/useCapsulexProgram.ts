@@ -120,7 +120,10 @@ export function useCapsulexProgram() {
     },
     onSuccess: (signature: string) => {
       // alertAndLog('Capsule Created!', `Transaction: ${signature}`);
-      console.log('✅ Capsule created successfully!', `Transaction: ${signature}`);
+      console.log(
+        '✅ Capsule created successfully!',
+        `Transaction: ${signature}`
+      );
       // You might want to refetch a list of capsules here if you have one
     },
     onError: (error: any) => {

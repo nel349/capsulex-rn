@@ -60,6 +60,7 @@ export function CreateCapsuleScreen() {
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const [notifyAudience, setNotifyAudience] = useState(false);
   const [isTwitterConnected, setIsTwitterConnected] = useState(false);
+  const [isGamified, setIsGamified] = useState(false);
   const { snackbar, showError, showSuccess, showInfo, hideSnackbar } =
     useSnackbar();
   const { getBalance } = useSolanaService();
@@ -214,7 +215,7 @@ export function CreateCapsuleScreen() {
         contentStorage: contentStorage,
         contentIntegrityHash: contentHash,
         revealDate: revealDateBN,
-        isGamified: false,
+        isGamified: isGamified,
       });
 
       console.log('✅ Capsule created on-chain:', txResult);
@@ -232,7 +233,7 @@ export function CreateCapsuleScreen() {
               ? txResult
               : (txResult as any)?.signature || JSON.stringify(txResult),
           sol_fee_amount: solBalance.required,
-          is_gamified: false,
+          is_gamified: isGamified,
         });
 
         console.log('✅ Capsule saved to database:', capsuleData);
@@ -415,6 +416,32 @@ export function CreateCapsuleScreen() {
               </Chip>
             ))}
           </View>
+        </View>
+
+        {/* Gamification Toggle */}
+        <View style={styles.section}>
+          <View style={styles.gamificationHeader}>
+            <View style={styles.gamificationTitleContainer}>
+              <Text style={styles.sectionTitle}>🎮 Gamify This Capsule</Text>
+              <Text style={styles.gamificationDescription}>
+                Let others guess your secret before it's revealed and compete for points!
+              </Text>
+            </View>
+            <Switch
+              value={isGamified}
+              onValueChange={setIsGamified}
+            />
+          </View>
+          {isGamified && (
+            <Card style={styles.gamificationInfoCard}>
+              <Card.Content>
+                <Text style={styles.gamificationInfoText}>
+                  🏆 When enabled, other users can submit guesses about your capsule content. 
+                  Winners earn points on the leaderboard when your capsule is revealed!
+                </Text>
+              </Card.Content>
+            </Card>
+          )}
         </View>
 
         {/* Content Input */}
@@ -787,6 +814,33 @@ const styles = StyleSheet.create({
   notificationInfoText: {
     fontSize: 14,
     color: '#2E7D32',
+    lineHeight: 20,
+  },
+  // Gamification Styles
+  gamificationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  gamificationTitleContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  gamificationDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    lineHeight: 20,
+  },
+  gamificationInfoCard: {
+    backgroundColor: '#FFF3E0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+  },
+  gamificationInfoText: {
+    fontSize: 14,
+    color: '#E65100',
     lineHeight: 20,
   },
 });

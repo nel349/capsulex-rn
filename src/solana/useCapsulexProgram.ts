@@ -87,6 +87,26 @@ export function useCapsulexProgram() {
         capsulexProgramId
       );
 
+      // Prepare base accounts
+      const accounts: any = {
+        creator: creator,
+        capsule: capsulePDA,
+        nftMint: nftMintPDA,
+        vault: vaultPDA,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        rent: SYSVAR_RENT_PUBKEY,
+      };
+
+      // If gamified, add the game PDA account
+      if (isGamified) {
+        const [gamePDA] = PublicKey.findProgramAddressSync(
+          [anchor.utils.bytes.utf8.encode('game'), capsulePDA.toBuffer()],
+          capsulexProgramId
+        );
+        accounts.game = gamePDA;
+      }
+
       return await capsulexProgram.methods
         .createCapsule(
           encryptedContent,
@@ -95,20 +115,12 @@ export function useCapsulexProgram() {
           revealDate,
           isGamified
         )
-        .accounts({
-          creator: creator,
-          capsule: capsulePDA,
-          nftMint: nftMintPDA,
-          vault: vaultPDA,
-          systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: SYSVAR_RENT_PUBKEY,
-        } as any)
+        .accounts(accounts)
         .rpc();
     },
     onSuccess: (signature: string) => {
       // alertAndLog('Capsule Created!', `Transaction: ${signature}`);
-      console.log('Capsule Created!', `Transaction: ${signature}`);
+      console.log('✅ Capsule created successfully!', `Transaction: ${signature}`);
       // You might want to refetch a list of capsules here if you have one
     },
     onError: (error: any) => {

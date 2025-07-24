@@ -38,7 +38,7 @@ export interface CreateCapsuleRequest {
   reveal_date: string; // ISO string
   on_chain_tx?: string;
   sol_fee_amount?: number;
-  is_gamified?: boolean;
+  is_gamified: boolean;
 }
 
 // Capsule Types

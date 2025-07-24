@@ -62,7 +62,7 @@ export function useBalance(publicKey?: Address) {
   return useQuery({
     queryKey: ['solana-balance', publicKey],
     queryFn: async (): Promise<number> => {
-      console.log('🔍 Fetching balance for:', publicKey?.toString());
+      // console.log('🔍 Fetching balance for:', publicKey?.toString());
 
       if (!publicKey) throw new Error('Public key is required');
 
@@ -74,12 +74,12 @@ export function useBalance(publicKey?: Address) {
         console.log('🔑 Using publicKey string:', publicKeyString);
 
         const response = await rpc.getBalance(publicKeyString).send();
-        console.log('📥 RPC response:', response);
+        // console.log('📥 RPC response:', response);
 
         const { value } = response;
         const balance = Number(value) / Number(LAMPORTS_PER_SOL);
 
-        console.log('💰 Balance fetched:', balance, 'SOL');
+        // console.log('💰 Balance fetched:', balance, 'SOL');
         return balance;
       } catch (error) {
         console.error('❌ Balance fetch failed:', error);

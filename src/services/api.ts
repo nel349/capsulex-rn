@@ -35,12 +35,12 @@ class ApiService {
       async config => {
         // Add auth token if available
         const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-        console.log('🔑 API Request - Token check:', {
-          hasToken: !!token,
-          tokenPrefix: token ? token.substring(0, 20) + '...' : 'none',
-          url: config.url,
-          method: config.method,
-        });
+        // console.log('🔑 API Request - Token check:', {
+        //   hasToken: !!token,
+        //   tokenPrefix: token ? token.substring(0, 20) + '...' : 'none',
+        //   url: config.url,
+        //   method: config.method,
+        // });
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }

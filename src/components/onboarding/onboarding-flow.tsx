@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
 
+import { useAuth } from '../../contexts';
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { userService } from '../../services';
 import { useAuthService } from '../../services/authService';
+import { dynamicClientService } from '../../services/dynamicClientService';
 import { ApiError } from '../../types/api';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useMobileWallet } from '../../utils/useMobileWallet';
@@ -16,6 +18,8 @@ import { ProgressIndicator } from './progress-indicator';
 import { SignupFormScreen } from './signup-form-screen';
 import { SocialConnectionScreen } from './social-connection-screen';
 import { WelcomeScreen } from './welcome-screen';
+
+// Note: Using dynamicClientService to avoid require cycle
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -38,6 +42,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const { selectedAccount } = useAuthorization();
   const { connect } = useMobileWallet();
   const { authenticateUser, clearAuth } = useAuthService();
+  const { saveDynamicAuthState } = useAuth();
   const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
 
   // Restore onboarding state after app restart (deep linking)
@@ -116,6 +121,54 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     restoreOnboardingState();
   }, [selectedAccount]);
 
+  // useEffect to check if the user is authenticated for iOS using dynamicClient
+  useEffect(() => {
+    const handleDynamicAuth = async () => {
+      if (
+        Platform.OS === 'ios' &&
+        dynamicClientService.isUserAuthenticated() &&
+        isSignInFlow
+      ) {
+        const userInfo = dynamicClientService.getUserInfo();
+        if (!userInfo) return;
+
+        const { address, name } = userInfo;
+
+        console.log('✅ Dynamic authentication detected:', { address, name });
+
+        setWalletAddress(address);
+        setUserName(name);
+
+        // Authenticate with backend API to get JWT token
+        try {
+          await authenticateUser({
+            wallet_address: address,
+            auth_type: 'wallet',
+            name: name,
+          });
+          console.log('🔐 Backend authentication successful');
+
+          setCurrentStep('complete');
+
+          // Use the actual values, not stale state
+          await saveOnboardingState('complete', name, address, false);
+          await saveDynamicAuthState(true, address);
+
+          // Clear onboarding state and move to hub
+          await clearOnboardingState();
+          onComplete();
+        } catch (authError) {
+          console.error('❌ Backend authentication failed:', authError);
+          showError('Failed to authenticate with backend. Please try again.');
+          setCurrentStep('welcome');
+          setIsSignInFlow(false);
+        }
+      }
+    };
+
+    handleDynamicAuth();
+  }, [isSignInFlow]); // Check periodically when in sign-in flow
+
   // Save onboarding state to survive app restarts
   const saveOnboardingState = async (
     step: OnboardingStep,
@@ -156,6 +209,12 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   // Set wallet address when account is connected and handle flow
   useEffect(() => {
+    // Skip this effect if we're using Dynamic authentication on iOS
+    if (Platform.OS === 'ios' && isSignInFlow) {
+      console.log('🔍 Skipping wallet effect - using Dynamic authentication');
+      return;
+    }
+
     // console.log('🔍 Wallet state change detected:', {
     //   hasAccount: !!selectedAccount?.publicKey,
     //   address: selectedAccount?.publicKey?.toBase58(),
@@ -182,8 +241,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         // Get Started flow: check if wallet is already registered
         handleGetStartedUserCheck(address);
       }
-    } else if (!selectedAccount?.publicKey) {
-      // Clear wallet address when disconnected
+    } else if (
+      !selectedAccount?.publicKey &&
+      !(Platform.OS === 'ios' && isSignInFlow)
+    ) {
+      // Clear wallet address when disconnected (but not during Dynamic auth)
       console.log('🔌 Wallet disconnected - clearing address');
       setWalletAddress('');
     }
@@ -341,15 +403,141 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   };
 
   const handleSignIn = async () => {
+    console.log('🚀 handleSignIn called');
+    console.log('🔍 Current state before sign in:', {
+      currentStep,
+      isSignInFlow,
+      platform: Platform.OS,
+      isAuthenticated: dynamicClientService.isUserAuthenticated(),
+    });
+
     setIsSignInFlow(true);
     setCurrentStep('connecting');
 
     try {
-      await connect();
+      if (Platform.OS === 'ios') {
+        const dynamicClient = dynamicClientService.getDynamicClient();
+
+        if (dynamicClient) {
+          console.log('🔄 Starting Dynamic OAuth login... with iOS');
+          const userInfo = dynamicClientService.getUserInfo();
+          console.log('🔍 Dynamic state check:', {
+            isAuthenticated: dynamicClientService.isUserAuthenticated(),
+            userInfo,
+          });
+
+          // if already authenticated, handle completion immediately
+          if (dynamicClientService.isUserAuthenticated() && userInfo) {
+            console.log(
+              '🔍 User already authenticated, handling completion directly'
+            );
+            const { address, name } = userInfo;
+
+            console.log('✅ Pre-authenticated user:', { address, name });
+
+            setWalletAddress(address);
+            setUserName(name);
+
+            // Authenticate with backend API to get JWT token
+            try {
+              await authenticateUser({
+                wallet_address: address,
+                auth_type: 'wallet',
+                name: name,
+              });
+              console.log('🔐 Backend authentication successful');
+
+              setCurrentStep('complete');
+              console.log('💾 Saving state and calling onComplete...');
+              await saveOnboardingState('complete', name, address, false);
+              await saveDynamicAuthState(true, address);
+              await clearOnboardingState();
+              console.log('🚀 Calling onComplete()');
+              onComplete();
+            } catch (authError) {
+              console.error('❌ Backend authentication failed:', authError);
+              showError(
+                'Failed to authenticate with backend. Please try again.'
+              );
+              setCurrentStep('welcome');
+              setIsSignInFlow(false);
+            }
+            return;
+          }
+
+          // Show the login screen and wait for authentication
+          console.log('🔄 Showing Dynamic auth UI...');
+          await dynamicClientService.showAuthUI();
+
+          // After auth.show() completes, check if user is now authenticated
+          console.log(
+            '🔄 Auth UI completed, checking authentication status...'
+          );
+          const postAuthUserInfo = dynamicClientService.getUserInfo();
+          console.log('🔍 Post-auth state:', {
+            isAuthenticated: dynamicClientService.isUserAuthenticated(),
+            userInfo: postAuthUserInfo,
+          });
+
+          // If authenticated after auth.show(), handle completion directly
+          if (dynamicClientService.isUserAuthenticated() && postAuthUserInfo) {
+            const { address, name } = postAuthUserInfo;
+
+            console.log('✅ Authentication successful:', { address, name });
+
+            setWalletAddress(address);
+            setUserName(name);
+
+            // Authenticate with backend API to get JWT token
+            try {
+              await authenticateUser({
+                wallet_address: address,
+                auth_type: 'wallet',
+                name: name,
+              });
+              console.log('🔐 Backend authentication successful');
+
+              setCurrentStep('complete');
+              console.log('💾 Saving state and calling onComplete...');
+              await saveOnboardingState('complete', name, address, false);
+              await saveDynamicAuthState(true, address);
+              await clearOnboardingState();
+              console.log('🚀 Calling onComplete()');
+              onComplete();
+            } catch (authError) {
+              console.error('❌ Backend authentication failed:', authError);
+              showError(
+                'Failed to authenticate with backend. Please try again.'
+              );
+              setCurrentStep('welcome');
+              setIsSignInFlow(false);
+            }
+          } else {
+            console.log('❌ Authentication failed or incomplete');
+            console.log('🔍 Failed state details:', {
+              isAuthenticated: dynamicClientService.isUserAuthenticated(),
+              userInfo: dynamicClientService.getUserInfo(),
+            });
+            setCurrentStep('welcome');
+            setIsSignInFlow(false);
+          }
+        } else {
+          // Dynamic client not available on iOS - show error
+          console.error('❌ Dynamic client not available on iOS');
+          showError('Authentication not available. Please check your setup.');
+          setCurrentStep('welcome');
+          setIsSignInFlow(false);
+        }
+      } else {
+        // Android - use regular wallet connection
+        await connect();
+      }
       // Let the useEffect handle the flow after connection
     } catch (error) {
-      // Wallet connection failed, stay on welcome
+      console.error('❌ Sign in failed:', error);
+      // Authentication failed, stay on welcome
       setCurrentStep('welcome');
+      setIsSignInFlow(false);
     }
   };
 

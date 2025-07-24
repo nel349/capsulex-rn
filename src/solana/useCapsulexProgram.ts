@@ -87,25 +87,23 @@ export function useCapsulexProgram() {
         capsulexProgramId
       );
 
-      // Prepare base accounts
+      // Always derive the game PDA (required by program)
+      const [gamePDA] = PublicKey.findProgramAddressSync(
+        [anchor.utils.bytes.utf8.encode('game'), capsulePDA.toBuffer()],
+        capsulexProgramId
+      );
+
+      // Prepare accounts (game account is always required by the program)
       const accounts: any = {
         creator: creator,
         capsule: capsulePDA,
         nftMint: nftMintPDA,
         vault: vaultPDA,
+        game: gamePDA, // Always include game account
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
         rent: SYSVAR_RENT_PUBKEY,
       };
-
-      // If gamified, add the game PDA account
-      if (isGamified) {
-        const [gamePDA] = PublicKey.findProgramAddressSync(
-          [anchor.utils.bytes.utf8.encode('game'), capsulePDA.toBuffer()],
-          capsulexProgramId
-        );
-        accounts.game = gamePDA;
-      }
 
       return await capsulexProgram.methods
         .createCapsule(

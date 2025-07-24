@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
+import { Platform } from 'react-native';
 
 import { useAuth } from '../contexts';
 import { HomeNavigator } from '../navigators/HomeNavigator';
@@ -9,19 +10,19 @@ import { OnboardingFlow } from './onboarding';
 export function AppWrapper() {
   const {
     isAuthenticated,
-    isSupported,
     isOnboardingComplete,
+    isLoading,
     setOnboardingComplete,
   } = useAuth();
 
-  // console.log('🔍 AppWrapper state:', {
-  //   isAuthenticated,
-  //   isSupported,
-  //   isOnboardingComplete,
-  // });
+  // Show loading screen while Dynamic auth is being restored on iOS
+  if (isLoading) {
+    console.log('⏳ Loading authentication state...');
+    return null; // Or show a loading spinner component
+  }
 
-  // iOS users (no wallet support) go straight to main app
-  if (!isSupported) {
+  // for ios users, we need to check if the wallet is supported
+  if (Platform.OS === 'ios' && isAuthenticated) {
     console.log('📱 iOS detected - showing main app');
     return <HomeNavigator />;
   }

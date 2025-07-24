@@ -23,13 +23,13 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
 import { useCapsuleService } from '../services/capsuleService';
 import { useSolanaService } from '../services/solana';
 import { twitterService } from '../services/twitterService';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
-import { useAuthorization } from '../utils/useAuthorization';
 import { VaultKeyManager } from '../utils/vaultKey';
 
 interface SOLBalance {
@@ -39,7 +39,7 @@ interface SOLBalance {
 }
 
 export function CreateCapsuleScreen() {
-  const { selectedAccount } = useAuthorization();
+  const { isAuthenticated, walletAddress } = useAuth();
   const { createCapsule } = useCapsulexProgram();
   const { createCapsule: createCapsuleInDB } = useCapsuleService();
   const [content, setContent] = useState('something:for testing');
@@ -72,16 +72,14 @@ export function CreateCapsuleScreen() {
 
   useEffect(() => {
     checkSOLBalance();
-  }, [getBalance, selectedAccount]);
+  }, [getBalance, walletAddress]);
 
   // Check if user is creating their first capsule (no vault key yet)
   const checkFirstTimeUser = async () => {
-    if (!selectedAccount?.address) return;
+    if (!walletAddress) return;
 
     try {
-      const hasVaultKey = await VaultKeyManager.hasVaultKey(
-        selectedAccount.address
-      );
+      const hasVaultKey = await VaultKeyManager.hasVaultKey(walletAddress);
       setIsFirstTimeUser(!hasVaultKey);
       setShowVaultKeyInfo(!hasVaultKey); // Show info card for first-time users
     } catch (error) {
@@ -103,20 +101,18 @@ export function CreateCapsuleScreen() {
   useEffect(() => {
     checkFirstTimeUser();
     checkTwitterConnection();
-  }, [selectedAccount]);
+  }, [walletAddress]);
 
   // Refresh vault key status when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       checkFirstTimeUser();
       checkTwitterConnection();
-    }, [selectedAccount])
+    }, [walletAddress])
   );
 
   const checkSOLBalance = async () => {
-    const balance = await getBalance(
-      selectedAccount?.publicKey.toString() as Address
-    );
+    const balance = await getBalance(walletAddress as unknown as Address);
     const required = 0.00005;
 
     setSolBalance({
@@ -157,7 +153,7 @@ export function CreateCapsuleScreen() {
       return;
     }
 
-    if (!selectedAccount) {
+    if (!isAuthenticated) {
       showError('Please connect your wallet first');
       return;
     }
@@ -193,7 +189,7 @@ export function CreateCapsuleScreen() {
       try {
         encryptedContent = await VaultKeyManager.encryptContent(
           content,
-          selectedAccount.address
+          walletAddress as string
         );
         console.log('🔐 Content encrypted with device vault key');
       } catch (encryptionError) {
@@ -207,7 +203,7 @@ export function CreateCapsuleScreen() {
       // Step 2: Create capsule on blockchain (ONLY wallet signature needed!)
       const blockchainPlaceholder = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        `ENCRYPTED_CONTENT_${selectedAccount.address}_${Date.now()}`
+        `ENCRYPTED_CONTENT_${walletAddress}_${Date.now()}`
       );
 
       const txResult = await createCapsule.mutateAsync({
@@ -321,7 +317,7 @@ export function CreateCapsuleScreen() {
     showInfo('SOL onramp feature coming soon!');
   };
 
-  if (!selectedAccount) {
+  if (!isAuthenticated) {
     return (
       <View style={styles.screenContainer}>
         <View style={styles.connectPrompt}>

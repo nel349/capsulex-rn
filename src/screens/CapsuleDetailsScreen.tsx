@@ -13,10 +13,10 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import type { CapsuleWithStatus } from '../services/capsuleApi';
 import type { Capsule } from '../types/api';
-import { useAuthorization } from '../utils/useAuthorization';
 import { VaultKeyManager } from '../utils/vaultKey';
 
 // Type definitions
@@ -47,7 +47,7 @@ export function CapsuleDetailsScreen() {
   const [fullCapsuleData, setFullCapsuleData] = useState<Capsule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { selectedAccount } = useAuthorization();
+  const { isAuthenticated, walletAddress } = useAuth();
   const { snackbar, showError, showSuccess, hideSnackbar } = useSnackbar();
 
   // Process the enhanced capsule data from HubScreen
@@ -84,7 +84,7 @@ export function CapsuleDetailsScreen() {
   }, [capsule]);
 
   const handleDecryptContent = async () => {
-    if (!selectedAccount) {
+    if (!isAuthenticated) {
       showError('Please connect your wallet to decrypt content');
       return;
     }
@@ -145,7 +145,7 @@ export function CapsuleDetailsScreen() {
       }
 
       // Check if this wallet matches the original creator
-      if (encryptedContent.walletAddress !== selectedAccount.address) {
+      if (encryptedContent.walletAddress !== walletAddress) {
         Alert.alert(
           'Unable to Decrypt',
           'This content was created with a different wallet. You can only decrypt capsules created with your current wallet on this device.',
@@ -157,7 +157,7 @@ export function CapsuleDetailsScreen() {
 
       // Check if we have the vault key on this device
       const hasVaultKey = await VaultKeyManager.hasVaultKey(
-        selectedAccount.address
+        walletAddress as string
       );
       if (!hasVaultKey) {
         Alert.alert(
@@ -296,10 +296,10 @@ export function CapsuleDetailsScreen() {
               )}
             </View>
 
-            {selectedAccount?.address && (
+            {walletAddress && (
               <Text variant="bodySmall" style={styles.walletInfo}>
-                Wallet: {selectedAccount?.address?.slice(0, 8)}...
-                {selectedAccount?.address?.slice(-8)}
+                Wallet: {walletAddress?.slice(0, 8)}...
+                {walletAddress?.slice(-8)}
               </Text>
             )}
           </Card.Content>

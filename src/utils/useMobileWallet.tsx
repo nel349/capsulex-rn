@@ -41,7 +41,7 @@ export function useMobileWallet() {
 
   const connect = useCallback(async (): Promise<Account> => {
     if (Platform.OS !== 'android') {
-      console.log('🔄 Starting Dynamic OAuth login...');
+      throw new Error('MWA wallet sign-in not available on iOS');
     }
 
     // Android: Use Mobile Wallet Adapter

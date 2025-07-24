@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Linking, Alert } from 'react-native';
 import { Button, IconButton, Menu } from 'react-native-paper';
 
+import { dynamicClient } from '../../../App';
 import { ellipsify } from '../../utils/ellipsify';
 import type { Account } from '../../utils/useAuthorization';
 import { useAuthorization } from '../../utils/useAuthorization';
@@ -35,7 +36,8 @@ export function TopBarWalletButton({
 export function TopBarPrivyButton() {
   const handlePrivyConnect = async () => {
     try {
-      Alert.alert('Success', 'Successfully connected with Privy!');
+      await dynamicClient.ui.auth.show();
+      // Alert.alert('Success', 'Successfully connected with Privy!');
     } catch (error) {
       console.error('Privy login error:', error);
       Alert.alert('Login Error', 'Failed to connect with Privy');

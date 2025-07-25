@@ -13,7 +13,17 @@ export function AppWrapper() {
     isOnboardingComplete,
     isLoading,
     setOnboardingComplete,
+    walletAddress,
   } = useAuth();
+
+  // Debug logging to understand what's happening
+  console.log('🔍 AppWrapper Debug:', {
+    platform: Platform.OS,
+    isAuthenticated,
+    isOnboardingComplete,
+    isLoading,
+    walletAddress: walletAddress ? `${walletAddress.slice(0, 8)}...` : null,
+  });
 
   // Show loading screen while Dynamic auth is being restored on iOS
   if (isLoading) {
@@ -21,7 +31,7 @@ export function AppWrapper() {
     return null; // Or show a loading spinner component
   }
 
-  // for ios users, we need to check if the wallet is supported
+  // For iOS users, we need to check if the wallet is supported
   if (Platform.OS === 'ios' && isAuthenticated) {
     console.log('📱 iOS detected - showing main app');
     return <HomeNavigator />;
@@ -32,9 +42,7 @@ export function AppWrapper() {
   // 2. Wallet + completed full signup = Main app
   // 3. Wallet + NOT completed signup = Continue onboarding
   if (isAuthenticated && isOnboardingComplete) {
-    // console.log(
-    //   '✅ Wallet connected AND full signup completed - showing main app'
-    // );
+    console.log('✅ Wallet connected AND full signup completed - showing main app');
     return <HomeNavigator />;
   }
 

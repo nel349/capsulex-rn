@@ -39,7 +39,7 @@ interface SOLBalance {
 }
 
 export function CreateCapsuleScreen() {
-  const { isAuthenticated, walletAddress } = useAuth();
+  const { isAuthenticated, walletAddress, reconnectWallet } = useAuth();
   const { createCapsule } = useCapsulexProgram();
   const { createCapsule: createCapsuleInDB } = useCapsuleService();
   const [content, setContent] = useState('something:for testing');
@@ -142,7 +142,32 @@ export function CreateCapsuleScreen() {
     setShowTimePicker(true);
   };
 
-  const handleCreateCapsule = async () => {
+  const attemptReconnectionAndRetry = async (originalError: Error): Promise<boolean> => {
+    try {
+      showInfo('Attempting to reconnect your wallet...');
+      const reconnectionSuccess = await reconnectWallet();
+      
+      if (reconnectionSuccess) {
+        showInfo('Wallet reconnected! Retrying capsule creation...');
+        // Small delay to let the UI update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return true;
+      } else {
+        if (Platform.OS === 'ios') {
+          showError('Reconnection failed. Please try connecting your wallet again.');
+        } else {
+          showError('Please restart the app and reconnect your wallet.');
+        }
+        return false;
+      }
+    } catch (reconnectionError) {
+      console.error('Reconnection attempt failed:', reconnectionError);
+      showError('Reconnection failed. Please restart the app and reconnect your wallet.');
+      return false;
+    }
+  };
+
+  const handleCreateCapsule = async (isRetry: boolean = false) => {
     if (!content.trim()) {
       showError('Please enter content for your capsule');
       return;
@@ -304,9 +329,22 @@ export function CreateCapsuleScreen() {
       }
     } catch (error) {
       console.error('❌ Error creating capsule:', error);
-      showError(
-        `Failed to create capsule: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      
+      // Check if this is a wallet connection error and we haven't already retried
+      if (!isRetry && error instanceof Error && error.message.includes('wallet connection has expired')) {
+        // Attempt reconnection and retry
+        const reconnectionSuccess = await attemptReconnectionAndRetry(error);
+        if (reconnectionSuccess) {
+          // Retry the operation
+          return handleCreateCapsule(true);
+        }
+        // If reconnection failed, the error was already shown
+        return;
+      } else {
+        showError(
+          `Failed to create capsule: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -556,7 +594,7 @@ export function CreateCapsuleScreen() {
         {/* Create Button */}
         <Button
           mode="contained"
-          onPress={handleCreateCapsule}
+          onPress={() => handleCreateCapsule()}
           loading={isLoading || createCapsule.isPending}
           disabled={
             isLoading ||

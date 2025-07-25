@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { useAuthorization } from '../utils/useAuthorization';
+import { dynamicClientService } from '../services/dynamicClientService';
 
 // Note: Removed Dynamic client import to avoid require cycle with App.tsx
 
@@ -22,6 +23,8 @@ interface AuthContextType {
     // eslint-disable-next-line no-unused-vars
     address: string | null
   ) => Promise<void>;
+  // eslint-disable-next-line no-unused-vars
+  reconnectWallet: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -187,12 +190,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Restore from AsyncStorage
           await restoreDynamicAuthState();
 
+          console.log('✅ Dynamic restoration complete, setting isDynamicRestored to true');
           setIsDynamicRestored(true);
         } catch (error) {
           console.error('Error restoring Dynamic auth:', error);
+          console.log('⚠️ Continuing despite restore error, setting isDynamicRestored to true');
           setIsDynamicRestored(true); // Continue even if restore fails
         }
       } else {
+        console.log('📱 Android detected, setting isDynamicRestored to true immediately');
         setIsDynamicRestored(true); // Not needed for Android
       }
     };
@@ -215,20 +221,108 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkOnboardingStatus();
   }, []);
 
-  // Check authentication - either Solana Mobile Wallet or Dynamic (iOS)
-  const isAuthenticated =
-    !!selectedAccount?.publicKey ||
-    (Platform.OS === 'ios' &&
-      isDynamicRestored &&
-      dynamicAuthState.isAuthenticated);
+  // Check authentication - validate actual connection, not just cached state
+  const isAuthenticated = React.useMemo(() => {
+    let result = false;
+    if (Platform.OS === 'ios') {
+      // For iOS, use both Dynamic client state AND our cached auth state
+      const dynamicAuth = isDynamicRestored && dynamicClientService.isUserAuthenticated();
+      const cachedAuth = isDynamicRestored && dynamicAuthState.isAuthenticated;
+      result = dynamicAuth || cachedAuth; // Use either source
+      
+      console.log('🔍 iOS Auth Check:', {
+        isDynamicRestored,
+        dynamicAuth,
+        cachedAuth,
+        result,
+      });
+    } else {
+      // For Android, check if we have a valid selected account
+      result = !!selectedAccount?.publicKey;
+      console.log('🔍 Android Auth Check:', {
+        hasSelectedAccount: !!selectedAccount?.publicKey,
+        result,
+      });
+    }
+    return result;
+  }, [selectedAccount?.publicKey, isDynamicRestored, dynamicAuthState.isAuthenticated]);
 
-  // Get wallet address from either source
-  const walletAddress =
-    selectedAccount?.publicKey?.toBase58() ||
-    (Platform.OS === 'ios' && isDynamicRestored
-      ? dynamicAuthState.walletAddress
-      : null) ||
-    null;
+  // Get wallet address from either source - validate real-time for iOS
+  const walletAddress = React.useMemo(() => {
+    if (Platform.OS === 'ios') {
+      // For iOS, try Dynamic client first, then fallback to cached state
+      if (isDynamicRestored && dynamicClientService.isUserAuthenticated()) {
+        const userInfo = dynamicClientService.getUserInfo();
+        return userInfo?.address || null;
+      }
+      // Fallback to cached auth state
+      if (isDynamicRestored && dynamicAuthState.isAuthenticated) {
+        return dynamicAuthState.walletAddress;
+      }
+      return null;
+    } else {
+      // For Android, use selected account
+      return selectedAccount?.publicKey?.toBase58() || null;
+    }
+  }, [selectedAccount?.publicKey, isDynamicRestored, dynamicAuthState.walletAddress, dynamicAuthState.isAuthenticated]);
+
+  // Fix for authenticated users who don't have onboarding completion flag set
+  useEffect(() => {
+    const fixOnboardingCompletionForAuthenticatedUsers = async () => {
+      // If user is authenticated but onboarding isn't marked complete, fix it
+      if (isAuthenticated && walletAddress && !isOnboardingComplete) {
+        console.log('🔄 User authenticated but onboarding not marked complete - fixing this');
+        try {
+          await AsyncStorage.setItem('onboarding_completed', 'true');
+          setIsOnboardingComplete(true);
+          console.log('✅ Fixed onboarding completion status for authenticated user');
+        } catch (error) {
+          console.error('Error fixing onboarding completion status:', error);
+        }
+      }
+    };
+
+    // Only run this after Dynamic restoration is complete to avoid race conditions
+    if (Platform.OS === 'ios' && !isDynamicRestored) {
+      return;
+    }
+
+    fixOnboardingCompletionForAuthenticatedUsers();
+  }, [isAuthenticated, walletAddress, isOnboardingComplete, isDynamicRestored]);
+
+  const reconnectWallet = async (): Promise<boolean> => {
+    if (Platform.OS === 'ios') {
+      // For iOS, use Dynamic client to show auth UI
+      try {
+        // Check if already authenticated
+        if (dynamicClientService.isUserAuthenticated()) {
+          return true;
+        }
+        
+        // Show Dynamic auth UI
+        await dynamicClientService.showAuthUI();
+        
+        // Check if authentication was successful
+        const isNowAuthenticated = dynamicClientService.isUserAuthenticated();
+        if (isNowAuthenticated) {
+          const userInfo = dynamicClientService.getUserInfo();
+          if (userInfo?.address) {
+            await saveDynamicAuthState(true, userInfo.address);
+            return true;
+          }
+        }
+        
+        return false;
+      } catch (error) {
+        console.error('iOS wallet reconnection failed:', error);
+        return false;
+      }
+    } else {
+      // For Android, we can't programmatically trigger MWA
+      // The user needs to manually reconnect through the app
+      return false;
+    }
+  };
 
   const value: AuthContextType = {
     isAuthenticated,
@@ -238,6 +332,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading: Platform.OS === 'ios' ? !isDynamicRestored : false,
     setOnboardingComplete: handleSetOnboardingComplete,
     saveDynamicAuthState,
+    reconnectWallet,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -60,8 +60,8 @@ export function useCapsulexProgram() {
       isGamified: boolean;
     }) => {
       if (!capsulexProgram || !anchorWallet?.publicKey) {
-        throw Error(
-          'Capsulex program not instantiated or wallet not connected'
+        throw new Error(
+          'Your wallet connection has expired. Please reconnect your wallet to continue.'
         );
       }
 
@@ -139,7 +139,9 @@ export function useCapsulexProgram() {
   // Fetch capsule on-chain
   const fetchCapsule = async (capsuleId: string, revealDate: anchor.BN) => {
     if (!capsulexProgram || !anchorWallet?.publicKey) {
-      throw Error('Capsulex program not instantiated or wallet not connected');
+      throw new Error(
+        'Your wallet connection has expired. Please reconnect your wallet to continue.'
+      );
     }
 
     const creator = anchorWallet.publicKey;
@@ -172,8 +174,8 @@ export function useCapsulexProgram() {
       creator?: PublicKey; // Optional, defaults to current wallet
     }) => {
       if (!capsulexProgram || !anchorWallet?.publicKey) {
-        throw Error(
-          'Capsulex program not instantiated or wallet not connected'
+        throw new Error(
+          'Your wallet connection has expired. Please reconnect your wallet to continue.'
         );
       }
 

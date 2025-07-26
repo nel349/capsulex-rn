@@ -2,7 +2,7 @@ import * as anchor from '@coral-xyz/anchor';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
+import { StyleSheet, View, ScrollView, RefreshControl, Platform } from 'react-native';
 import {
   Text,
   TextInput,
@@ -17,6 +17,8 @@ import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
+import { dynamicClientService } from '../services/dynamicClientService';
+import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import type { CapsuleGame, Guess, GuessesApiResponse } from '../types/api';
 
 type RootStackParamList = {
@@ -31,7 +33,8 @@ type GameScreenProps = NativeStackScreenProps<RootStackParamList, 'Game'>;
 
 export function GameScreen({ route }: GameScreenProps) {
   const { capsule_id, action = 'view' } = route.params;
-  const { isAuthenticated, walletAddress } = useAuth();
+  const { isAuthenticated, walletAddress, reconnectWallet } = useAuth();
+  const { submitGuess } = useCapsulexProgram();
   const [game, setGame] = useState<CapsuleGame | null>(null);
   const [guesses, setGuesses] = useState<Guess[]>([]);
   const [myGuess, setMyGuess] = useState<string>('');
@@ -46,7 +49,6 @@ export function GameScreen({ route }: GameScreenProps) {
   const { snackbar, showError, showInfo, hideSnackbar } =
     useSnackbar();
 
-  // Load game data
   const loadGameData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -77,6 +79,29 @@ export function GameScreen({ route }: GameScreenProps) {
       setIsLoading(false);
     }
   }, [capsule_id]);
+
+  // Check and maintain wallet connection
+  useEffect(() => {
+    const checkWalletConnection = async () => {
+      if (!isAuthenticated) {
+        console.log('🔍 Wallet not authenticated, attempting reconnection...');
+        try {
+          const reconnectionSuccess = await reconnectWallet();
+          if (reconnectionSuccess) {
+            console.log('✅ Wallet reconnected successfully');
+            // Reload game data after successful reconnection
+            await loadGameData();
+          } else {
+            console.log('❌ Wallet reconnection failed');
+          }
+        } catch (error) {
+          console.error('Error during wallet reconnection:', error);
+        }
+      }
+    };
+    
+    checkWalletConnection();
+  }, [isAuthenticated, reconnectWallet, loadGameData]);
 
   // Refresh game data
   const handleRefresh = useCallback(async () => {
@@ -146,38 +171,110 @@ export function GameScreen({ route }: GameScreenProps) {
       return;
     }
 
+    if (!game) {
+      showError('Game data not loaded');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
+      showInfo('Validating wallet connection...');
+
+      // Double-check wallet connection before transaction
+      if (!isAuthenticated) {
+        showInfo('Reconnecting wallet...');
+        const reconnectionSuccess = await reconnectWallet();
+        if (!reconnectionSuccess) {
+          showError('Failed to reconnect wallet. Please try again.');
+          return;
+        }
+      }
+
+      // Note: Wallet session validation is now handled in useCapsulexProgram hook
+      // This provides better separation of concerns and more robust validation
+
       showInfo('Creating transaction... Please approve in your wallet');
 
+      // Derive game PDA from capsule PDA
+      const gamePDA = new anchor.web3.PublicKey(game.game_id);
 
-      // Derive guess PDA
-      const CAPSULEX_PROGRAM_ID =
-        'J1r7tHjxEuCcSYVrikUKxzyeeccuC3QbyHjUbY8Pw7uH';
-      const programId = new anchor.web3.PublicKey(CAPSULEX_PROGRAM_ID);
+      // Submit guess using the Solana program
+      const txSignature = await submitGuess.mutateAsync({
+        gamePDA,
+        guessContent: myGuess.trim(),
+        isAnonymous,
+      });
 
-      const [guessPDA] = anchor.web3.PublicKey.findProgramAddressSync(
-        [
-          anchor.utils.bytes.utf8.encode('guess'),
-          new anchor.web3.PublicKey(game!.capsule_pda).toBuffer(),
-          new anchor.web3.PublicKey(walletAddress!).toBuffer(),
-        ],
-        programId
-      );
+      console.log('✅ Guess submitted successfully:', txSignature);
 
-      // For now, we'll show a message about using Blinks for submission
-      // TODO: Implement direct Solana transaction submission in mobile app
-      showInfo(
-        'Please use the Blink link from Twitter or web to submit your guess with Solana transaction'
-      );
+      // Now register the guess in the backend database
+      try {
+        const CAPSULEX_PROGRAM_ID = 'J1r7tHjxEuCcSYVrikUKxzyeeccuC3QbyHjUbY8Pw7uH';
+        const programId = new anchor.web3.PublicKey(CAPSULEX_PROGRAM_ID);
 
-      // Alternative: Open Blink URL
-      // const blinkUrl = `https://capsulex-blink-production.up.railway.app/api/guess/${capsule_id}`;
-      // Linking.openURL(blinkUrl);
+        // Derive guess PDA for backend registration (using current_guesses count before submission)
+        const currentGuessesBuffer = Buffer.from(new Uint32Array([game.current_guesses]).buffer);
+        
+        const [guessPDA] = anchor.web3.PublicKey.findProgramAddressSync(
+          [
+            anchor.utils.bytes.utf8.encode('guess'),
+            gamePDA.toBuffer(),
+            new anchor.web3.PublicKey(walletAddress!).toBuffer(),
+            currentGuessesBuffer,
+          ],
+          programId
+        );
+
+        const backendResponse = await apiService.post(`/games/${capsule_id}/guess`, {
+          transaction_signature: txSignature,
+          guesser_wallet: walletAddress,
+          guess_content: myGuess.trim(),
+          is_anonymous: isAnonymous,
+          guess_pda: guessPDA.toBase58(),
+          game_pda: gamePDA.toBase58(),
+        });
+
+        if (backendResponse.success) {
+          console.log('✅ Guess registered in database:', backendResponse.data);
+          showInfo('🎯 Guess submitted successfully!');
+          
+          // Clear the input and refresh data
+          setMyGuess('');
+          setIsAnonymous(false);
+          
+          // Reload game data to show the new guess
+          loadGameData();
+        } else {
+          console.warn('⚠️ Backend registration failed:', backendResponse.error);
+          showInfo('🎯 Guess submitted on blockchain, but database sync failed. Your guess is still valid!');
+        }
+      } catch (backendError) {
+        console.warn('⚠️ Backend registration error:', backendError);
+        showInfo('🎯 Guess submitted on blockchain, but database sync failed. Your guess is still valid!');
+      }
+
     } catch (error) {
       console.error('Error submitting guess:', error);
-      showError('Failed to submit guess. Please try again.');
+      
+      // Handle specific wallet connection errors with automatic retry
+      if (error instanceof Error && error.message.includes('wallet connection has expired')) {
+        showInfo('Wallet connection expired. Attempting to reconnect...');
+        
+        try {
+          const reconnectionSuccess = await reconnectWallet();
+          if (reconnectionSuccess) {
+            showInfo('Wallet reconnected. Please try submitting your guess again.');
+          } else {
+            showError('Failed to reconnect wallet. Please reconnect manually and try again.');
+          }
+        } catch (reconnectError) {
+          console.error('Reconnection attempt failed:', reconnectError);
+          showError('Your wallet connection has expired. Please reconnect and try again.');
+        }
+      } else {
+        showError('Failed to submit guess. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -328,11 +425,11 @@ export function GameScreen({ route }: GameScreenProps) {
               <Button
                 mode="contained"
                 onPress={handleSubmitGuess}
-                loading={isSubmitting}
-                disabled={isSubmitting || !myGuess.trim()}
+                loading={isSubmitting || submitGuess.isPending}
+                disabled={isSubmitting || submitGuess.isPending || !myGuess.trim()}
                 style={styles.submitButton}
               >
-                Submit Guess
+                {isSubmitting || submitGuess.isPending ? 'Submitting...' : 'Submit Guess'}
               </Button>
             </Card.Content>
           </Card>

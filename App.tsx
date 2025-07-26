@@ -62,8 +62,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ClusterProvider>
         <ConnectionProvider config={{ commitment: 'processed' }}>
-          <dynamicClient.reactNative.WebView />
-          <SafeAreaView
+          <AuthProvider>
+            <dynamicClient.reactNative.WebView />
+            <SafeAreaView
             style={[
               styles.shell,
               {
@@ -81,11 +82,10 @@ export default function App() {
                   : CombinedDefaultTheme
               }
             >
-              <AuthProvider>
-                <AppNavigator />
-              </AuthProvider>
+              <AppNavigator />
             </PaperProvider>
           </SafeAreaView>
+          </AuthProvider>
         </ConnectionProvider>
       </ClusterProvider>
     </QueryClientProvider>

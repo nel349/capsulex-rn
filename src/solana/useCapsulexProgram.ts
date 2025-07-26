@@ -4,9 +4,11 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { Platform } from 'react-native';
 
 import type { Capsulex as CapsulexProgramType } from '../../assets/capsulex'; // Renamed to avoid conflict
 import idl from '../../assets/capsulex.json'; // Assuming this is the correct path
+import { dynamicClientService } from '../services/dynamicClientService';
 import { alertAndLog } from '../utils/alertAndLog';
 import { useConnection } from '../utils/ConnectionProvider';
 import { useAnchorWallet } from '../utils/useAnchorWallet';
@@ -221,11 +223,115 @@ export function useCapsulexProgram() {
     },
   });
 
+  // Mutation for submitGuess instruction
+  const submitGuess = useMutation({
+    mutationKey: ['guess', 'submit'],
+    mutationFn: async ({
+      gamePDA,
+      guessContent,
+      isAnonymous,
+    }: {
+      gamePDA: PublicKey;
+      guessContent: string;
+      isAnonymous: boolean;
+    }) => {
+      if (!capsulexProgram || !anchorWallet?.publicKey) {
+        throw new Error(
+          'Your wallet connection has expired. Please reconnect your wallet to continue.'
+        );
+      }
+
+      // For iOS, validate the wallet session is still active before transaction
+      if (Platform.OS === 'ios') {
+        console.log('🔍 useCapsulexProgram - validating wallet session before transaction...');
+        
+        try {
+          // More robust validation: actually try to use the signer
+          const signer = dynamicClientService.getSigner();
+          const publicKey = signer.publicKey;
+          
+          // Verify the signer matches our expected wallet
+          if (!publicKey || publicKey.toBase58() !== anchorWallet.publicKey.toBase58()) {
+            throw new Error('Wallet address mismatch - connection may have expired');
+          }
+          
+          // Test if we can actually access wallet properties (this will fail if WebView is unmounted)
+          const client = dynamicClientService.getDynamicClient();
+          const walletAddress = client?.wallets?.primary?.address;
+          if (!walletAddress) {
+            throw new Error('Cannot access wallet - WebView may be unmounted');
+          }
+          
+          console.log('✅ useCapsulexProgram - comprehensive wallet validation passed');
+        } catch (walletError) {
+          console.error('❌ useCapsulexProgram - wallet validation failed:', walletError);
+          throw new Error(
+            'Your wallet connection has expired. Please reconnect your wallet to continue.'
+          );
+        }
+      }
+
+      const guesser = anchorWallet.publicKey;
+
+      // Fetch the game account to get current_guesses count
+      const gameAccount = await capsulexProgram.account.game.fetch(gamePDA);
+      
+      // Derive guess PDA (using the same pattern as tests)
+      const currentGuessesBuffer = Buffer.from(new Uint32Array([gameAccount.currentGuesses]).buffer);
+      const [guessPDA] = PublicKey.findProgramAddressSync(
+        [
+          anchor.utils.bytes.utf8.encode('guess'),
+          gamePDA.toBuffer(),
+          guesser.toBuffer(),
+          currentGuessesBuffer,
+        ],
+        capsulexProgramId
+      );
+
+      // Derive vault PDA
+      const [vaultPDA] = PublicKey.findProgramAddressSync(
+        [anchor.utils.bytes.utf8.encode('vault')],
+        capsulexProgramId
+      );
+
+      return await capsulexProgram.methods
+        .submitGuess(guessContent, isAnonymous)
+        .accounts({
+          guesser: guesser,
+          game: gamePDA,
+          guess: guessPDA,
+          vault: vaultPDA,
+          systemProgram: SystemProgram.programId,
+        } as any)
+        .rpc({
+          skipPreflight: false,
+        });
+    },
+    onSuccess: (signature: string) => {
+      console.log('Guess Submitted!', `Transaction: ${signature}`);
+      alertAndLog(
+        '🎯 Guess Submitted!',
+        `Your guess has been submitted. Transaction: ${signature.slice(0, 8)}...`
+      );
+    },
+    onError: (error: any) => {
+      console.error('Submit guess transaction failed:', error);
+      if (error.logs) {
+        console.error('Transaction logs:', error.logs);
+      }
+      if (error.error?.errorMessage) {
+        console.error('Program error message:', error.error.errorMessage);
+      }
+      alertAndLog('❌ Guess Submission Failed', error.message || 'Transaction failed');
+    },
+  });
+
   return {
     capsulexProgram,
     capsulexProgramId,
     createCapsule,
     revealCapsule,
+    submitGuess,
     fetchCapsule,
     // Add other mutations/queries as needed for other instructions
   };

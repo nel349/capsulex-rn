@@ -3,7 +3,7 @@ import {
   type Transaction,
   type VersionedTransaction,
 } from '@solana/web3.js';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { useAuth } from '../contexts';
@@ -28,6 +28,42 @@ export function useAnchorWallet(): AnchorWallet | undefined {
   const { selectedAccount } = useAuthorization();
   const { isAuthenticated, walletAddress } = useAuth();
   const mobileWallet = useMobileWallet();
+  const [dynamicClientReady, setDynamicClientReady] = useState(false);
+
+  // Poll Dynamic client status for iOS
+  useEffect(() => {
+    if (Platform.OS === 'ios' && isAuthenticated && walletAddress) {
+      const checkDynamicClient = () => {
+        try {
+          const client = dynamicClientService.getDynamicClient();
+          if (client) {
+            const hasAuth = !!client.auth?.authenticatedUser;
+            const hasWallet = !!client.wallets?.primary;
+            const hasWalletAddress = !!client.wallets?.primary?.address;
+            
+            const isReady = (hasAuth || hasWallet) && hasWalletAddress;
+            
+            if (isReady !== dynamicClientReady) {
+              console.log('🔄 Dynamic client ready state changed:', isReady);
+              setDynamicClientReady(isReady);
+            }
+          }
+        } catch (error) {
+          // Ignore errors during polling
+        }
+      };
+
+      // Check immediately
+      checkDynamicClient();
+      
+      // Poll every 500ms while not ready
+      const interval = setInterval(checkDynamicClient, 500);
+      
+      return () => clearInterval(interval);
+    } else {
+      setDynamicClientReady(false);
+    }
+  }, [isAuthenticated, walletAddress, dynamicClientReady]);
 
   return useMemo(() => {
     // Android: Use Mobile Wallet Adapter
@@ -64,10 +100,15 @@ export function useAnchorWallet(): AnchorWallet | undefined {
         return;
       }
 
-      // Check if Dynamic client and wallet are available
-      if (!dynamicClientService.isUserAuthenticated()) {
+      // Wait for Dynamic client to be ready
+      if (!dynamicClientReady) {
+        console.log('⏳ useAnchorWallet: Waiting for Dynamic client to be ready...');
         return;
       }
+      
+      console.log('✅ useAnchorWallet: Dynamic client is ready, creating wallet interface');
+      
+      // At this point, we know the Dynamic client is ready
 
       return {
         signTransaction: async <T extends Transaction | VersionedTransaction>(
@@ -92,5 +133,5 @@ export function useAnchorWallet(): AnchorWallet | undefined {
     }
 
     return undefined;
-  }, [selectedAccount, mobileWallet, isAuthenticated, walletAddress]);
+  }, [selectedAccount, mobileWallet, isAuthenticated, walletAddress, dynamicClientReady]);
 }

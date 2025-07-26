@@ -42,7 +42,9 @@ export function AppWrapper() {
   // 2. Wallet + completed full signup = Main app
   // 3. Wallet + NOT completed signup = Continue onboarding
   if (isAuthenticated && isOnboardingComplete) {
-    console.log('✅ Wallet connected AND full signup completed - showing main app');
+    console.log(
+      '✅ Wallet connected AND full signup completed - showing main app'
+    );
     return <HomeNavigator />;
   }
 

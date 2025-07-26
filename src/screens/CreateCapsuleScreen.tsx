@@ -142,11 +142,13 @@ export function CreateCapsuleScreen() {
     setShowTimePicker(true);
   };
 
-  const attemptReconnectionAndRetry = async (originalError: Error): Promise<boolean> => {
+  const attemptReconnectionAndRetry = async (
+    originalError: Error
+  ): Promise<boolean> => {
     try {
       showInfo('Attempting to reconnect your wallet...');
       const reconnectionSuccess = await reconnectWallet();
-      
+
       if (reconnectionSuccess) {
         showInfo('Wallet reconnected! Retrying capsule creation...');
         // Small delay to let the UI update
@@ -154,7 +156,9 @@ export function CreateCapsuleScreen() {
         return true;
       } else {
         if (Platform.OS === 'ios') {
-          showError('Reconnection failed. Please try connecting your wallet again.');
+          showError(
+            'Reconnection failed. Please try connecting your wallet again.'
+          );
         } else {
           showError('Please restart the app and reconnect your wallet.');
         }
@@ -162,7 +166,9 @@ export function CreateCapsuleScreen() {
       }
     } catch (reconnectionError) {
       console.error('Reconnection attempt failed:', reconnectionError);
-      showError('Reconnection failed. Please restart the app and reconnect your wallet.');
+      showError(
+        'Reconnection failed. Please restart the app and reconnect your wallet.'
+      );
       return false;
     }
   };
@@ -329,9 +335,13 @@ export function CreateCapsuleScreen() {
       }
     } catch (error) {
       console.error('❌ Error creating capsule:', error);
-      
+
       // Check if this is a wallet connection error and we haven't already retried
-      if (!isRetry && error instanceof Error && error.message.includes('wallet connection has expired')) {
+      if (
+        !isRetry &&
+        error instanceof Error &&
+        error.message.includes('wallet connection has expired')
+      ) {
         // Attempt reconnection and retry
         const reconnectionSuccess = await attemptReconnectionAndRetry(error);
         if (reconnectionSuccess) {

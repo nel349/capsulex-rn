@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 
-import { useAuthorization } from '../utils/useAuthorization';
 import { dynamicClientService } from '../services/dynamicClientService';
+import { useAuthorization } from '../utils/useAuthorization';
 
 // Note: Removed Dynamic client import to avoid require cycle with App.tsx
 
@@ -190,15 +190,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Restore from AsyncStorage
           await restoreDynamicAuthState();
 
-          console.log('✅ Dynamic restoration complete, setting isDynamicRestored to true');
+          console.log(
+            '✅ Dynamic restoration complete, setting isDynamicRestored to true'
+          );
           setIsDynamicRestored(true);
         } catch (error) {
           console.error('Error restoring Dynamic auth:', error);
-          console.log('⚠️ Continuing despite restore error, setting isDynamicRestored to true');
+          console.log(
+            '⚠️ Continuing despite restore error, setting isDynamicRestored to true'
+          );
           setIsDynamicRestored(true); // Continue even if restore fails
         }
       } else {
-        console.log('📱 Android detected, setting isDynamicRestored to true immediately');
+        console.log(
+          '📱 Android detected, setting isDynamicRestored to true immediately'
+        );
         setIsDynamicRestored(true); // Not needed for Android
       }
     };
@@ -226,10 +232,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let result = false;
     if (Platform.OS === 'ios') {
       // For iOS, use both Dynamic client state AND our cached auth state
-      const dynamicAuth = isDynamicRestored && dynamicClientService.isUserAuthenticated();
+      const dynamicAuth =
+        isDynamicRestored && dynamicClientService.isUserAuthenticated();
       const cachedAuth = isDynamicRestored && dynamicAuthState.isAuthenticated;
       result = dynamicAuth || cachedAuth; // Use either source
-      
+
       console.log('🔍 iOS Auth Check:', {
         isDynamicRestored,
         dynamicAuth,
@@ -245,7 +252,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
     }
     return result;
-  }, [selectedAccount?.publicKey, isDynamicRestored, dynamicAuthState.isAuthenticated]);
+  }, [
+    selectedAccount?.publicKey,
+    isDynamicRestored,
+    dynamicAuthState.isAuthenticated,
+  ]);
 
   // Get wallet address from either source - validate real-time for iOS
   const walletAddress = React.useMemo(() => {
@@ -264,18 +275,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // For Android, use selected account
       return selectedAccount?.publicKey?.toBase58() || null;
     }
-  }, [selectedAccount?.publicKey, isDynamicRestored, dynamicAuthState.walletAddress, dynamicAuthState.isAuthenticated]);
+  }, [
+    selectedAccount?.publicKey,
+    isDynamicRestored,
+    dynamicAuthState.walletAddress,
+    dynamicAuthState.isAuthenticated,
+  ]);
 
   // Fix for authenticated users who don't have onboarding completion flag set
   useEffect(() => {
     const fixOnboardingCompletionForAuthenticatedUsers = async () => {
       // If user is authenticated but onboarding isn't marked complete, fix it
       if (isAuthenticated && walletAddress && !isOnboardingComplete) {
-        console.log('🔄 User authenticated but onboarding not marked complete - fixing this');
+        console.log(
+          '🔄 User authenticated but onboarding not marked complete - fixing this'
+        );
         try {
           await AsyncStorage.setItem('onboarding_completed', 'true');
           setIsOnboardingComplete(true);
-          console.log('✅ Fixed onboarding completion status for authenticated user');
+          console.log(
+            '✅ Fixed onboarding completion status for authenticated user'
+          );
         } catch (error) {
           console.error('Error fixing onboarding completion status:', error);
         }
@@ -298,10 +318,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (dynamicClientService.isUserAuthenticated()) {
           return true;
         }
-        
+
         // Show Dynamic auth UI
         await dynamicClientService.showAuthUI();
-        
+
         // Check if authentication was successful
         const isNowAuthenticated = dynamicClientService.isUserAuthenticated();
         if (isNowAuthenticated) {
@@ -311,7 +331,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             return true;
           }
         }
-        
+
         return false;
       } catch (error) {
         console.error('iOS wallet reconnection failed:', error);

@@ -4,3 +4,4 @@ export * from './CreateCapsuleScreen';
 export * from './CapsuleDetailsScreen';
 export * from './DiscoverScreen';
 export * from './ProfileScreen';
+export * from './GameScreen';

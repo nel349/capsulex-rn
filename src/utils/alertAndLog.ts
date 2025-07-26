@@ -12,7 +12,7 @@ export function alertAndLog(title: string, message: any) {
 // Helper function for components that want to show user-friendly error messages
 export function logErrorForSnackbar(
   title: string,
-  message: any,
+  message: any
 ): { title: string; message: string } {
   console.error(`${title}: ${message}`);
   return {

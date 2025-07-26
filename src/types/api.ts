@@ -59,6 +59,53 @@ export interface Capsule {
   posted_to_social: boolean;
 }
 
+// Game Types
+export interface CapsuleGame {
+  game_id: string;
+  capsule_id: string;
+  capsule_pda: string;
+  creator: string;
+  max_guesses: number;
+  max_winners: number;
+  current_guesses: number;
+  winners_found: number;
+  is_active: boolean;
+  winner: string | null;
+  total_participants: number;
+  reveal_date: string;
+  created_at: string;
+  content_hint: string;
+  is_revealed: boolean;
+}
+
+export interface Guess {
+  guess_id: string;
+  guesser: string | null; // null for anonymous guesses
+  guess_content: string;
+  is_anonymous: boolean;
+  is_paid: boolean;
+  is_correct: boolean;
+  submitted_at: string;
+}
+
+export interface GuessesApiResponse {
+  guesses: Guess[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    has_more: boolean;
+    filtered_by_wallet: string | null;
+  };
+  game_info: {
+    game_id: string;
+    capsule_id: string;
+    total_guesses: number;
+    max_guesses: number;
+    is_active: boolean;
+  };
+}
+
 // API Error Class
 export class ApiError extends Error {
   constructor(

@@ -1,5 +1,6 @@
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+
 import { dynamicClientService } from './dynamicClientService';
 
 export interface ReconnectionResult {
@@ -13,7 +14,8 @@ export class WalletReconnectionService {
   private reconnectionAttempts = 0;
   private maxReconnectionAttempts = 3;
   private reconnectionInProgress = false;
-  private reconnectionCallbacks: Array<(result: ReconnectionResult) => void> = [];
+  private reconnectionCallbacks: Array<(result: ReconnectionResult) => void> =
+    [];
 
   static getInstance(): WalletReconnectionService {
     if (!WalletReconnectionService.instance) {
@@ -30,7 +32,7 @@ export class WalletReconnectionService {
   async reconnectWallet(): Promise<ReconnectionResult> {
     if (this.reconnectionInProgress) {
       // Return a promise that resolves when the current reconnection completes
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         this.reconnectionCallbacks.push(resolve);
       });
     }
@@ -40,15 +42,15 @@ export class WalletReconnectionService {
 
     try {
       const result = await this.attemptReconnection();
-      
+
       // Notify all waiting callbacks
       this.reconnectionCallbacks.forEach(callback => callback(result));
       this.reconnectionCallbacks = [];
-      
+
       if (result.success) {
         this.reconnectionAttempts = 0;
       }
-      
+
       return result;
     } finally {
       this.reconnectionInProgress = false;
@@ -66,7 +68,10 @@ export class WalletReconnectionService {
       console.error('Wallet reconnection failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error during reconnection'
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error during reconnection',
       };
     }
   }
@@ -78,12 +83,15 @@ export class WalletReconnectionService {
       if (cachedAccountJSON) {
         const cachedAccount = JSON.parse(cachedAccountJSON);
         const currentTime = Date.now();
-        
+
         // Check if cached account is still valid (not expired)
-        if (cachedAccount.timestamp && (currentTime - cachedAccount.timestamp) < 7 * 24 * 60 * 60 * 1000) {
+        if (
+          cachedAccount.timestamp &&
+          currentTime - cachedAccount.timestamp < 7 * 24 * 60 * 60 * 1000
+        ) {
           return {
             success: true,
-            walletAddress: cachedAccount.account?.address
+            walletAddress: cachedAccount.account?.address,
           };
         }
       }
@@ -94,7 +102,7 @@ export class WalletReconnectionService {
       console.error('Android wallet reconnection failed:', error);
       return {
         success: false,
-        error: 'Failed to reconnect Android wallet'
+        error: 'Failed to reconnect Android wallet',
       };
     }
   }
@@ -103,13 +111,13 @@ export class WalletReconnectionService {
     try {
       // Use the service's built-in authentication check
       const isAuthenticated = dynamicClientService.isUserAuthenticated();
-      
+
       if (isAuthenticated) {
         const userInfo = dynamicClientService.getUserInfo();
         if (userInfo?.address) {
           return {
             success: true,
-            walletAddress: userInfo.address
+            walletAddress: userInfo.address,
           };
         }
       }
@@ -120,7 +128,7 @@ export class WalletReconnectionService {
       console.error('iOS wallet reconnection failed:', error);
       return {
         success: false,
-        error: 'Failed to reconnect iOS wallet'
+        error: 'Failed to reconnect iOS wallet',
       };
     }
   }
@@ -158,32 +166,34 @@ export class WalletReconnectionService {
   //   });
   // }
 
-  private async performPlatformSpecificReconnection(platform: string): Promise<ReconnectionResult> {
+  private async performPlatformSpecificReconnection(
+    platform: string
+  ): Promise<ReconnectionResult> {
     if (platform === 'Android') {
       // For Android, attempt to restore from cached session
       try {
         // Check if there's a more recent cached session
         await this.delay(500); // Small delay to allow for any pending state updates
-        
+
         const cachedAccountJSON = await AsyncStorage.getItem('selectedAccount');
         if (cachedAccountJSON) {
           const cachedAccount = JSON.parse(cachedAccountJSON);
           if (cachedAccount.account?.address) {
             return {
               success: true,
-              walletAddress: cachedAccount.account.address
+              walletAddress: cachedAccount.account.address,
             };
           }
         }
-        
+
         return {
           success: false,
-          error: 'WALLET_RECONNECTION_NEEDED' // Special error code for UI handling
+          error: 'WALLET_RECONNECTION_NEEDED', // Special error code for UI handling
         };
       } catch (error) {
         return {
           success: false,
-          error: 'WALLET_RECONNECTION_NEEDED'
+          error: 'WALLET_RECONNECTION_NEEDED',
         };
       }
     } else {
@@ -198,37 +208,37 @@ export class WalletReconnectionService {
             if (userInfo?.address) {
               return {
                 success: true,
-                walletAddress: userInfo.address
+                walletAddress: userInfo.address,
               };
             }
           }
-          
+
           // If not authenticated, show the Dynamic auth UI
           console.log('🔄 Showing Dynamic auth UI for reconnection...');
           await dynamicClientService.showAuthUI();
-          
+
           // Check if user completed authentication
           if (dynamicClientService.isUserAuthenticated()) {
             const userInfo = dynamicClientService.getUserInfo();
             if (userInfo?.address) {
               return {
                 success: true,
-                walletAddress: userInfo.address
+                walletAddress: userInfo.address,
               };
             }
           }
         }
-        
+
         // If Dynamic client is not available or auth failed
         return {
           success: false,
-          error: 'WALLET_RECONNECTION_NEEDED'
+          error: 'WALLET_RECONNECTION_NEEDED',
         };
       } catch (error) {
         console.error('Dynamic auth UI failed:', error);
         return {
           success: false,
-          error: 'WALLET_RECONNECTION_NEEDED'
+          error: 'WALLET_RECONNECTION_NEEDED',
         };
       }
     }
@@ -254,7 +264,7 @@ export class WalletReconnectionService {
   resetReconnectionAttempts(): void {
     this.reconnectionAttempts = 0;
   }
-
 }
 
-export const walletReconnectionService = WalletReconnectionService.getInstance();
+export const walletReconnectionService =
+  WalletReconnectionService.getInstance();

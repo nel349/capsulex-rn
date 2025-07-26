@@ -35,16 +35,17 @@ class DynamicClientService {
     const hasAuth = !!client?.auth?.authenticatedUser;
     const hasWallet = !!client?.wallets?.primary;
     const result = hasAuth && hasWallet;
-    
+
     console.log('🔍 Dynamic Auth Status:', {
       hasClient: !!client,
       hasAuth,
       hasWallet,
       result,
       authUser: client?.auth?.authenticatedUser?.email || 'none',
-      walletAddress: client?.wallets?.primary?.address?.slice(0, 8) + '...' || 'none',
+      walletAddress:
+        client?.wallets?.primary?.address?.slice(0, 8) + '...' || 'none',
     });
-    
+
     return result;
   }
 

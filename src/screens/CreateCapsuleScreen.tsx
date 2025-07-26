@@ -23,13 +23,13 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
 import { useCapsuleService } from '../services/capsuleService';
 import { useSolanaService } from '../services/solana';
 import { twitterService } from '../services/twitterService';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
-import { useAuthorization } from '../utils/useAuthorization';
 import { VaultKeyManager } from '../utils/vaultKey';
 
 interface SOLBalance {
@@ -39,7 +39,7 @@ interface SOLBalance {
 }
 
 export function CreateCapsuleScreen() {
-  const { selectedAccount } = useAuthorization();
+  const { isAuthenticated, walletAddress, reconnectWallet } = useAuth();
   const { createCapsule } = useCapsulexProgram();
   const { createCapsule: createCapsuleInDB } = useCapsuleService();
   const [content, setContent] = useState('something:for testing');
@@ -72,16 +72,14 @@ export function CreateCapsuleScreen() {
 
   useEffect(() => {
     checkSOLBalance();
-  }, [getBalance, selectedAccount]);
+  }, [getBalance, walletAddress]);
 
   // Check if user is creating their first capsule (no vault key yet)
   const checkFirstTimeUser = async () => {
-    if (!selectedAccount?.address) return;
+    if (!walletAddress) return;
 
     try {
-      const hasVaultKey = await VaultKeyManager.hasVaultKey(
-        selectedAccount.address
-      );
+      const hasVaultKey = await VaultKeyManager.hasVaultKey(walletAddress);
       setIsFirstTimeUser(!hasVaultKey);
       setShowVaultKeyInfo(!hasVaultKey); // Show info card for first-time users
     } catch (error) {
@@ -103,20 +101,18 @@ export function CreateCapsuleScreen() {
   useEffect(() => {
     checkFirstTimeUser();
     checkTwitterConnection();
-  }, [selectedAccount]);
+  }, [walletAddress]);
 
   // Refresh vault key status when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       checkFirstTimeUser();
       checkTwitterConnection();
-    }, [selectedAccount])
+    }, [walletAddress])
   );
 
   const checkSOLBalance = async () => {
-    const balance = await getBalance(
-      selectedAccount?.publicKey.toString() as Address
-    );
+    const balance = await getBalance(walletAddress as unknown as Address);
     const required = 0.00005;
 
     setSolBalance({
@@ -146,7 +142,38 @@ export function CreateCapsuleScreen() {
     setShowTimePicker(true);
   };
 
-  const handleCreateCapsule = async () => {
+  const attemptReconnectionAndRetry = async (
+    originalError: Error
+  ): Promise<boolean> => {
+    try {
+      showInfo('Attempting to reconnect your wallet...');
+      const reconnectionSuccess = await reconnectWallet();
+
+      if (reconnectionSuccess) {
+        showInfo('Wallet reconnected! Retrying capsule creation...');
+        // Small delay to let the UI update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return true;
+      } else {
+        if (Platform.OS === 'ios') {
+          showError(
+            'Reconnection failed. Please try connecting your wallet again.'
+          );
+        } else {
+          showError('Please restart the app and reconnect your wallet.');
+        }
+        return false;
+      }
+    } catch (reconnectionError) {
+      console.error('Reconnection attempt failed:', reconnectionError);
+      showError(
+        'Reconnection failed. Please restart the app and reconnect your wallet.'
+      );
+      return false;
+    }
+  };
+
+  const handleCreateCapsule = async (isRetry: boolean = false) => {
     if (!content.trim()) {
       showError('Please enter content for your capsule');
       return;
@@ -157,7 +184,7 @@ export function CreateCapsuleScreen() {
       return;
     }
 
-    if (!selectedAccount) {
+    if (!isAuthenticated) {
       showError('Please connect your wallet first');
       return;
     }
@@ -193,7 +220,7 @@ export function CreateCapsuleScreen() {
       try {
         encryptedContent = await VaultKeyManager.encryptContent(
           content,
-          selectedAccount.address
+          walletAddress as string
         );
         console.log('🔐 Content encrypted with device vault key');
       } catch (encryptionError) {
@@ -207,7 +234,7 @@ export function CreateCapsuleScreen() {
       // Step 2: Create capsule on blockchain (ONLY wallet signature needed!)
       const blockchainPlaceholder = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        `ENCRYPTED_CONTENT_${selectedAccount.address}_${Date.now()}`
+        `ENCRYPTED_CONTENT_${walletAddress}_${Date.now()}`
       );
 
       const txResult = await createCapsule.mutateAsync({
@@ -308,9 +335,26 @@ export function CreateCapsuleScreen() {
       }
     } catch (error) {
       console.error('❌ Error creating capsule:', error);
-      showError(
-        `Failed to create capsule: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+
+      // Check if this is a wallet connection error and we haven't already retried
+      if (
+        !isRetry &&
+        error instanceof Error &&
+        error.message.includes('wallet connection has expired')
+      ) {
+        // Attempt reconnection and retry
+        const reconnectionSuccess = await attemptReconnectionAndRetry(error);
+        if (reconnectionSuccess) {
+          // Retry the operation
+          return handleCreateCapsule(true);
+        }
+        // If reconnection failed, the error was already shown
+        return;
+      } else {
+        showError(
+          `Failed to create capsule: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -321,7 +365,7 @@ export function CreateCapsuleScreen() {
     showInfo('SOL onramp feature coming soon!');
   };
 
-  if (!selectedAccount) {
+  if (!isAuthenticated) {
     return (
       <View style={styles.screenContainer}>
         <View style={styles.connectPrompt}>
@@ -424,20 +468,19 @@ export function CreateCapsuleScreen() {
             <View style={styles.gamificationTitleContainer}>
               <Text style={styles.sectionTitle}>🎮 Gamify This Capsule</Text>
               <Text style={styles.gamificationDescription}>
-                Let others guess your secret before it's revealed and compete for points!
+                Let others guess your secret before it's revealed and compete
+                for points!
               </Text>
             </View>
-            <Switch
-              value={isGamified}
-              onValueChange={setIsGamified}
-            />
+            <Switch value={isGamified} onValueChange={setIsGamified} />
           </View>
           {isGamified && (
             <Card style={styles.gamificationInfoCard}>
               <Card.Content>
                 <Text style={styles.gamificationInfoText}>
-                  🏆 When enabled, other users can submit guesses about your capsule content. 
-                  Winners earn points on the leaderboard when your capsule is revealed!
+                  🏆 When enabled, other users can submit guesses about your
+                  capsule content. Winners earn points on the leaderboard when
+                  your capsule is revealed!
                 </Text>
               </Card.Content>
             </Card>
@@ -561,7 +604,7 @@ export function CreateCapsuleScreen() {
         {/* Create Button */}
         <Button
           mode="contained"
-          onPress={handleCreateCapsule}
+          onPress={() => handleCreateCapsule()}
           loading={isLoading || createCapsule.isPending}
           disabled={
             isLoading ||

@@ -2,6 +2,7 @@
  * The app navigator (formerly "AppNavigator" and "MainNavigator") is used for the primary
  * navigation flows of your app.
  */
+import type { LinkingOptions } from '@react-navigation/native';
 import {
   DarkTheme as NavigationDarkTheme,
   DefaultTheme as NavigationDefaultTheme,
@@ -36,6 +37,8 @@ import { HomeNavigator } from './HomeNavigator';
  */
 
 type RootStackParamList = {
+  Main: undefined;
+  HomeStack: undefined;
   Home: undefined;
   Settings: undefined;
   CapsuleDetails: {
@@ -55,6 +58,10 @@ type RootStackParamList = {
       posted_to_social?: boolean;
     };
   };
+  Game: {
+    capsule_id: string;
+    action?: 'view' | 'guess';
+  };
   // 🔥 Your screens go here
 };
 
@@ -65,7 +72,7 @@ declare global {
 }
 
 // Documentation: https://reactnavigation.org/docs/stack-navigator/
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppStack = () => {
   return (
@@ -89,9 +96,35 @@ const AppStack = () => {
           headerShown: true,
         }}
       />
+      <Stack.Screen
+        name="Game"
+        component={Screens.GameScreen}
+        options={{
+          title: 'Time Capsule Game',
+          headerShown: true,
+        }}
+      />
       {/** 🔥 Your screens go here */}
     </Stack.Navigator>
   );
+};
+
+// Deep linking configuration
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: ['capsulex://'],
+  config: {
+    screens: {
+      Game: {
+        path: 'game/:capsule_id/:action?',
+        parse: {
+          capsule_id: (capsule_id: string) => capsule_id,
+          action: (action: string) => (action as 'view' | 'guess') || 'view',
+        },
+      },
+      CapsuleDetails: 'capsule/:capsule_id',
+      Settings: 'settings',
+    },
+  },
 };
 
 export interface NavigationProps
@@ -123,6 +156,7 @@ export const AppNavigator = (props: NavigationProps) => {
 
   return (
     <NavigationContainer
+      linking={linking as any}
       theme={colorScheme === 'dark' ? CombinedDarkTheme : CombinedDefaultTheme}
       {...props}
     >

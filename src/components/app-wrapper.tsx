@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
+import { Platform } from 'react-native';
 
 import { useAuth } from '../contexts';
 import { HomeNavigator } from '../navigators/HomeNavigator';
@@ -9,19 +10,29 @@ import { OnboardingFlow } from './onboarding';
 export function AppWrapper() {
   const {
     isAuthenticated,
-    isSupported,
     isOnboardingComplete,
+    isLoading,
     setOnboardingComplete,
+    walletAddress,
   } = useAuth();
 
-  // console.log('🔍 AppWrapper state:', {
-  //   isAuthenticated,
-  //   isSupported,
-  //   isOnboardingComplete,
-  // });
+  // Debug logging to understand what's happening
+  console.log('🔍 AppWrapper Debug:', {
+    platform: Platform.OS,
+    isAuthenticated,
+    isOnboardingComplete,
+    isLoading,
+    walletAddress: walletAddress ? `${walletAddress.slice(0, 8)}...` : null,
+  });
 
-  // iOS users (no wallet support) go straight to main app
-  if (!isSupported) {
+  // Show loading screen while Dynamic auth is being restored on iOS
+  if (isLoading) {
+    console.log('⏳ Loading authentication state...');
+    return null; // Or show a loading spinner component
+  }
+
+  // For iOS users, we need to check if the wallet is supported
+  if (Platform.OS === 'ios' && isAuthenticated) {
     console.log('📱 iOS detected - showing main app');
     return <HomeNavigator />;
   }
@@ -31,9 +42,9 @@ export function AppWrapper() {
   // 2. Wallet + completed full signup = Main app
   // 3. Wallet + NOT completed signup = Continue onboarding
   if (isAuthenticated && isOnboardingComplete) {
-    // console.log(
-    //   '✅ Wallet connected AND full signup completed - showing main app'
-    // );
+    console.log(
+      '✅ Wallet connected AND full signup completed - showing main app'
+    );
     return <HomeNavigator />;
   }
 

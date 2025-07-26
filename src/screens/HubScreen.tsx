@@ -26,6 +26,7 @@ import {
   Avatar,
 } from 'react-native-paper';
 
+import { useAuth } from '../contexts';
 import type {
   CapsuleWithStatus,
   WalletCapsulesResponse,
@@ -35,7 +36,6 @@ import { useCapsuleService } from '../services/capsuleService';
 import { useBalance } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import type { Capsule } from '../types/api';
-import { useAuthorization } from '../utils/useAuthorization';
 
 // Enhanced capsule type that merges blockchain and database data
 interface EnhancedCapsule extends CapsuleWithStatus {
@@ -52,8 +52,8 @@ type HubScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 export function HubScreen() {
-  const { selectedAccount } = useAuthorization();
   const navigation = useNavigation<HubScreenNavigationProp>();
+  const { isAuthenticated, walletAddress } = useAuth();
   const [capsuleData, setCapsuleData] = useState<
     WalletCapsulesResponse['data'] | null
   >(null);
@@ -65,9 +65,7 @@ export function HubScreen() {
     new Set()
   );
   // const { getBalance } = useSolanaService();
-  const { data: balance } = useBalance(
-    selectedAccount?.publicKey as unknown as Address
-  );
+  const { data: balance } = useBalance(walletAddress as unknown as Address);
   const { revealCapsule } = useCapsulexProgram();
   const queryClient = useQueryClient();
   const { getMyCapsules } = useCapsuleService();
@@ -79,18 +77,18 @@ export function HubScreen() {
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!refreshing && selectedAccount) {
+      if (!refreshing && walletAddress) {
         fetchCapsuleData();
       }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [selectedAccount, refreshing]);
+  }, [walletAddress, refreshing]);
 
   // App state change handling
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {
-      if (nextAppState === 'active' && selectedAccount) {
+      if (nextAppState === 'active' && walletAddress) {
         fetchCapsuleData();
       }
     };
@@ -100,7 +98,7 @@ export function HubScreen() {
       handleAppStateChange
     );
     return () => subscription?.remove();
-  }, [selectedAccount]);
+  }, [walletAddress]);
 
   // Pulsing animation for ready-to-reveal capsules
   useEffect(() => {
@@ -148,15 +146,14 @@ export function HubScreen() {
 
   // Fetch capsule data from blockchain and database, then merge them
   const fetchCapsuleData = useCallback(async () => {
-    if (!selectedAccount) return;
+    if (!walletAddress) return;
 
     try {
       setError(null);
 
       // Fetch blockchain data
-      const blockchainResponse = await capsuleApi.getCapsulesByWallet(
-        selectedAccount.publicKey.toString()
-      );
+      const blockchainResponse =
+        await capsuleApi.getCapsulesByWallet(walletAddress);
 
       if (!blockchainResponse.success) {
         setError('Failed to load capsules');
@@ -237,14 +234,14 @@ export function HubScreen() {
     } finally {
       setLoading(false);
     }
-  }, [selectedAccount, getMyCapsules]);
+  }, [walletAddress, getMyCapsules]);
 
   // Initial load
   useEffect(() => {
-    if (selectedAccount) {
+    if (walletAddress) {
       fetchCapsuleData();
     }
-  }, [selectedAccount, fetchCapsuleData]);
+  }, [walletAddress, fetchCapsuleData]);
 
   // Pull to refresh
   const onRefresh = useCallback(async () => {
@@ -358,7 +355,7 @@ export function HubScreen() {
   }
 
   // Render not connected state
-  if (!selectedAccount) {
+  if (!isAuthenticated) {
     return (
       <View style={[styles.screenContainer, styles.centered]}>
         <Avatar.Icon size={80} icon="wallet" style={styles.walletIcon} />

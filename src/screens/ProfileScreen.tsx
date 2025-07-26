@@ -12,10 +12,10 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
 import { twitterService } from '../services/twitterService';
-import { useAuthorization } from '../utils/useAuthorization';
 import { useMobileWallet } from '../utils/useMobileWallet';
 import { VaultKeyManager } from '../utils/vaultKey';
 
@@ -40,10 +40,10 @@ export function ProfileScreen() {
   const { snackbar, showSuccess, showError, showInfo, hideSnackbar } =
     useSnackbar();
 
-  const { selectedAccount } = useAuthorization();
+  const { isAuthenticated, walletAddress } = useAuth();
   const { disconnect } = useMobileWallet();
   const [profile, setProfile] = useState<UserProfile>({
-    wallet: selectedAccount?.address || '',
+    wallet: walletAddress || '',
     displayName: 'CapsuleUser',
     email: undefined,
     privyConnected: false,
@@ -69,7 +69,7 @@ export function ProfileScreen() {
   // Re-check vault key status when wallet changes (sign in/out)
   useEffect(() => {
     checkVaultKeyStatus();
-  }, [selectedAccount]);
+  }, [walletAddress]);
 
   const loadAppSettings = async () => {
     try {
@@ -109,14 +109,14 @@ export function ProfileScreen() {
   };
 
   const checkVaultKeyStatus = async () => {
-    if (!selectedAccount?.address) {
+    if (!walletAddress) {
       setVaultKeyExists(false);
       return;
     }
 
     try {
-      console.log('🔍 Checking vault key status for:', selectedAccount.address);
-      const exists = await VaultKeyManager.hasVaultKey(selectedAccount.address);
+      console.log('🔍 Checking vault key status for:', walletAddress);
+      const exists = await VaultKeyManager.hasVaultKey(walletAddress);
       console.log('🔑 Vault key exists:', exists);
       setVaultKeyExists(exists);
     } catch (error) {
@@ -244,7 +244,7 @@ export function ProfileScreen() {
   };
 
   const handleCreateVaultKey = async () => {
-    if (!selectedAccount?.address) {
+    if (!walletAddress) {
       showError('No wallet connected');
       return;
     }
@@ -259,7 +259,7 @@ export function ProfileScreen() {
           onPress: async () => {
             try {
               setVaultKeyLoading(true);
-              await VaultKeyManager.generateVaultKey(selectedAccount.address);
+              await VaultKeyManager.generateVaultKey(walletAddress);
 
               // Force refresh the vault key status
               await checkVaultKeyStatus();
@@ -280,16 +280,14 @@ export function ProfileScreen() {
   };
 
   const handleBackupVaultKey = async () => {
-    if (!selectedAccount?.address) {
+    if (!walletAddress) {
       showError('No wallet connected');
       return;
     }
 
     try {
       setVaultKeyLoading(true);
-      const backupData = await VaultKeyManager.exportVaultKey(
-        selectedAccount.address
-      );
+      const backupData = await VaultKeyManager.exportVaultKey(walletAddress);
 
       Alert.alert(
         'Backup Vault Key',
@@ -301,7 +299,7 @@ export function ProfileScreen() {
             onPress: async () => {
               try {
                 await Share.share({
-                  message: `CapsuleX Vault Key Backup\n\nWallet: ${selectedAccount.address}\nBackup Data: ${backupData}\n\n⚠️ Keep this backup secure and private!`,
+                  message: `CapsuleX Vault Key Backup\n\nWallet: ${walletAddress}\nBackup Data: ${backupData}\n\n⚠️ Keep this backup secure and private!`,
                   title: 'CapsuleX Vault Key Backup',
                 });
               } catch (error) {
@@ -316,7 +314,7 @@ export function ProfileScreen() {
               // TODO: Copy to clipboard when @react-native-clipboard/clipboard is available
               Alert.alert(
                 'Backup Data',
-                `Wallet: ${selectedAccount.address}\n\nBackup: ${backupData}\n\n⚠️ Save this information securely!`,
+                `Wallet: ${walletAddress}\n\nBackup: ${backupData}\n\n⚠️ Save this information securely!`,
                 [{ text: 'OK' }]
               );
             },
@@ -353,7 +351,7 @@ export function ProfileScreen() {
   };
 
   const handleDeleteVaultKey = async () => {
-    if (!selectedAccount?.address) {
+    if (!walletAddress) {
       showError('No wallet connected');
       return;
     }
@@ -369,7 +367,7 @@ export function ProfileScreen() {
           onPress: async () => {
             try {
               setVaultKeyLoading(true);
-              await VaultKeyManager.deleteVaultKey(selectedAccount.address);
+              await VaultKeyManager.deleteVaultKey(walletAddress);
 
               // Force refresh the vault key status
               await checkVaultKeyStatus();
@@ -425,7 +423,7 @@ export function ProfileScreen() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  if (!selectedAccount) {
+  if (!isAuthenticated) {
     return (
       <View style={styles.screenContainer}>
         <View style={styles.connectPrompt}>

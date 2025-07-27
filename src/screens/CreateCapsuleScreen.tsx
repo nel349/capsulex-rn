@@ -38,10 +38,16 @@ interface SOLBalance {
   required: number;
 }
 
+type CreateMode = 'time_capsule' | 'social_post';
+
 export function CreateCapsuleScreen() {
   const { isAuthenticated, walletAddress, reconnectWallet } = useAuth();
   const { createCapsule } = useCapsulexProgram();
   const { createCapsule: createCapsuleInDB } = useCapsuleService();
+  
+  // Mode selection
+  const [createMode, setCreateMode] = useState<CreateMode>('time_capsule');
+  
   const [content, setContent] = useState('something:for testing');
   const [selectedPlatform, setSelectedPlatform] = useState<
     'twitter' | 'instagram'
@@ -72,7 +78,7 @@ export function CreateCapsuleScreen() {
 
   useEffect(() => {
     checkSOLBalance();
-  }, [getBalance, walletAddress]);
+  }, [getBalance, walletAddress, createMode, isGamified]);
 
   // Check if user is creating their first capsule (no vault key yet)
   const checkFirstTimeUser = async () => {
@@ -113,7 +119,21 @@ export function CreateCapsuleScreen() {
 
   const checkSOLBalance = async () => {
     const balance = await getBalance(walletAddress as unknown as Address);
-    const required = 0.00005;
+    
+    // Calculate required SOL based on mode and features (pay-per-use pricing)
+    let required: number;
+    if (createMode === 'social_post') {
+      // Social posts: Just Twitter scheduling (~$0.25 = ~0.00125 SOL at $200/SOL)
+      required = 0.00125;
+    } else if (isGamified) {
+      // Gamified time capsules: Everything + AI gaming (~$0.50 = ~0.0025 SOL)
+      // Blockchain + encryption + reveal posting + AI semantic validation + gaming
+      required = 0.0025;
+    } else {
+      // Regular time capsules: Blockchain + encryption + reveal posting (~$0.35 = ~0.00175 SOL)
+      // Same infrastructure as gamified, just no AI gaming layer
+      required = 0.00175;
+    }
 
     setSolBalance({
       balance: balance,
@@ -173,14 +193,50 @@ export function CreateCapsuleScreen() {
     }
   };
 
+  const handleCreateSocialPost = async (isRetry: boolean = false) => {
+    try {
+      console.log('📱 Creating social post...');
+      
+      // Call the social post API endpoint
+      const response = await apiService.post('/scheduler/social-post', {
+        post_content: content,
+        scheduled_for: revealDateTime.toISOString(),
+      });
+
+      if (response.success) {
+        console.log('✅ Social post scheduled:', response.data);
+        
+        showSuccess(
+          `📱 Social post scheduled successfully! It will be posted on ${revealDateTime.toLocaleDateString()} at ${revealDateTime.toLocaleTimeString()}.`
+        );
+
+        // Reset form after short delay
+        setTimeout(() => {
+          setContent('');
+          setRevealDateTime(new Date());
+        }, 2000);
+      } else {
+        console.error('❌ Social post scheduling failed:', response.error);
+        showError(`Failed to schedule social post: ${response.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Error scheduling social post:', error);
+      showError(
+        `Failed to schedule social post: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCreateCapsule = async (isRetry: boolean = false) => {
     if (!content.trim()) {
-      showError('Please enter content for your capsule');
+      showError(createMode === 'time_capsule' ? 'Please enter content for your capsule' : 'Please enter content for your post');
       return;
     }
 
     if (!revealDateTime) {
-      showError('Please select a reveal date and time');
+      showError(createMode === 'time_capsule' ? 'Please select a reveal date and time' : 'Please select when to post');
       return;
     }
 
@@ -189,12 +245,18 @@ export function CreateCapsuleScreen() {
       return;
     }
 
+    // Both modes require SOL balance (time capsules for blockchain fees, social posts for service fees)
     if (!solBalance.sufficient) {
       setShowSOLModal(true);
       return;
     }
 
     setIsLoading(true);
+
+    // Handle social post mode differently
+    if (createMode === 'social_post') {
+      return handleCreateSocialPost(isRetry);
+    }
 
     try {
       // Convert to Unix timestamp (seconds) and then to Anchor BN
@@ -391,14 +453,67 @@ export function CreateCapsuleScreen() {
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Create Time Capsule</Text>
+          <Text style={styles.title}>
+            {createMode === 'time_capsule' ? 'Create Time Capsule' : 'Schedule Social Post'}
+          </Text>
           <Text style={styles.subtitle}>
-            Schedule your content for future reveal
+            {createMode === 'time_capsule' 
+              ? 'Schedule your content for future reveal'
+              : 'Schedule a post to be published automatically'
+            }
           </Text>
         </View>
 
-        {/* Vault Key Education Card - Show for first-time users */}
-        {showVaultKeyInfo && (
+        {/* Mode Selection */}
+        <Card style={styles.modeSelectionCard}>
+          <Card.Content>
+            <Text style={styles.sectionTitle}>📝 What do you want to create?</Text>
+            <View style={styles.modeButtonContainer}>
+              <Pressable
+                style={[
+                  styles.modeButton,
+                  createMode === 'time_capsule' && styles.modeButtonActive,
+                ]}
+                onPress={() => setCreateMode('time_capsule')}
+              >
+                <Text
+                  style={[
+                    styles.modeButtonText,
+                    createMode === 'time_capsule' && styles.modeButtonTextActive,
+                  ]}
+                >
+                  🔐 Time Capsule
+                </Text>
+                <Text style={styles.modeButtonDescription}>
+                  Encrypted content stored on blockchain
+                </Text>
+              </Pressable>
+              
+              <Pressable
+                style={[
+                  styles.modeButton,
+                  createMode === 'social_post' && styles.modeButtonActive,
+                ]}
+                onPress={() => setCreateMode('social_post')}
+              >
+                <Text
+                  style={[
+                    styles.modeButtonText,
+                    createMode === 'social_post' && styles.modeButtonTextActive,
+                  ]}
+                >
+                  📱 Social Post
+                </Text>
+                <Text style={styles.modeButtonDescription}>
+                  Schedule a post to Twitter
+                </Text>
+              </Pressable>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Vault Key Education Card - Show for first-time users (time capsule only) */}
+        {createMode === 'time_capsule' && showVaultKeyInfo && (
           <Card style={styles.vaultKeyInfoCard}>
             <Card.Content>
               <View style={styles.vaultKeyHeader}>
@@ -428,27 +543,29 @@ export function CreateCapsuleScreen() {
           </Card>
         )}
 
-        {/* SOL Balance Card */}
+        {/* SOL Balance Card (both modes require payment) */}
         <Card
           style={[
             styles.balanceCard,
             !solBalance.sufficient && styles.insufficientBalance,
           ]}
         >
-          <Card.Content>
-            <View style={styles.balanceHeader}>
-              <Text>SOL Balance</Text>
-              <Text style={styles.balanceAmount}>
-                {solBalance.balance.toFixed(6)} SOL
-              </Text>
-            </View>
-            <Text style={styles.balanceInfo}>
-              {solBalance.sufficient
-                ? '✅ Sufficient balance for capsule creation'
-                : '⚠️ Insufficient balance. You need at least 0.00005 SOL'}
+        <Card.Content>
+          <View style={styles.balanceHeader}>
+            <Text>SOL Balance</Text>
+            <Text style={styles.balanceAmount}>
+              {solBalance.balance.toFixed(6)} SOL
             </Text>
-          </Card.Content>
-        </Card>
+          </View>
+          <Text style={styles.balanceInfo}>
+            {solBalance.sufficient
+              ? (createMode === 'time_capsule' 
+                  ? `✅ Sufficient balance for ${isGamified ? 'gamified ' : ''}capsule creation`
+                  : '✅ Sufficient balance for social post scheduling')
+              : `⚠️ Insufficient balance. You need at least ${solBalance.required.toFixed(6)} SOL`}
+          </Text>
+        </Card.Content>
+      </Card>
 
         {/* Platform Selection */}
         <View style={styles.section}>
@@ -470,8 +587,9 @@ export function CreateCapsuleScreen() {
           </View>
         </View>
 
-        {/* Gamification Toggle */}
-        <View style={styles.section}>
+        {/* Gamification Toggle (time capsule only) */}
+        {createMode === 'time_capsule' && (
+          <View style={styles.section}>
           <View style={styles.gamificationHeader}>
             <View style={styles.gamificationTitleContainer}>
               <Text style={styles.sectionTitle}>🎮 Gamify This Capsule</Text>
@@ -494,13 +612,19 @@ export function CreateCapsuleScreen() {
             </Card>
           )}
         </View>
+        )}
 
         {/* Content Input */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Message</Text>
+          <Text style={styles.sectionTitle}>
+            {createMode === 'time_capsule' ? 'Your Message' : 'Your Post Content'}
+          </Text>
           <TextInput
             mode="outlined"
-            placeholder="What would you like to share in the future?"
+            placeholder={createMode === 'time_capsule' 
+              ? "What would you like to share in the future?" 
+              : "What do you want to post on Twitter?"
+            }
             value={content}
             onChangeText={setContent}
             multiline
@@ -510,37 +634,44 @@ export function CreateCapsuleScreen() {
           <Text style={styles.characterCount}>
             {content.length}/280 characters
           </Text>
-        </View>
-
-        {/* Twitter Audience Notification Toggle */}
-        <View style={styles.section}>
-          <View style={styles.notificationHeader}>
-            <View style={styles.notificationTitleContainer}>
-              <Text style={styles.sectionTitle}>Notify Your Audience</Text>
-              {!isTwitterConnected && (
-                <Text style={styles.twitterWarning}>
-                  Connect Twitter in Profile to enable notifications
-                </Text>
-              )}
-            </View>
-            <Switch
-              value={notifyAudience}
-              onValueChange={setNotifyAudience}
-              disabled={!isTwitterConnected}
-            />
-          </View>
-          {notifyAudience && isTwitterConnected && (
-            <Card style={styles.notificationInfoCard}>
-              <Card.Content>
-                <Text style={styles.notificationInfoText}>
-                  📢 This will post a teaser about your time capsule to your
-                  Twitter account, letting your followers know when to expect
-                  the reveal.
-                </Text>
-              </Card.Content>
-            </Card>
+          {createMode === 'social_post' && (
+            <Text style={styles.socialPostHint}>
+              💡 This content will be posted directly to Twitter at your scheduled time. Service fee required.
+            </Text>
           )}
         </View>
+
+        {/* Twitter Audience Notification Toggle (Time Capsule Mode Only) */}
+        {createMode === 'time_capsule' && (
+          <View style={styles.section}>
+            <View style={styles.notificationHeader}>
+              <View style={styles.notificationTitleContainer}>
+                <Text style={styles.sectionTitle}>Notify Your Audience</Text>
+                {!isTwitterConnected && (
+                  <Text style={styles.twitterWarning}>
+                    Connect Twitter in Profile to enable notifications
+                  </Text>
+                )}
+              </View>
+              <Switch
+                value={notifyAudience}
+                onValueChange={setNotifyAudience}
+                disabled={!isTwitterConnected}
+              />
+            </View>
+            {notifyAudience && isTwitterConnected && (
+              <Card style={styles.notificationInfoCard}>
+                <Card.Content>
+                  <Text style={styles.notificationInfoText}>
+                    📢 This will post a teaser about your time capsule to your
+                    Twitter account, letting your followers know when to expect
+                    the reveal.
+                  </Text>
+                </Card.Content>
+              </Card>
+            )}
+          </View>
+        )}
 
         {/* Reveal Date & Time */}
         <View style={styles.section}>
@@ -590,52 +721,36 @@ export function CreateCapsuleScreen() {
           )}
         </View>
 
-        {/* Automatic Reveal Info */}
+        {/* Automatic Processing Info */}
         <Card style={styles.automaticRevealInfoCard}>
           <Card.Content>
             <Text style={styles.automaticRevealInfoText}>
-              ⏰ Your time capsule will be automatically revealed at the
-              scheduled time. If you have Twitter connected, we'll also post a
-              reveal announcement to your followers.
+              {createMode === 'time_capsule' 
+                ? '⏰ Your time capsule will be automatically revealed at the scheduled time. If you have Twitter connected, we\'ll also post a reveal announcement to your followers.'
+                : '📱 Your post will be automatically published to Twitter at the scheduled time. Make sure you have Twitter connected in your Profile settings.'
+              }
             </Text>
           </Card.Content>
         </Card>
 
-        {/* Cost Breakdown */}
-        <Card style={styles.costCard}>
-          <Card.Content>
-            <Text style={styles.costTitle}>Transaction Cost</Text>
-            <View style={styles.costRow}>
-              <Text>Capsule Creation</Text>
-              <Text>~0.00005 SOL</Text>
-            </View>
-            <View style={styles.costRow}>
-              <Text>Network Fee</Text>
-              <Text>~0.000005 SOL</Text>
-            </View>
-            <View style={[styles.costRow, styles.totalRow]}>
-              <Text>Total</Text>
-              <Text>~0.000055 SOL</Text>
-            </View>
-          </Card.Content>
-        </Card>
 
         {/* Create Button */}
         <Button
           mode="contained"
           onPress={() => handleCreateCapsule()}
-          loading={isLoading || createCapsule.isPending}
+          loading={isLoading || (createMode === 'time_capsule' && createCapsule.isPending)}
           disabled={
             isLoading ||
-            createCapsule.isPending ||
+            (createMode === 'time_capsule' && createCapsule.isPending) ||
             !content.trim() ||
-            !revealDateTime
+            !revealDateTime ||
+            !solBalance.sufficient
           }
           style={styles.createButton}
         >
-          {isLoading || createCapsule.isPending
-            ? 'Creating Capsule...'
-            : 'Create Time Capsule'}
+          {isLoading || (createMode === 'time_capsule' && createCapsule.isPending)
+            ? (createMode === 'time_capsule' ? 'Creating Capsule...' : 'Scheduling Post...')
+            : (createMode === 'time_capsule' ? 'Create Time Capsule' : 'Schedule Post')}
         </Button>
       </ScrollView>
 
@@ -762,24 +877,6 @@ const styles = StyleSheet.create({
   },
   timeInput: {
     flex: 1,
-  },
-  costCard: {
-    margin: 16,
-  },
-  costTitle: {
-    marginBottom: 12,
-    fontWeight: 'bold',
-  },
-  costRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 8,
-    marginTop: 8,
   },
   createButton: {
     margin: 16,
@@ -916,5 +1013,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1565C0',
     lineHeight: 20,
+  },
+  modeSelectionCard: {
+    margin: 16,
+    marginBottom: 8,
+  },
+  modeButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  modeButton: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  modeButtonActive: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#2196F3',
+  },
+  modeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  modeButtonTextActive: {
+    color: '#1565C0',
+  },
+  modeButtonDescription: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  socialPostHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

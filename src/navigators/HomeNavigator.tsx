@@ -7,6 +7,7 @@ import { TopBar } from '../components/top-bar/top-bar-feature';
 import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
 import { DiscoverScreen } from '../screens/DiscoverScreen';
 import { HubScreen } from '../screens/HubScreen';
+import { LeaderboardScreen } from '../screens/LeaderboardScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -49,6 +50,14 @@ export function HomeNavigator() {
                   color={color}
                 />
               );
+            case 'Leaderboards':
+              return (
+                <MaterialCommunityIcon
+                  name={focused ? 'trophy' : 'trophy-outline'}
+                  size={size}
+                  color={color}
+                />
+              );
             case 'Profile':
               return (
                 <MaterialCommunityIcon
@@ -81,6 +90,11 @@ export function HomeNavigator() {
         name="Discover"
         component={DiscoverScreen}
         options={{ tabBarLabel: 'Discover' }}
+      />
+      <Tab.Screen
+        name="Leaderboards"
+        component={LeaderboardScreen}
+        options={{ tabBarLabel: 'Leaderboards' }}
       />
       <Tab.Screen
         name="Profile"

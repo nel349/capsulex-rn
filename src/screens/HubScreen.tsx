@@ -226,7 +226,7 @@ export function HubScreen() {
 
       // Vibrate if there are newly ready capsules
       if (enhancedData.summary.ready_to_reveal > 0) {
-        Vibration.vibrate([100, 50, 100]);
+        // Vibration.vibrate([100, 50, 100]);
       }
     } catch (error) {
       console.error('Error fetching capsule data:', error);
@@ -246,7 +246,7 @@ export function HubScreen() {
   // Pull to refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    Vibration.vibrate(50); // Haptic feedback
+    // Vibration.vibrate(50); // Haptic feedback
     await fetchCapsuleData();
     await queryClient.invalidateQueries({ queryKey: ['solana-balance'] });
     setRefreshing(false);

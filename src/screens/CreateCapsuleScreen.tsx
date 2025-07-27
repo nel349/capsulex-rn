@@ -249,12 +249,14 @@ export function CreateCapsuleScreen() {
 
       // Step 3: Save capsule to Supabase database
       try {
+        const currentTime = new Date().toISOString(); // Capture frontend time for consistency
         const capsuleData = await createCapsuleInDB({
           content_encrypted: JSON.stringify(encryptedContent), // Store wallet-encrypted content with metadata
           content_hash: contentHash,
           has_media: false,
           media_urls: [],
           reveal_date: revealDateTime.toISOString(),
+          created_at: currentTime, // Use frontend time to ensure consistency with reveal_date
           on_chain_tx:
             typeof txResult === 'string'
               ? txResult
@@ -298,15 +300,21 @@ export function CreateCapsuleScreen() {
         }
 
         // Show success message with backup reminder for first-time users
-        let successMessage = '🎉 Time capsule created successfully';
+        let successMessage =
+          '🎉 Time capsule created successfully and scheduled for automatic reveal';
 
         if (notifyAudience && isTwitterConnected) {
           if (twitterPostSuccess) {
-            successMessage += ' and announced to your audience!';
+            successMessage += '. Announcement posted to your audience!';
           } else {
             successMessage +=
-              '! (Audience notification failed - check Twitter connection)';
+              '. (Audience announcement failed - check Twitter connection)';
           }
+        } else if (isTwitterConnected) {
+          successMessage +=
+            '. A reveal announcement will be posted to Twitter automatically.';
+        } else {
+          successMessage += '.';
         }
 
         if (isFirstTimeUser) {
@@ -581,6 +589,17 @@ export function CreateCapsuleScreen() {
             />
           )}
         </View>
+
+        {/* Automatic Reveal Info */}
+        <Card style={styles.automaticRevealInfoCard}>
+          <Card.Content>
+            <Text style={styles.automaticRevealInfoText}>
+              ⏰ Your time capsule will be automatically revealed at the
+              scheduled time. If you have Twitter connected, we'll also post a
+              reveal announcement to your followers.
+            </Text>
+          </Card.Content>
+        </Card>
 
         {/* Cost Breakdown */}
         <Card style={styles.costCard}>
@@ -884,6 +903,18 @@ const styles = StyleSheet.create({
   gamificationInfoText: {
     fontSize: 14,
     color: '#E65100',
+    lineHeight: 20,
+  },
+  automaticRevealInfoCard: {
+    backgroundColor: '#E3F2FD',
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+    margin: 16,
+    marginTop: 8,
+  },
+  automaticRevealInfoText: {
+    fontSize: 14,
+    color: '#1565C0',
     lineHeight: 20,
   },
 });

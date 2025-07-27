@@ -2,7 +2,13 @@ import * as anchor from '@coral-xyz/anchor';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { StyleSheet, View, ScrollView, RefreshControl, Platform, Share } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  RefreshControl,
+  Share,
+} from 'react-native';
 import {
   Text,
   TextInput,
@@ -30,7 +36,6 @@ type RootStackParamList = {
 
 type GameScreenProps = NativeStackScreenProps<RootStackParamList, 'Game'>;
 
-
 export function GameScreen({ route }: GameScreenProps) {
   const { capsule_id, action = 'view' } = route.params;
   const { isAuthenticated, walletAddress, reconnectWallet } = useAuth();
@@ -46,8 +51,7 @@ export function GameScreen({ route }: GameScreenProps) {
     action === 'guess'
   );
   const guessInputRef = useRef<any>(null);
-  const { snackbar, showError, showInfo, hideSnackbar } =
-    useSnackbar();
+  const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
 
   const loadGameData = useCallback(async () => {
     try {
@@ -99,7 +103,7 @@ export function GameScreen({ route }: GameScreenProps) {
         }
       }
     };
-    
+
     checkWalletConnection();
   }, [isAuthenticated, reconnectWallet, loadGameData]);
 
@@ -210,12 +214,15 @@ export function GameScreen({ route }: GameScreenProps) {
 
       // Now register the guess in the backend database
       try {
-        const CAPSULEX_PROGRAM_ID = 'J1r7tHjxEuCcSYVrikUKxzyeeccuC3QbyHjUbY8Pw7uH';
+        const CAPSULEX_PROGRAM_ID =
+          'J1r7tHjxEuCcSYVrikUKxzyeeccuC3QbyHjUbY8Pw7uH';
         const programId = new anchor.web3.PublicKey(CAPSULEX_PROGRAM_ID);
 
         // Derive guess PDA for backend registration (using current_guesses count before submission)
-        const currentGuessesBuffer = Buffer.from(new Uint32Array([game.current_guesses]).buffer);
-        
+        const currentGuessesBuffer = Buffer.from(
+          new Uint32Array([game.current_guesses]).buffer
+        );
+
         const [guessPDA] = anchor.web3.PublicKey.findProgramAddressSync(
           [
             anchor.utils.bytes.utf8.encode('guess'),
@@ -226,51 +233,69 @@ export function GameScreen({ route }: GameScreenProps) {
           programId
         );
 
-        const backendResponse = await apiService.post(`/games/${capsule_id}/guess`, {
-          transaction_signature: txSignature,
-          guesser_wallet: walletAddress,
-          guess_content: myGuess.trim(),
-          is_anonymous: isAnonymous,
-          guess_pda: guessPDA.toBase58(),
-          game_pda: gamePDA.toBase58(),
-        });
+        const backendResponse = await apiService.post(
+          `/games/${capsule_id}/guess`,
+          {
+            transaction_signature: txSignature,
+            guesser_wallet: walletAddress,
+            guess_content: myGuess.trim(),
+            is_anonymous: isAnonymous,
+            guess_pda: guessPDA.toBase58(),
+            game_pda: gamePDA.toBase58(),
+          }
+        );
 
         if (backendResponse.success) {
           console.log('✅ Guess registered in database:', backendResponse.data);
           showInfo('🎯 Guess submitted successfully!');
-          
+
           // Clear the input and refresh data
           setMyGuess('');
           setIsAnonymous(false);
-          
+
           // Reload game data to show the new guess
           loadGameData();
         } else {
-          console.warn('⚠️ Backend registration failed:', backendResponse.error);
-          showInfo('🎯 Guess submitted on blockchain, but database sync failed. Your guess is still valid!');
+          console.warn(
+            '⚠️ Backend registration failed:',
+            backendResponse.error
+          );
+          showInfo(
+            '🎯 Guess submitted on blockchain, but database sync failed. Your guess is still valid!'
+          );
         }
       } catch (backendError) {
         console.warn('⚠️ Backend registration error:', backendError);
-        showInfo('🎯 Guess submitted on blockchain, but database sync failed. Your guess is still valid!');
+        showInfo(
+          '🎯 Guess submitted on blockchain, but database sync failed. Your guess is still valid!'
+        );
       }
-
     } catch (error) {
       console.error('Error submitting guess:', error);
-      
+
       // Handle specific wallet connection errors with automatic retry
-      if (error instanceof Error && error.message.includes('wallet connection has expired')) {
+      if (
+        error instanceof Error &&
+        error.message.includes('wallet connection has expired')
+      ) {
         showInfo('Wallet connection expired. Attempting to reconnect...');
-        
+
         try {
           const reconnectionSuccess = await reconnectWallet();
           if (reconnectionSuccess) {
-            showInfo('Wallet reconnected. Please try submitting your guess again.');
+            showInfo(
+              'Wallet reconnected. Please try submitting your guess again.'
+            );
           } else {
-            showError('Failed to reconnect wallet. Please reconnect manually and try again.');
+            showError(
+              'Failed to reconnect wallet. Please reconnect manually and try again.'
+            );
           }
         } catch (reconnectError) {
           console.error('Reconnection attempt failed:', reconnectError);
-          showError('Your wallet connection has expired. Please reconnect and try again.');
+          showError(
+            'Your wallet connection has expired. Please reconnect and try again.'
+          );
         }
       } else {
         showError('Failed to submit guess. Please try again.');
@@ -284,10 +309,14 @@ export function GameScreen({ route }: GameScreenProps) {
   const handleShareGuess = async (guess: Guess) => {
     try {
       const statusEmoji = guess.is_correct ? '✅' : guess.is_paid ? '💰' : '📝';
-      const statusText = guess.is_correct ? 'Correct' : guess.is_paid ? 'Paid' : 'Submitted';
-      
+      const statusText = guess.is_correct
+        ? 'Correct'
+        : guess.is_paid
+          ? 'Paid'
+          : 'Submitted';
+
       const shareText = `🎯 My CapsuleX Guess ${statusEmoji}\n\n"${guess.guess_content}"\n\nStatus: ${statusText}\nDate: ${new Date(guess.submitted_at).toLocaleDateString()}\n\n#CapsuleX #CryptoGuess`;
-      
+
       const result = await Share.share({
         message: shareText,
         title: 'My CapsuleX Guess',
@@ -414,7 +443,11 @@ export function GameScreen({ route }: GameScreenProps) {
               </Text>
               <View style={styles.guesseMeta}>
                 <Chip mode="outlined">
-                  {myExistingGuess.is_correct ? '✅ Correct' : myExistingGuess.is_paid ? '💰 Paid' : '📝 Submitted'}
+                  {myExistingGuess.is_correct
+                    ? '✅ Correct'
+                    : myExistingGuess.is_paid
+                      ? '💰 Paid'
+                      : '📝 Submitted'}
                 </Chip>
                 <Text style={styles.guessDate}>
                   {new Date(myExistingGuess.submitted_at).toLocaleDateString()}
@@ -457,10 +490,14 @@ export function GameScreen({ route }: GameScreenProps) {
                 mode="contained"
                 onPress={handleSubmitGuess}
                 loading={isSubmitting || submitGuess.isPending}
-                disabled={isSubmitting || submitGuess.isPending || !myGuess.trim()}
+                disabled={
+                  isSubmitting || submitGuess.isPending || !myGuess.trim()
+                }
                 style={styles.submitButton}
               >
-                {isSubmitting || submitGuess.isPending ? 'Submitting...' : 'Submit Guess'}
+                {isSubmitting || submitGuess.isPending
+                  ? 'Submitting...'
+                  : 'Submit Guess'}
               </Button>
             </Card.Content>
           </Card>

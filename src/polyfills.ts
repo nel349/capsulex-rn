@@ -24,7 +24,6 @@ console.log('🔧 Buffer polyfill check:', {
   writeUIntBE: typeof Buffer.prototype.writeUIntBE,
 });
 
-
 // getRandomValues polyfill
 class Crypto {
   getRandomValues = expoCryptoGetRandomValues;

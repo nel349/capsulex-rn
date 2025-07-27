@@ -71,7 +71,10 @@ class DynamicClientService {
         signer = this.getSigner();
         console.log('✅ Successfully got signer');
       } catch (signerError) {
-        console.log('❌ Could not get signer - session likely expired:', signerError);
+        console.log(
+          '❌ Could not get signer - session likely expired:',
+          signerError
+        );
         return false;
       }
 
@@ -87,7 +90,10 @@ class DynamicClientService {
         publicKey = signer.publicKey;
         console.log('✅ Successfully got public key:', publicKey?.toBase58());
       } catch (pkError) {
-        console.log('❌ Could not get public key - wallet session invalid:', pkError);
+        console.log(
+          '❌ Could not get public key - wallet session invalid:',
+          pkError
+        );
         return false;
       }
 
@@ -105,7 +111,10 @@ class DynamicClientService {
           console.log('❌ Cannot access wallet address - session invalid');
           return false;
         }
-        console.log('✅ Wallet is responsive, address:', walletAddress.slice(0, 8) + '...');
+        console.log(
+          '✅ Wallet is responsive, address:',
+          walletAddress.slice(0, 8) + '...'
+        );
       } catch (walletError) {
         console.log('❌ Wallet responsiveness test failed:', walletError);
         return false;
@@ -155,33 +164,44 @@ class DynamicClientService {
   // Helper method to get Solana signer
   getSigner() {
     const client = this.getDynamicClient();
-    
+
     if (!client) {
       console.error('🔍 getSigner: No Dynamic client available');
-      throw new Error('Dynamic client not available - WebView may be unmounted');
+      throw new Error(
+        'Dynamic client not available - WebView may be unmounted'
+      );
     }
-    
+
     const primaryWallet = client.wallets?.primary;
-    
+
     if (!primaryWallet) {
       console.error('🔍 getSigner: No primary wallet available');
-      throw new Error('Primary wallet not available - user may not be authenticated');
+      throw new Error(
+        'Primary wallet not available - user may not be authenticated'
+      );
     }
-    
+
     const walletAddress = primaryWallet.address;
     if (!walletAddress) {
       console.error('🔍 getSigner: Primary wallet has no address');
-      throw new Error('Wallet address not available - wallet may be disconnected');
+      throw new Error(
+        'Wallet address not available - wallet may be disconnected'
+      );
     }
-    
+
     try {
-      console.log('🔍 getSigner: Attempting to get signer for wallet:', walletAddress.slice(0, 8) + '...');
+      console.log(
+        '🔍 getSigner: Attempting to get signer for wallet:',
+        walletAddress.slice(0, 8) + '...'
+      );
       const signer = client.solana.getSigner({ wallet: primaryWallet });
       console.log('✅ getSigner: Successfully obtained signer');
       return signer;
     } catch (error) {
       console.error('❌ getSigner: Failed to get signer:', error);
-      throw new Error(`Failed to get wallet signer: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get wallet signer: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -191,18 +211,24 @@ class DynamicClientService {
     try {
       const client = this.getDynamicClient();
       console.log('🔬 Client exists:', !!client);
-      
+
       if (client) {
         console.log('🔬 Auth exists:', !!client.auth);
         console.log('🔬 Auth user exists:', !!client.auth?.authenticatedUser);
-        console.log('🔬 Auth user email:', client.auth?.authenticatedUser?.email);
-        
+        console.log(
+          '🔬 Auth user email:',
+          client.auth?.authenticatedUser?.email
+        );
+
         console.log('🔬 Wallets exists:', !!client.wallets);
         console.log('🔬 Primary wallet exists:', !!client.wallets?.primary);
-        console.log('🔬 Primary wallet address:', client.wallets?.primary?.address);
-        
+        console.log(
+          '🔬 Primary wallet address:',
+          client.wallets?.primary?.address
+        );
+
         console.log('🔬 Solana exists:', !!client.solana);
-        
+
         try {
           console.log('🔬 Attempting to get connection...');
           const connection = client.solana?.getConnection();
@@ -210,7 +236,7 @@ class DynamicClientService {
         } catch (connError) {
           console.log('🔬 Connection error:', connError);
         }
-        
+
         try {
           console.log('🔬 Attempting to get signer...');
           const signer = this.getSigner();

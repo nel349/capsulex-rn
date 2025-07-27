@@ -65,26 +65,26 @@ export default function App() {
           <AuthProvider>
             <dynamicClient.reactNative.WebView />
             <SafeAreaView
-            style={[
-              styles.shell,
-              {
-                backgroundColor:
-                  colorScheme === 'dark'
-                    ? MD3DarkTheme.colors.background
-                    : MD3LightTheme.colors.background,
-              },
-            ]}
-          >
-            <PaperProvider
-              theme={
-                colorScheme === 'dark'
-                  ? CombinedDarkTheme
-                  : CombinedDefaultTheme
-              }
+              style={[
+                styles.shell,
+                {
+                  backgroundColor:
+                    colorScheme === 'dark'
+                      ? MD3DarkTheme.colors.background
+                      : MD3LightTheme.colors.background,
+                },
+              ]}
             >
-              <AppNavigator />
-            </PaperProvider>
-          </SafeAreaView>
+              <PaperProvider
+                theme={
+                  colorScheme === 'dark'
+                    ? CombinedDarkTheme
+                    : CombinedDefaultTheme
+                }
+              >
+                <AppNavigator />
+              </PaperProvider>
+            </SafeAreaView>
           </AuthProvider>
         </ConnectionProvider>
       </ClusterProvider>

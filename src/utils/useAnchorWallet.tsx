@@ -40,9 +40,9 @@ export function useAnchorWallet(): AnchorWallet | undefined {
             const hasAuth = !!client.auth?.authenticatedUser;
             const hasWallet = !!client.wallets?.primary;
             const hasWalletAddress = !!client.wallets?.primary?.address;
-            
+
             const isReady = (hasAuth || hasWallet) && hasWalletAddress;
-            
+
             if (isReady !== dynamicClientReady) {
               console.log('🔄 Dynamic client ready state changed:', isReady);
               setDynamicClientReady(isReady);
@@ -55,10 +55,10 @@ export function useAnchorWallet(): AnchorWallet | undefined {
 
       // Check immediately
       checkDynamicClient();
-      
+
       // Poll every 500ms while not ready
       const interval = setInterval(checkDynamicClient, 500);
-      
+
       return () => clearInterval(interval);
     } else {
       setDynamicClientReady(false);
@@ -102,12 +102,16 @@ export function useAnchorWallet(): AnchorWallet | undefined {
 
       // Wait for Dynamic client to be ready
       if (!dynamicClientReady) {
-        console.log('⏳ useAnchorWallet: Waiting for Dynamic client to be ready...');
+        console.log(
+          '⏳ useAnchorWallet: Waiting for Dynamic client to be ready...'
+        );
         return;
       }
-      
-      console.log('✅ useAnchorWallet: Dynamic client is ready, creating wallet interface');
-      
+
+      console.log(
+        '✅ useAnchorWallet: Dynamic client is ready, creating wallet interface'
+      );
+
       // At this point, we know the Dynamic client is ready
 
       return {
@@ -133,5 +137,11 @@ export function useAnchorWallet(): AnchorWallet | undefined {
     }
 
     return undefined;
-  }, [selectedAccount, mobileWallet, isAuthenticated, walletAddress, dynamicClientReady]);
+  }, [
+    selectedAccount,
+    mobileWallet,
+    isAuthenticated,
+    walletAddress,
+    dynamicClientReady,
+  ]);
 }

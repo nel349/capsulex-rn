@@ -243,28 +243,40 @@ export function useCapsulexProgram() {
 
       // For iOS, validate the wallet session is still active before transaction
       if (Platform.OS === 'ios') {
-        console.log('🔍 useCapsulexProgram - validating wallet session before transaction...');
-        
+        console.log(
+          '🔍 useCapsulexProgram - validating wallet session before transaction...'
+        );
+
         try {
           // More robust validation: actually try to use the signer
           const signer = dynamicClientService.getSigner();
           const publicKey = signer.publicKey;
-          
+
           // Verify the signer matches our expected wallet
-          if (!publicKey || publicKey.toBase58() !== anchorWallet.publicKey.toBase58()) {
-            throw new Error('Wallet address mismatch - connection may have expired');
+          if (
+            !publicKey ||
+            publicKey.toBase58() !== anchorWallet.publicKey.toBase58()
+          ) {
+            throw new Error(
+              'Wallet address mismatch - connection may have expired'
+            );
           }
-          
+
           // Test if we can actually access wallet properties (this will fail if WebView is unmounted)
           const client = dynamicClientService.getDynamicClient();
           const walletAddress = client?.wallets?.primary?.address;
           if (!walletAddress) {
             throw new Error('Cannot access wallet - WebView may be unmounted');
           }
-          
-          console.log('✅ useCapsulexProgram - comprehensive wallet validation passed');
+
+          console.log(
+            '✅ useCapsulexProgram - comprehensive wallet validation passed'
+          );
         } catch (walletError) {
-          console.error('❌ useCapsulexProgram - wallet validation failed:', walletError);
+          console.error(
+            '❌ useCapsulexProgram - wallet validation failed:',
+            walletError
+          );
           throw new Error(
             'Your wallet connection has expired. Please reconnect your wallet to continue.'
           );
@@ -275,9 +287,11 @@ export function useCapsulexProgram() {
 
       // Fetch the game account to get current_guesses count
       const gameAccount = await capsulexProgram.account.game.fetch(gamePDA);
-      
+
       // Derive guess PDA (using the same pattern as tests)
-      const currentGuessesBuffer = Buffer.from(new Uint32Array([gameAccount.currentGuesses]).buffer);
+      const currentGuessesBuffer = Buffer.from(
+        new Uint32Array([gameAccount.currentGuesses]).buffer
+      );
       const [guessPDA] = PublicKey.findProgramAddressSync(
         [
           anchor.utils.bytes.utf8.encode('guess'),
@@ -322,7 +336,10 @@ export function useCapsulexProgram() {
       if (error.error?.errorMessage) {
         console.error('Program error message:', error.error.errorMessage);
       }
-      alertAndLog('❌ Guess Submission Failed', error.message || 'Transaction failed');
+      alertAndLog(
+        '❌ Guess Submission Failed',
+        error.message || 'Transaction failed'
+      );
     },
   });
 

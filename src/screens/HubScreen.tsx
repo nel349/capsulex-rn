@@ -727,6 +727,7 @@ const styles = StyleSheet.create({
   readyCard: {
     marginBottom: 12,
     borderRadius: 12,
+    backgroundColor: '#FFF8F6', // Add solid background for efficient shadow rendering
   },
   readyCardInner: {
     backgroundColor: '#FFF8F6',

@@ -2,7 +2,7 @@ import * as anchor from '@coral-xyz/anchor';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { StyleSheet, View, ScrollView, RefreshControl, Platform } from 'react-native';
+import { StyleSheet, View, ScrollView, RefreshControl, Platform, Share } from 'react-native';
 import {
   Text,
   TextInput,
@@ -11,13 +11,13 @@ import {
   Chip,
   Switch,
   ActivityIndicator,
+  IconButton,
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
-import { dynamicClientService } from '../services/dynamicClientService';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import type { CapsuleGame, Guess, GuessesApiResponse } from '../types/api';
 
@@ -280,6 +280,28 @@ export function GameScreen({ route }: GameScreenProps) {
     }
   };
 
+  // Share guess function
+  const handleShareGuess = async (guess: Guess) => {
+    try {
+      const statusEmoji = guess.is_correct ? '✅' : guess.is_paid ? '💰' : '📝';
+      const statusText = guess.is_correct ? 'Correct' : guess.is_paid ? 'Paid' : 'Submitted';
+      
+      const shareText = `🎯 My CapsuleX Guess ${statusEmoji}\n\n"${guess.guess_content}"\n\nStatus: ${statusText}\nDate: ${new Date(guess.submitted_at).toLocaleDateString()}\n\n#CapsuleX #CryptoGuess`;
+      
+      const result = await Share.share({
+        message: shareText,
+        title: 'My CapsuleX Guess',
+      });
+
+      if (result.action === Share.sharedAction) {
+        showInfo('Guess shared successfully! 🚀');
+      }
+    } catch (error) {
+      console.error('Error sharing guess:', error);
+      showError('Failed to share guess');
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
@@ -377,7 +399,16 @@ export function GameScreen({ route }: GameScreenProps) {
         {myExistingGuess && (
           <Card style={styles.existingGuessCard}>
             <Card.Content>
-              <Text style={styles.existingGuessTitle}>Your Guess</Text>
+              <View style={styles.existingGuessHeader}>
+                <Text style={styles.existingGuessTitle}>Your Guess</Text>
+                <IconButton
+                  icon="share-variant"
+                  size={20}
+                  onPress={() => handleShareGuess(myExistingGuess)}
+                  style={styles.shareButton}
+                  iconColor="#2E7D32"
+                />
+              </View>
               <Text style={styles.existingGuessContent}>
                 "{myExistingGuess.guess_content}"
               </Text>
@@ -599,10 +630,20 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#4CAF50',
   },
+  existingGuessHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   existingGuessTitle: {
     fontWeight: 'bold',
-    marginBottom: 8,
     color: '#2E7D32',
+    flex: 1,
+  },
+  shareButton: {
+    margin: 0,
+    backgroundColor: 'transparent',
   },
   existingGuessContent: {
     fontSize: 16,

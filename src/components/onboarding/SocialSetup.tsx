@@ -1,25 +1,35 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, Text } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 
 import { useDualAuth } from '../../providers/DualAuthProvider';
 
-interface SocialSetupProps {
-  onConnect: () => Promise<void>;
-  onSkip: () => void;
-  onBack: () => void;
-}
+interface SocialSetupProps {}
 
-export function SocialSetup({ onConnect, onSkip, onBack }: SocialSetupProps) {
+export function SocialSetup({}: SocialSetupProps) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const navigation = useNavigation();
 
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      await onConnect();
+      // TODO: Implement X/Twitter OAuth integration
+      // Navigate directly to main app after social connect
+      navigation.navigate('HomeStack' as never);
     } finally {
       setIsConnecting(false);
     }
+  };
+
+  const handleSkip = () => {
+    // Navigate directly to main app after skipping social
+    navigation.navigate('HomeStack' as never);
+  };
+
+  const handleBack = () => {
+    // Navigate back to onboarding
+    navigation.navigate('Onboarding' as never);
   };
 
   return (
@@ -44,11 +54,11 @@ export function SocialSetup({ onConnect, onSkip, onBack }: SocialSetupProps) {
           Connect X
         </Button>
 
-        <Button mode="outlined" onPress={onSkip} style={styles.button}>
+        <Button mode="outlined" onPress={handleSkip} style={styles.button}>
           Skip
         </Button>
 
-        <Button mode="text" onPress={onBack} style={styles.button}>
+        <Button mode="text" onPress={handleBack} style={styles.button}>
           Back
         </Button>
       </View>

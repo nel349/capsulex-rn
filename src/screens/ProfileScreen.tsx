@@ -15,9 +15,9 @@ import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
 import { twitterService } from '../services/twitterService';
-import { useMobileWallet } from '../utils/useMobileWallet';
 import { VaultKeyManager } from '../utils/vaultKey';
 import { useDualAuth } from '../providers';
+import { useAuthService } from '../services/authService';
 
 interface UserProfile {
   wallet: string;
@@ -40,8 +40,8 @@ export function ProfileScreen() {
   const { snackbar, showSuccess, showError, showInfo, hideSnackbar } =
     useSnackbar();
 
-  const { isAuthenticated, walletAddress } = useDualAuth();
-  const { disconnect } = useMobileWallet();
+  const { isAuthenticated, walletAddress, signOut } = useDualAuth();
+  const { clearAuth } = useAuthService();
   const [profile, setProfile] = useState<UserProfile>({
     wallet: walletAddress || '',
     displayName: 'CapsuleUser',
@@ -229,14 +229,27 @@ export function ProfileScreen() {
   const handleDisconnectWallet = () => {
     Alert.alert(
       'Disconnect Wallet',
-      'Are you sure you want to disconnect your wallet? This will log you out.',
+      'Are you sure you want to disconnect your wallet? This will log you out and clear all stored authentication data.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Disconnect',
           style: 'destructive',
-          onPress: () => {
-            disconnect();
+          onPress: async () => {
+            try {
+              showInfo('Disconnecting wallet...');
+              
+              // Clear JWT tokens and user data from AsyncStorage
+              await clearAuth();
+              
+              // Use platform-specific signOut method
+              await signOut();
+              
+              showSuccess('Wallet disconnected successfully!');
+            } catch (error) {
+              console.error('Error disconnecting wallet:', error);
+              showError('Failed to disconnect wallet. Please try again.');
+            }
           },
         },
       ]

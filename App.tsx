@@ -20,7 +20,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClusterProvider } from './src/components/cluster/cluster-data-access';
 import { AppNavigator } from './src/navigators/AppNavigator';
-import { DualAuthProvider } from './src/providers';
 import { ConnectionProvider } from './src/utils/ConnectionProvider';
 
 const queryClient = new QueryClient();
@@ -62,7 +61,6 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ClusterProvider>
         <ConnectionProvider config={{ commitment: 'processed' }}>
-          <DualAuthProvider>
             <dynamicClient.reactNative.WebView />
             <SafeAreaView
               style={[
@@ -85,7 +83,6 @@ export default function App() {
                 <AppNavigator />
               </PaperProvider>
             </SafeAreaView>
-          </DualAuthProvider>
         </ConnectionProvider>
       </ClusterProvider>
     </QueryClientProvider>

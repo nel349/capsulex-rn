@@ -74,6 +74,13 @@ export function HubScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
 
+  // if the user is not authenticated, we should navigate to the welcome screen
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigation.navigate('Welcome' as never);
+    }
+  }, [isAuthenticated]);
+
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {

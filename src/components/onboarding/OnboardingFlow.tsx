@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { useDualAuth } from '../../providers/DualAuthProvider';
@@ -10,38 +11,29 @@ import { WelcomeScreen } from './WelcomeScreen';
 import { SignUpScreen } from './SignUpScreen';
 import { SocialSetup } from './SocialSetup';
 
-interface OnboardingFlowProps {
-  onComplete: () => void;
-}
+interface OnboardingFlowProps {}
 
 type OnboardingStep = 'welcome' | 'signup' | 'connecting' | 'social';
 
-export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
+export function OnboardingFlow({}: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
-  const { signIn, signUp, isConnecting } = useDualAuth();
+  const { signIn, signUp, isAuthenticated } = useDualAuth();
   const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
+  const navigation = useNavigation();
 
   const handleGetStarted = async () => {
-    try {
-      await signUp('User'); // Default name for iOS, will be overridden for Android
-      setCurrentStep('social');
-    } catch (error) {
-      console.error('Get started failed:', error);
-      
-      // For Android, if we need name/email, go to signup screen
-      if (error instanceof Error && error.message.includes('wallet')) {
-        setCurrentStep('signup');
-      } else {
-        showError(error instanceof Error ? error.message : 'Failed to get started');
-      }
-    }
+    // Go to signup screen to collect name and email first
+    setCurrentStep('signup');
   };
 
   const handleSignIn = async () => {
     try {
       setCurrentStep('connecting');
-      await signIn();
-      onComplete();
+      const result = await signIn();
+      // Only navigate if we're still in the connecting step (user hasn't navigated away)
+      if (currentStep === 'connecting') {
+        navigation.navigate('HomeStack' as never);
+      }
     } catch (error) {
       console.error('Sign in failed:', error);
       
@@ -57,11 +49,14 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
   };
 
-  const handleSignupSubmit = async (name: string) => {
+  const handleSignupSubmit = async (name: string, email: string) => {
     try {
       setCurrentStep('connecting');
-      await signUp(name);
-      setCurrentStep('social');
+      await signUp(name, email);
+      // Only navigate if we're still in the connecting step (user hasn't navigated away)
+      if (currentStep === 'connecting') {
+        navigation.navigate('SocialSetup' as never);
+      }
     } catch (error) {
       console.error('Signup failed:', error);
       showError(error instanceof Error ? error.message : 'Signup failed');
@@ -71,11 +66,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const handleSocialConnect = async () => {
     // TODO: Implement X/Twitter OAuth integration
-    onComplete();
+    // Navigate directly to main app after social connect
+    navigation.navigate('HomeStack' as never);
   };
 
   const handleSocialSkip = () => {
-    onComplete();
+    // Navigate directly to main app after skipping social
+    navigation.navigate('HomeStack' as never);
   };
 
   const handleBack = () => {
@@ -120,11 +117,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       case 'social':
         return (
-          <SocialSetup
-            onConnect={handleSocialConnect}
-            onSkip={handleSocialSkip}
-            onBack={handleBack}
-          />
+          <View style={styles.centerContainer}>
+            <Text variant="headlineMedium" style={styles.connectingTitle}>
+              Redirecting to social setup...
+            </Text>
+          </View>
         );
 
       default:

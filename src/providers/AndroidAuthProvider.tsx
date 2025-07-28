@@ -29,11 +29,32 @@ export function AndroidAuthProvider({ children }: AndroidAuthProviderProps) {
   const connect = async () => {
     if (Platform.OS !== 'android') return;
     
+    console.log('📱 AndroidAuth: Starting wallet connection...');
+    console.log('🔍 AndroidAuth: Current selected account before connect:', {
+      hasAccount: !!selectedAccount,
+      address: selectedAccount?.publicKey?.toBase58(),
+    });
+    
     setIsConnecting(true);
     try {
+      console.log('🔗 AndroidAuth: Calling mobileWalletConnect...');
       await mobileWalletConnect();
+      console.log('✅ AndroidAuth: Mobile wallet connect completed');
+    } catch (error) {
+      console.error('❌ AndroidAuth: Mobile wallet connect failed:', error);
+      console.error('❌ AndroidAuth: Error details:', {
+        name: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+      });
+      throw error;
     } finally {
       setIsConnecting(false);
+      console.log('🔍 AndroidAuth: Connection attempt finished. Current state:', {
+        walletAddress: selectedAccount?.publicKey?.toBase58(),
+        isConnected: !!selectedAccount?.publicKey,
+        hasSelectedAccount: !!selectedAccount,
+      });
     }
   };
 

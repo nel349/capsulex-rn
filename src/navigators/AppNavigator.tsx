@@ -19,7 +19,8 @@ import {
 } from 'react-native-paper';
 
 import { OnboardingFlow } from '../components/onboarding';
-import { useDualAuth } from '../providers';
+import { SocialSetup } from '../components/onboarding/SocialSetup';
+import { DualAuthProvider, useDualAuth } from '../providers';
 import * as Screens from '../screens';
 
 import { HomeNavigator } from './HomeNavigator';
@@ -38,7 +39,8 @@ import { HomeNavigator } from './HomeNavigator';
  */
 
 type RootStackParamList = {
-  Main: undefined;
+  Onboarding: undefined;
+  SocialSetup: undefined;
   HomeStack: undefined;
   Home: undefined;
   Settings: undefined;
@@ -72,42 +74,30 @@ declare global {
   }
 }
 
-// Auth Gate Component - handles routing between onboarding and main app
-function AuthGate() {
-  const { isAuthenticated, isOnboardingComplete, setOnboardingComplete } = useDualAuth();
-
-  console.log('🔍 AuthGate Debug:', {
-    isAuthenticated,
-    isOnboardingComplete,
-  });
-
-  // Show main app if authenticated and onboarding complete
-  if (isAuthenticated && isOnboardingComplete) {
-    console.log('✅ Authenticated and onboarded - showing main app');
-    return <HomeNavigator />;
-  }
-
-  // Show onboarding flow
-  console.log('🔄 Showing onboarding flow');
-  return (
-    <OnboardingFlow
-      onComplete={() => {
-        console.log('🎉 Onboarding completed');
-        setOnboardingComplete(true);
-      }}
-    />
-  );
-}
-
 // Documentation: https://reactnavigation.org/docs/stack-navigator/
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppStack = () => {
+  const { isAuthenticated } = useDualAuth();
+  
+  // Determine initial route based on authentication status
+  const initialRouteName = isAuthenticated ? 'HomeStack' : 'Onboarding';
+  
+  console.log('🔍 AppStack Debug:', {
+    isAuthenticated,
+    initialRouteName,
+  });
+
   return (
-    <Stack.Navigator initialRouteName={'Main'}>
+    <Stack.Navigator initialRouteName={initialRouteName}>
       <Stack.Screen
-        name="Main"
-        component={AuthGate}
+        name="Onboarding"
+        component={OnboardingFlow}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SocialSetup"
+        component={SocialSetup}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -188,8 +178,10 @@ export const AppNavigator = (props: NavigationProps) => {
       theme={colorScheme === 'dark' ? CombinedDarkTheme : CombinedDefaultTheme}
       {...props}
     >
-      <StatusBar />
-      <AppStack />
+      <DualAuthProvider>
+        <StatusBar />
+        <AppStack />
+      </DualAuthProvider>
     </NavigationContainer>
   );
 };

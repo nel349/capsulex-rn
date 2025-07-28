@@ -4,23 +4,21 @@ import { Platform } from 'react-native';
 
 import { userService } from '../services';
 import { useAuthService } from '../services/authService';
-import { ApiError } from '../types/api';
 
 import { AndroidAuthProvider, useAndroidAuth } from './AndroidAuthProvider';
 import { IOSAuthProvider, useIOSAuth } from './IOSAuthProvider';
+import { useNavigation } from '@react-navigation/native';
 
 interface DualAuthState {
   walletAddress: string | null;
   isAuthenticated: boolean;
   isConnecting: boolean;
   userName?: string | null;
-  isOnboardingComplete: boolean;
   isSupported: boolean;
   // Unified methods
   signIn: () => Promise<void>;
-  signUp: (name: string) => Promise<void>;
+  signUp: (name: string, email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  setOnboardingComplete: (complete: boolean) => void;
   // Platform-specific connection (mainly for Android)
   connectWallet: () => Promise<void>;
 }
@@ -34,8 +32,8 @@ interface DualAuthProviderProps {
 function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   const androidAuth = useAndroidAuth();
   const iosAuth = useIOSAuth();
+  const navigation = useNavigation();
   const { authenticateUser } = useAuthService();
-  const [isOnboardingComplete, setIsOnboardingCompleteState] = useState(false);
 
   const isIOS = Platform.OS === 'ios';
   
@@ -46,39 +44,6 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   const userName = isIOS ? iosAuth.userName : null;
   const isSupported = isIOS || androidAuth.isConnected; // iOS always supported, Android check connection
 
-  // Load onboarding completion status
-  useEffect(() => {
-    const loadOnboardingStatus = async () => {
-      try {
-        const completed = await AsyncStorage.getItem('onboarding_completed');
-        setIsOnboardingCompleteState(completed === 'true');
-      } catch (error) {
-        console.error('Error loading onboarding status:', error);
-      }
-    };
-    loadOnboardingStatus();
-  }, []);
-
-  // Auto-complete onboarding for authenticated users
-  useEffect(() => {
-    if (isAuthenticated && walletAddress && !isOnboardingComplete) {
-      setOnboardingComplete(true);
-    }
-  }, [isAuthenticated, walletAddress, isOnboardingComplete]);
-
-  const setOnboardingComplete = async (complete: boolean) => {
-    setIsOnboardingCompleteState(complete);
-    try {
-      if (complete) {
-        await AsyncStorage.setItem('onboarding_completed', 'true');
-      } else {
-        await AsyncStorage.removeItem('onboarding_completed');
-      }
-    } catch (error) {
-      console.error('Error saving onboarding status:', error);
-    }
-  };
-
   const signIn = async () => {
     if (isIOS) {
       await iosAuth.authenticate();
@@ -86,13 +51,31 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
       // Android sign in: connect wallet and check if user exists
       await androidAuth.connect();
       
+      // Wait for wallet address to be available (with timeout)
+      let retries = 0;
+      const maxRetries = 20; // Increased timeout to 10 seconds
+      while (!androidAuth.walletAddress && retries < maxRetries) {
+        console.log(`⏳ Waiting for wallet address... attempt ${retries + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        retries++;
+      }
+      
+      console.log('🔍 Final wallet state:', {
+        walletAddress: androidAuth.walletAddress,
+        isConnected: androidAuth.isConnected,
+        retries
+      });
+      
       if (!androidAuth.walletAddress) {
         throw new Error('No wallet connected');
       }
 
       const userExists = await userService.userExists(androidAuth.walletAddress);
       if (!userExists) {
-        throw new Error('No account found for this wallet');
+        // throw new Error('No account found for this wallet');
+
+        // take back to the welcome screen and show a message that the account is not registered
+        navigation.navigate('Welcome' as never);
       }
 
       await authenticateUser({
@@ -111,11 +94,28 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
       // Android: Connect wallet and register user
       await androidAuth.connect();
       
+      // Wait for wallet address to be available (with timeout)
+      let retries = 0;
+      const maxRetries = 20; // Increased timeout to 10 seconds
+      while (!androidAuth.walletAddress && retries < maxRetries) {
+        console.log(`⏳ SignUp: Waiting for wallet address... attempt ${retries + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        retries++;
+      }
+      
+      console.log('🔍 SignUp final wallet state:', {
+        walletAddress: androidAuth.walletAddress,
+        isConnected: androidAuth.isConnected,
+        retries
+      });
+      
       if (!androidAuth.walletAddress) {
         throw new Error('No wallet connected');
       }
 
       const userExists = await userService.userExists(androidAuth.walletAddress);
+
+      console.log('🔍 SignUp userExists:', userExists);
       
       if (userExists) {
         // User already exists, just authenticate
@@ -142,6 +142,11 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   };
 
   const signOut = async () => {
+    // we nuke all stored data from the auth service
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user');
+    await AsyncStorage.removeItem('wallet_address');
+
     if (isIOS) {
       await iosAuth.signOut();
     } else {
@@ -161,13 +166,11 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
     isAuthenticated,
     isConnecting,
     userName,
-    isOnboardingComplete,
     isSupported,
     signIn,
     signUp,
     signOut,
-    setOnboardingComplete,
-    connectWallet,
+    connectWallet
   };
 
   return (

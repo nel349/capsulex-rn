@@ -5,7 +5,7 @@ import { Button, TextInput } from 'react-native-paper';
 import { useDualAuth } from '../../providers/DualAuthProvider';
 
 interface SignUpScreenProps {
-  onSubmit: (name: string) => void;
+  onSubmit: (name: string, email: string) => void;
   onBack: () => void;
 }
 
@@ -17,7 +17,7 @@ export function SignUpScreen({ onSubmit, onBack }: SignUpScreenProps) {
     if (!name.trim() || !email.trim()) {
       return;
     }
-    onSubmit(name.trim());
+    onSubmit(name.trim(), email.trim());
   };
 
   return (

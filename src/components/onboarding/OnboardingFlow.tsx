@@ -28,9 +28,12 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
       walletAddress
     });
 
-    // Always handle disconnect/logout, regardless of current state
+    // Only reset to welcome if user was previously authenticated and now isn't
     if (!isAuthenticated || !walletAddress) {
-      setCurrentStep('welcome');
+      // Don't reset to welcome if we're in signup flow
+      if (currentStep !== 'signup') {
+        setCurrentStep('welcome');
+      }
       return;
     }
 

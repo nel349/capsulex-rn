@@ -29,7 +29,10 @@ export function IOSAuthProvider({ children }: IOSAuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
 
-  const useDynamic = () => useReactiveClient(dynamicClientService.getDynamicClient() as any);
+  const useDynamic = () => {
+    const client = dynamicClientService.getDynamicClient();
+    return client ? useReactiveClient(client as any) : { setShowDynamicUserProfile: () => {} };
+  };
   const { setShowDynamicUserProfile } = useDynamic();
 
   // do not check dynamicClient because it is not reliable

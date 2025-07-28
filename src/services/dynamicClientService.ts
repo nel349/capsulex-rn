@@ -180,7 +180,6 @@ class DynamicClientService {
       
       const handleAuthSuccess = (user: any) => {
         console.log('🔔 ✅ AUTH SUCCESS:', user);
-        setShwo
         callback(true, user);
       };
       

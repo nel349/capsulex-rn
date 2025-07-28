@@ -107,10 +107,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
 
       const userExists = await userService.userExists(currentWalletAddress);
       if (!userExists) {
-        // throw new Error('No account found for this wallet');
-
-        // take back to the welcome screen and show a message that the account is not registered
-        // navigation.navigate('Welcome' as never);
+        throw new Error('No account found for this wallet. Please sign up first.');
       }
 
       await authenticateUser({
@@ -124,7 +121,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
     }
   };
 
-  const signUp = async (name: string) => {
+  const signUp = async (name: string, email: string) => {
     if (isIOS) {
       await handleSignInIOS();
     } else {
@@ -132,19 +129,8 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
       let currentWalletAddress = walletAddress;
       
       if (!currentWalletAddress) {
-        // Only connect if we don't have a wallet address
-        await androidAuth.connect();
-        
-        // Wait for wallet address to be available (with timeout)
-        let retries = 0;
-        const maxRetries = 20;
-        while (!androidAuth.walletAddress && retries < maxRetries) {
-          console.log(`⏳ SignUp: Waiting for wallet address... attempt ${retries + 1}/${maxRetries}`);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          retries++;
-        }
-        
-        currentWalletAddress = androidAuth.walletAddress;
+        // Connect and get wallet address directly
+        currentWalletAddress = await androidAuth.connect();
       }
       
       console.log('🔍 SignUp final wallet state:', {
@@ -167,6 +153,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
           wallet_address: currentWalletAddress,
           auth_type: 'wallet',
           name: name,
+          email: email,
         });
         
         // Mark token as valid after successful authentication
@@ -176,13 +163,15 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
         await userService.registerWalletUser(
           currentWalletAddress,
           'wallet',
-          name
+          name,
+          email
         );
 
         await authenticateUser({
           wallet_address: currentWalletAddress,
           auth_type: 'wallet',
           name: name,
+          email: email,
         });
         
         // Mark token as valid after successful authentication

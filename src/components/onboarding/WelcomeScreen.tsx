@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Button, Text } from 'react-native-paper';
+import { useSnackbar } from '../../hooks/useSnackbar';
+import { AppSnackbar } from '../ui/AppSnackbar';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -8,6 +10,9 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
+
+  // snackbar for errors 
+  const { snackbar, hideSnackbar } = useSnackbar();
 
 
 
@@ -18,7 +23,12 @@ export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
           Welcome to CapsuleX
         </Text>
       </View>
-
+      <AppSnackbar
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        onDismiss={hideSnackbar}
+      />
       <View style={styles.ctaContainer}>
         <Button
           mode="contained"

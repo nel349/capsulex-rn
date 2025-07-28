@@ -1,16 +1,16 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
 
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { useDualAuth } from '../../providers/DualAuthProvider';
 import { AppSnackbar } from '../ui/AppSnackbar';
 
-import { WelcomeScreen } from './WelcomeScreen';
 import { SignUpScreen } from './SignUpScreen';
 import { SocialSetup } from './SocialSetup';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { WelcomeScreen } from './WelcomeScreen';
 
 interface OnboardingFlowProps {}
 
@@ -21,8 +21,6 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
   const { signIn, signUp, isAuthenticated, walletAddress } = useDualAuth();
   const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
   const navigation = useNavigation();
-
-
 
   useEffect(() => {
     // console.log('🔍 Auth State Change:', {
@@ -59,7 +57,7 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
         setCurrentStep('connecting');
         await signIn();
         console.log('🔍 iOS Get Started - Sign in completed successfully');
-        
+
         // Navigation will be handled by useEffect when auth state changes
       } catch (error) {
         // console.error('🔍 iOS Get Started - Sign in failed:', error);
@@ -76,8 +74,11 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
       // Navigation will be handled by useEffect when auth state changes
     } catch (error) {
       console.error('Sign in failed:', error);
-      
-      if (error instanceof Error && error.message.includes('No account found')) {
+
+      if (
+        error instanceof Error &&
+        error.message.includes('No account found')
+      ) {
         showInfo('No account found. Redirecting to sign up...');
         setTimeout(() => {
           setCurrentStep('signup');
@@ -137,10 +138,7 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
 
       case 'signup':
         return (
-          <SignUpScreen
-            onSubmit={handleSignupSubmit}
-            onBack={handleBack}
-          />
+          <SignUpScreen onSubmit={handleSignupSubmit} onBack={handleBack} />
         );
 
       case 'connecting':

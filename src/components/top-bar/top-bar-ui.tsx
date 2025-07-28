@@ -8,10 +8,8 @@ import { dynamicClient } from '../../../App';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useCluster } from '../cluster/cluster-data-access';
 
-export function TopBarWalletButton({
-}: {
-}) {
-    // const { connect } = useDualAuth();
+export function TopBarWalletButton({}: {}) {
+  // const { connect } = useDualAuth();
   return (
     <View>
       {/* add a button here that says "Connect" and when pressed, it will connect the wallet */}
@@ -82,9 +80,7 @@ export function TopBarWalletMenu() {
     <Menu
       visible={visible}
       onDismiss={closeMenu}
-      anchor={
-        <TopBarWalletButton />
-      }
+      anchor={<TopBarWalletButton />}
     >
       <Menu.Item
         onPress={copyAddressToClipboard}

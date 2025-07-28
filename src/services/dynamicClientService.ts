@@ -1,8 +1,8 @@
+import type { Commitment } from '@solana/web3.js';
 import { Platform } from 'react-native';
 
 import { dynamicClient } from '../../App';
-import { Commitment } from '@solana/web3.js';
-import { UserInfo } from '../types/api';
+import type { UserInfo } from '../types/api';
 
 type DynamicClient = typeof dynamicClient;
 
@@ -155,8 +155,10 @@ class DynamicClientService {
   }
 
   // Helper method to show auth UI
-  async showAuthUI(callback: (isAuthenticated: boolean, userInfo?: UserInfo) => void): Promise<void> {
-
+  async showAuthUI(
+    // eslint-disable-next-line no-unused-vars
+    callback: (isAuthenticated: boolean, userInfo?: UserInfo) => void
+  ): Promise<void> {
     this.addAuthStateListener(callback);
 
     const client = this.getDynamicClient();
@@ -168,7 +170,10 @@ class DynamicClientService {
   }
 
   // Add event listener for auth state changes
-  addAuthStateListener(callback: (isAuthenticated: boolean, userInfo?: UserInfo) => void): () => void {
+  addAuthStateListener(
+    // eslint-disable-next-line no-unused-vars
+    callback: (isAuthenticated: boolean, userInfo?: UserInfo) => void
+  ): () => void {
     const client = this.getDynamicClient();
     if (!client) {
       console.warn('Cannot add auth state listener - no client available');
@@ -176,52 +181,54 @@ class DynamicClientService {
     }
 
     if (client.auth && typeof client.auth.on === 'function') {
-      console.log('🔊 Adding ALL Dynamic event listeners for debugging... Inside the function');
-      
+      console.log(
+        '🔊 Adding ALL Dynamic event listeners for debugging... Inside the function'
+      );
+
       const handleAuthSuccess = (user: any) => {
         console.log('🔔 ✅ AUTH SUCCESS:', user);
         callback(true, user);
       };
-      
+
       const handleAuthFailed = (error: any) => {
         console.log('🔔 ❌ AUTH FAILED:', error);
       };
-      
+
       const handleLoggedOut = () => {
         console.log('🔔 🚪 LOGGED OUT');
         callback(false);
       };
-      
+
       const handleAuthInit = () => {
         console.log('🔔 🚀 AUTH INIT');
       };
-      
+
       const handleUserChanged = (user: any) => {
         console.log('🔔 👤 USER CHANGED:', user);
         callback(!!user, user);
       };
-      
+
       // Listen to ALL auth events for debugging
       client.auth.on('authSuccess', handleAuthSuccess);
       client.auth.on('authFailed', handleAuthFailed);
       client.auth.on('loggedOut', handleLoggedOut);
       client.auth.on('authInit', handleAuthInit);
       client.auth.on('authenticatedUserChanged', handleUserChanged);
-      
+
       // Also listen to UI events
       if (client.ui && typeof client.ui.on === 'function') {
         const handleAuthFlowClosed = () => {
           console.log('🔔 🚪 AUTH FLOW CLOSED');
         };
-        
+
         const handleAuthFlowCancelled = () => {
           console.log('🔔 ❌ AUTH FLOW CANCELLED');
         };
-        
+
         client.ui.on('authFlowClosed', handleAuthFlowClosed);
         client.ui.on('authFlowCancelled', handleAuthFlowCancelled);
       }
-      
+
       // Return cleanup function
       return () => {
         if (client.auth && typeof client.auth.off === 'function') {

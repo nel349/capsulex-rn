@@ -14,10 +14,10 @@ import {
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
+import { useDualAuth } from '../providers';
 import type { CapsuleWithStatus } from '../services/capsuleApi';
 import type { Capsule } from '../types/api';
 import { VaultKeyManager } from '../utils/vaultKey';
-import { useDualAuth } from '../providers';
 
 // Type definitions
 

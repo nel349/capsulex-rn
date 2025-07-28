@@ -61,28 +61,28 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ClusterProvider>
         <ConnectionProvider config={{ commitment: 'processed' }}>
-            <dynamicClient.reactNative.WebView />
-            <SafeAreaView
-              style={[
-                styles.shell,
-                {
-                  backgroundColor:
-                    colorScheme === 'dark'
-                      ? MD3DarkTheme.colors.background
-                      : MD3LightTheme.colors.background,
-                },
-              ]}
-            >
-              <PaperProvider
-                theme={
+          <dynamicClient.reactNative.WebView />
+          <SafeAreaView
+            style={[
+              styles.shell,
+              {
+                backgroundColor:
                   colorScheme === 'dark'
-                    ? CombinedDarkTheme
-                    : CombinedDefaultTheme
-                }
-              >
-                <AppNavigator />
-              </PaperProvider>
-            </SafeAreaView>
+                    ? MD3DarkTheme.colors.background
+                    : MD3LightTheme.colors.background,
+              },
+            ]}
+          >
+            <PaperProvider
+              theme={
+                colorScheme === 'dark'
+                  ? CombinedDarkTheme
+                  : CombinedDefaultTheme
+              }
+            >
+              <AppNavigator />
+            </PaperProvider>
+          </SafeAreaView>
         </ConnectionProvider>
       </ClusterProvider>
     </QueryClientProvider>

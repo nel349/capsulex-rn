@@ -79,7 +79,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppStack = () => {
   const { isAuthenticated } = useDualAuth();
-  
+
   console.log('🔍 AppStack Debug:', {
     isAuthenticated,
   });

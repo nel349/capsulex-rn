@@ -1,10 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  StyleSheet,
-  View,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
+import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
 import {
   Text,
   Card,
@@ -15,9 +10,9 @@ import {
   SegmentedButtons,
 } from 'react-native-paper';
 
-import { apiService } from '../services/api';
-import { ApiResponse } from '../types/api';
 import { useDualAuth } from '../providers';
+import { apiService } from '../services/api';
+import type { ApiResponse } from '../types/api';
 
 interface LeaderboardEntry {
   rank: number;
@@ -74,7 +69,7 @@ export function LeaderboardScreen() {
       const leaderboardResponse = (await apiService.get(
         `/leaderboard/global?timeframe=${timeFrame}&limit=50`
       )) as LeaderboardAPIResponse;
-      
+
       if (leaderboardResponse.success) {
         setLeaderboard(leaderboardResponse.data || []);
       }
@@ -84,7 +79,7 @@ export function LeaderboardScreen() {
         const userStatsResponse = (await apiService.get(
           `/leaderboard/user/${walletAddress}`
         )) as UserStatsAPIResponse;
-        
+
         if (userStatsResponse.success) {
           setUserStats(userStatsResponse.data);
         }
@@ -146,7 +141,7 @@ export function LeaderboardScreen() {
           <Card.Content>
             <SegmentedButtons
               value={timeFrame}
-              onValueChange={(value) => setTimeFrame(value as TimeFrame)}
+              onValueChange={value => setTimeFrame(value as TimeFrame)}
               buttons={[
                 { value: 'all-time', label: 'All Time' },
                 { value: 'weekly', label: 'This Week' },
@@ -172,22 +167,27 @@ export function LeaderboardScreen() {
                     Your Stats
                   </Text>
                   <Text style={styles.userStatsSubtitle}>
-                    Rank #{userStats.global_rank} • {userStats.total_points} points
+                    Rank #{userStats.global_rank} • {userStats.total_points}{' '}
+                    points
                   </Text>
                 </View>
               </View>
-              
+
               <View style={styles.userStatsGrid}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>{userStats.games_won}</Text>
                   <Text style={styles.statLabel}>Wins</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{userStats.games_participated}</Text>
+                  <Text style={styles.statNumber}>
+                    {userStats.games_participated}
+                  </Text>
                   <Text style={styles.statLabel}>Games</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{Math.round(userStats.win_rate * 100)}%</Text>
+                  <Text style={styles.statNumber}>
+                    {Math.round(userStats.win_rate * 100)}%
+                  </Text>
                   <Text style={styles.statLabel}>Win Rate</Text>
                 </View>
                 <View style={styles.statItem}>
@@ -217,21 +217,28 @@ export function LeaderboardScreen() {
               <Text variant="titleLarge" style={styles.podiumTitle}>
                 🏆 Top Champions
               </Text>
-              
+
               <View style={styles.podium}>
                 {/* Second Place */}
                 <View style={[styles.podiumPosition, styles.secondPlace]}>
                   <Text style={styles.podiumEmoji}>🥈</Text>
                   <Avatar.Text
                     size={40}
-                    label={leaderboard[1]?.wallet_address.slice(0, 2).toUpperCase()}
-                    style={[styles.podiumAvatar, { backgroundColor: '#C0C0C0' }]}
+                    label={leaderboard[1]?.wallet_address
+                      .slice(0, 2)
+                      .toUpperCase()}
+                    style={[
+                      styles.podiumAvatar,
+                      { backgroundColor: '#C0C0C0' },
+                    ]}
                   />
                   <Text style={styles.podiumName}>
-                    {leaderboard[1]?.display_name || 
-                     `${leaderboard[1]?.wallet_address.slice(0, 4)}...${leaderboard[1]?.wallet_address.slice(-4)}`}
+                    {leaderboard[1]?.display_name ||
+                      `${leaderboard[1]?.wallet_address.slice(0, 4)}...${leaderboard[1]?.wallet_address.slice(-4)}`}
                   </Text>
-                  <Text style={styles.podiumPoints}>{leaderboard[1]?.total_points} pts</Text>
+                  <Text style={styles.podiumPoints}>
+                    {leaderboard[1]?.total_points} pts
+                  </Text>
                 </View>
 
                 {/* First Place */}
@@ -239,14 +246,21 @@ export function LeaderboardScreen() {
                   <Text style={styles.podiumEmoji}>🥇</Text>
                   <Avatar.Text
                     size={50}
-                    label={leaderboard[0]?.wallet_address.slice(0, 2).toUpperCase()}
-                    style={[styles.podiumAvatar, { backgroundColor: '#FFD700' }]}
+                    label={leaderboard[0]?.wallet_address
+                      .slice(0, 2)
+                      .toUpperCase()}
+                    style={[
+                      styles.podiumAvatar,
+                      { backgroundColor: '#FFD700' },
+                    ]}
                   />
                   <Text style={styles.podiumName}>
-                    {leaderboard[0]?.display_name || 
-                     `${leaderboard[0]?.wallet_address.slice(0, 4)}...${leaderboard[0]?.wallet_address.slice(-4)}`}
+                    {leaderboard[0]?.display_name ||
+                      `${leaderboard[0]?.wallet_address.slice(0, 4)}...${leaderboard[0]?.wallet_address.slice(-4)}`}
                   </Text>
-                  <Text style={styles.podiumPoints}>{leaderboard[0]?.total_points} pts</Text>
+                  <Text style={styles.podiumPoints}>
+                    {leaderboard[0]?.total_points} pts
+                  </Text>
                 </View>
 
                 {/* Third Place */}
@@ -254,14 +268,21 @@ export function LeaderboardScreen() {
                   <Text style={styles.podiumEmoji}>🥉</Text>
                   <Avatar.Text
                     size={40}
-                    label={leaderboard[2]?.wallet_address.slice(0, 2).toUpperCase()}
-                    style={[styles.podiumAvatar, { backgroundColor: '#CD7F32' }]}
+                    label={leaderboard[2]?.wallet_address
+                      .slice(0, 2)
+                      .toUpperCase()}
+                    style={[
+                      styles.podiumAvatar,
+                      { backgroundColor: '#CD7F32' },
+                    ]}
                   />
                   <Text style={styles.podiumName}>
-                    {leaderboard[2]?.display_name || 
-                     `${leaderboard[2]?.wallet_address.slice(0, 4)}...${leaderboard[2]?.wallet_address.slice(-4)}`}
+                    {leaderboard[2]?.display_name ||
+                      `${leaderboard[2]?.wallet_address.slice(0, 4)}...${leaderboard[2]?.wallet_address.slice(-4)}`}
                   </Text>
-                  <Text style={styles.podiumPoints}>{leaderboard[2]?.total_points} pts</Text>
+                  <Text style={styles.podiumPoints}>
+                    {leaderboard[2]?.total_points} pts
+                  </Text>
                 </View>
               </View>
             </Card.Content>
@@ -274,18 +295,22 @@ export function LeaderboardScreen() {
             <Text variant="titleMedium" style={styles.leaderboardTitle}>
               📊 Full Rankings
             </Text>
-            
+
             {leaderboard.map((entry, index) => (
               <View key={entry.wallet_address}>
-                <View style={[
-                  styles.leaderboardEntry,
-                  entry.is_current_user && styles.currentUserEntry
-                ]}>
+                <View
+                  style={[
+                    styles.leaderboardEntry,
+                    entry.is_current_user && styles.currentUserEntry,
+                  ]}
+                >
                   <View style={styles.entryLeft}>
-                    <Text style={[
-                      styles.rankText,
-                      { color: getRankColor(entry.rank) }
-                    ]}>
+                    <Text
+                      style={[
+                        styles.rankText,
+                        { color: getRankColor(entry.rank) },
+                      ]}
+                    >
                       {getRankEmoji(entry.rank)}
                     </Text>
                     <Avatar.Text
@@ -295,8 +320,8 @@ export function LeaderboardScreen() {
                     />
                     <View style={styles.entryInfo}>
                       <Text style={styles.entryName}>
-                        {entry.display_name || 
-                         `${entry.wallet_address.slice(0, 4)}...${entry.wallet_address.slice(-4)}`}
+                        {entry.display_name ||
+                          `${entry.wallet_address.slice(0, 4)}...${entry.wallet_address.slice(-4)}`}
                       </Text>
                       <View style={styles.entryStats}>
                         <Chip mode="outlined" compact style={styles.statChip}>
@@ -313,14 +338,16 @@ export function LeaderboardScreen() {
                       </View>
                     </View>
                   </View>
-                  
+
                   <View style={styles.entryRight}>
                     <Text style={styles.pointsText}>{entry.total_points}</Text>
                     <Text style={styles.pointsLabel}>points</Text>
                   </View>
                 </View>
-                
-                {index < leaderboard.length - 1 && <Divider style={styles.entryDivider} />}
+
+                {index < leaderboard.length - 1 && (
+                  <Divider style={styles.entryDivider} />
+                )}
               </View>
             ))}
 
@@ -335,34 +362,44 @@ export function LeaderboardScreen() {
         </Card>
 
         {/* Recent Achievements (if user authenticated) */}
-        {isAuthenticated && userStats && userStats.recent_achievements.length > 0 && (
-          <Card style={styles.achievementsCard}>
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.achievementsTitle}>
-                🎉 Recent Achievements
-              </Text>
-              
-              {userStats.recent_achievements.slice(0, 5).map((achievement, index) => (
-                <View key={index} style={styles.achievementItem}>
-                  <Text style={styles.achievementEmoji}>
-                    {achievement.type === 'win' ? '🏆' : 
-                     achievement.type === 'badge' ? '🏅' : '🎯'}
-                  </Text>
-                  <View style={styles.achievementInfo}>
-                    <Text style={styles.achievementText}>
-                      {achievement.type === 'win' ? 'Won a game!' :
-                       achievement.type === 'badge' ? 'Earned a badge!' :
-                       'Participated in a game'}
-                    </Text>
-                    <Text style={styles.achievementDate}>
-                      +{achievement.points_earned} points • {new Date(achievement.timestamp).toLocaleDateString()}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </Card.Content>
-          </Card>
-        )}
+        {isAuthenticated &&
+          userStats &&
+          userStats.recent_achievements.length > 0 && (
+            <Card style={styles.achievementsCard}>
+              <Card.Content>
+                <Text variant="titleMedium" style={styles.achievementsTitle}>
+                  🎉 Recent Achievements
+                </Text>
+
+                {userStats.recent_achievements
+                  .slice(0, 5)
+                  .map((achievement, index) => (
+                    <View key={index} style={styles.achievementItem}>
+                      <Text style={styles.achievementEmoji}>
+                        {achievement.type === 'win'
+                          ? '🏆'
+                          : achievement.type === 'badge'
+                            ? '🏅'
+                            : '🎯'}
+                      </Text>
+                      <View style={styles.achievementInfo}>
+                        <Text style={styles.achievementText}>
+                          {achievement.type === 'win'
+                            ? 'Won a game!'
+                            : achievement.type === 'badge'
+                              ? 'Earned a badge!'
+                              : 'Participated in a game'}
+                        </Text>
+                        <Text style={styles.achievementDate}>
+                          +{achievement.points_earned} points •{' '}
+                          {new Date(achievement.timestamp).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+              </Card.Content>
+            </Card>
+          )}
       </ScrollView>
     </View>
   );

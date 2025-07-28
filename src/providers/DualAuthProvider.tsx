@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { userService } from '../services';
 import { useAuthService } from '../services/authService';
+import { dynamicClientService } from '../services/dynamicClientService';
 
 import { AndroidAuthProvider, useAndroidAuth } from './AndroidAuthProvider';
 import { IOSAuthProvider, useIOSAuth } from './IOSAuthProvider';
-import { useNavigation } from '@react-navigation/native';
-import { dynamicClientService } from '../services/dynamicClientService';
 
 interface DualAuthState {
   walletAddress: string | null;
@@ -18,6 +18,7 @@ interface DualAuthState {
   isSupported: boolean;
   // Unified methods
   signIn: () => Promise<void>;
+  // eslint-disable-next-line no-unused-vars
   signUp: (name: string, email: string) => Promise<void>;
   signOut: () => Promise<void>;
   // Platform-specific connection (mainly for Android)
@@ -34,17 +35,22 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   const androidAuth = useAndroidAuth();
   const iosAuth = useIOSAuth();
   const { authenticateUser } = useAuthService();
-  const navigation = useNavigation();
   const [hasValidToken, setHasValidToken] = useState(false);
-  
+
   const isIOS = Platform.OS === 'ios';
-  
+
   // Get platform-specific state
-  const walletAddress = isIOS ? iosAuth.walletAddress : androidAuth.walletAddress;
-  const walletConnected = isIOS ? iosAuth.isAuthenticated : androidAuth.isConnected;
+  const walletAddress = isIOS
+    ? iosAuth.walletAddress
+    : androidAuth.walletAddress;
+  const walletConnected = isIOS
+    ? iosAuth.isAuthenticated
+    : androidAuth.isConnected;
   // Both platforms require wallet connection AND valid token, but handle differently
   const isAuthenticated = walletConnected && hasValidToken;
-  const isConnecting = isIOS ? iosAuth.isAuthenticating : androidAuth.isConnecting;
+  const isConnecting = isIOS
+    ? iosAuth.isAuthenticating
+    : androidAuth.isConnecting;
   const userName = isIOS ? iosAuth.userName : null;
   const isSupported = isIOS || androidAuth.isConnected; // iOS always supported, Android check connection
 
@@ -54,16 +60,20 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
       try {
         const token = await AsyncStorage.getItem('auth-token');
         const platformLog = isIOS ? '🔍 iOS' : '🔍 Android';
-        console.log(`${platformLog} Checking token state:`, { hasToken: !!token, walletConnected, walletAddress });
+        console.log(`${platformLog} Checking token state:`, {
+          hasToken: !!token,
+          walletConnected,
+          walletAddress,
+        });
         setHasValidToken(!!token);
       } catch (error) {
         console.error('Error checking auth token:', error);
         setHasValidToken(false);
       }
     };
-    
+
     checkToken();
-    
+
     // Re-check token when wallet connection changes
     if (walletConnected) {
       checkToken();
@@ -72,13 +82,12 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
     }
   }, [isIOS, walletConnected, walletAddress]); // Check when wallet address changes
 
-
-  const handleSignInIOS = async () : Promise<void> => {
+  const handleSignInIOS = async (): Promise<void> => {
     if (isIOS) {
       await iosAuth.authenticate();
       // Navigation will be handled by WelcomeScreen's useEffect when auth state updates
     }
-  }
+  };
 
   const signIn = async () => {
     if (isIOS) {
@@ -86,28 +95,30 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
     } else {
       // Android sign in: connect wallet and get address directly
       const currentWalletAddress = await androidAuth.connect();
-      
+
       console.log('🔍 Android sign-in state:', {
         isConnected: androidAuth.isConnected,
         walletAddress: currentWalletAddress,
       });
-      
+
       if (!currentWalletAddress) {
         throw new Error('No wallet address available');
       }
-      
+
       console.log('🔍 Final wallet state:', {
         walletAddress: currentWalletAddress,
         isConnected: androidAuth.isConnected,
       });
-      
+
       if (!currentWalletAddress) {
         throw new Error('No wallet connected');
       }
 
       const userExists = await userService.userExists(currentWalletAddress);
       if (!userExists) {
-        throw new Error('No account found for this wallet. Please sign up first.');
+        throw new Error(
+          'No account found for this wallet. Please sign up first.'
+        );
       }
 
       await authenticateUser({
@@ -115,7 +126,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
         auth_type: 'wallet',
         name: 'User',
       });
-      
+
       // Mark token as valid after successful Android authentication
       setHasValidToken(true);
     }
@@ -127,18 +138,18 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
     } else {
       // Android: Use existing wallet address or connect new one
       let currentWalletAddress = walletAddress;
-      
+
       if (!currentWalletAddress) {
         // Connect and get wallet address directly
         currentWalletAddress = await androidAuth.connect();
       }
-      
+
       console.log('🔍 SignUp final wallet state:', {
         currentWalletAddress,
         androidAuthWallet: androidAuth.walletAddress,
-        isConnected: androidAuth.isConnected
+        isConnected: androidAuth.isConnected,
       });
-      
+
       if (!currentWalletAddress) {
         throw new Error('No wallet connected');
       }
@@ -146,7 +157,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
       const userExists = await userService.userExists(currentWalletAddress);
 
       console.log('🔍 SignUp userExists:', userExists);
-      
+
       if (userExists) {
         // User already exists, just authenticate
         await authenticateUser({
@@ -155,7 +166,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
           name: name,
           email: email,
         });
-        
+
         // Mark token as valid after successful authentication
         setHasValidToken(true);
       } else {
@@ -173,7 +184,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
           name: name,
           email: email,
         });
-        
+
         // Mark token as valid after successful authentication
         setHasValidToken(true);
       }
@@ -183,7 +194,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   const signOut = async () => {
     // Clear local token state first (both platforms)
     setHasValidToken(false);
-    
+
     // we nuke all stored data from the auth service - use correct storage keys
     await AsyncStorage.removeItem('auth-token');
     await AsyncStorage.removeItem('auth-user');
@@ -217,7 +228,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
     signIn,
     signUp,
     signOut,
-    connectWallet
+    connectWallet,
   };
 
   return (
@@ -231,9 +242,7 @@ export function DualAuthProvider({ children }: DualAuthProviderProps) {
   return (
     <AndroidAuthProvider>
       <IOSAuthProvider>
-        <DualAuthProviderInner>
-          {children}
-        </DualAuthProviderInner>
+        <DualAuthProviderInner>{children}</DualAuthProviderInner>
       </IOSAuthProvider>
     </AndroidAuthProvider>
   );

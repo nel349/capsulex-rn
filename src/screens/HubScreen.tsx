@@ -33,10 +33,10 @@ import type {
 } from '../services/capsuleApi';
 import { capsuleApi, CapsuleApiService } from '../services/capsuleApi';
 import { useCapsuleService } from '../services/capsuleService';
+import { dynamicClientService } from '../services/dynamicClientService';
 import { useBalance } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import type { Capsule } from '../types/api';
-import { dynamicClientService } from '../services/dynamicClientService';
 
 // Enhanced capsule type that merges blockchain and database data
 interface EnhancedCapsule extends CapsuleWithStatus {
@@ -75,10 +75,8 @@ export function HubScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
 
-
   // lets hide the dynamic client from the screen
   useEffect(() => {
-    
     const hideDynamicClient = async () => {
       // wait for 2
       dynamicClientService.refreshClient();

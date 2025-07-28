@@ -13,11 +13,11 @@ import {
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
+import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
+import { useAuthService } from '../services/authService';
 import { twitterService } from '../services/twitterService';
 import { VaultKeyManager } from '../utils/vaultKey';
-import { useDualAuth } from '../providers';
-import { useAuthService } from '../services/authService';
 
 interface UserProfile {
   wallet: string;
@@ -238,13 +238,13 @@ export function ProfileScreen() {
           onPress: async () => {
             try {
               showInfo('Disconnecting wallet...');
-              
+
               // Clear JWT tokens and user data from AsyncStorage
               await clearAuth();
-              
+
               // Use platform-specific signOut method
               await signOut();
-              
+
               showSuccess('Wallet disconnected successfully!');
             } catch (error) {
               console.error('Error disconnecting wallet:', error);

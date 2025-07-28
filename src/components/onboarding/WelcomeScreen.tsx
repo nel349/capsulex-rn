@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Button, Text } from 'react-native-paper';
+
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { AppSnackbar } from '../ui/AppSnackbar';
 
@@ -10,11 +11,8 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
-
-  // snackbar for errors 
+  // snackbar for errors
   const { snackbar, hideSnackbar } = useSnackbar();
-
-
 
   return (
     <View style={styles.container}>

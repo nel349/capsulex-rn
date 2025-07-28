@@ -6,11 +6,11 @@ import {
 import { useMemo, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { useDualAuth } from '../providers';
 import { dynamicClientService } from '../services/dynamicClientService';
 
 import { useAuthorization } from './useAuthorization';
 import { useMobileWallet } from './useMobileWallet';
-import { useDualAuth } from '../providers';
 
 export interface AnchorWallet {
   publicKey: PublicKey;

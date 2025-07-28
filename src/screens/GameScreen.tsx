@@ -22,10 +22,10 @@ import {
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
+import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import type { CapsuleGame, Guess, GuessesApiResponse } from '../types/api';
-import { useDualAuth } from '../providers';
 
 type RootStackParamList = {
   Game: {

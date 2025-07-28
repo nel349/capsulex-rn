@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Button, Text } from 'react-native-paper';
 
 import { useDualAuth } from '../../providers/DualAuthProvider';
+import { dynamicClientService } from '../../services/dynamicClientService';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -10,6 +11,25 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
+
+  const { walletAddress, userName, isAuthenticated } = useDualAuth();
+
+
+  // refresh the dynamic client always
+  useEffect(() => {
+    
+    // get wallet address from the dual auth provider
+    
+
+    if (isAuthenticated && walletAddress) {
+      onGetStarted();
+    }
+
+    console.log('isAuthenticated', isAuthenticated);
+    console.log('walletAddress', walletAddress);
+    console.log('userName', userName);
+  }, [isAuthenticated, walletAddress, userName]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>

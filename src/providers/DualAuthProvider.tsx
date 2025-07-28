@@ -8,6 +8,7 @@ import { useAuthService } from '../services/authService';
 import { AndroidAuthProvider, useAndroidAuth } from './AndroidAuthProvider';
 import { IOSAuthProvider, useIOSAuth } from './IOSAuthProvider';
 import { useNavigation } from '@react-navigation/native';
+import { dynamicClientService } from '../services/dynamicClientService';
 
 interface DualAuthState {
   walletAddress: string | null;
@@ -32,9 +33,9 @@ interface DualAuthProviderProps {
 function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   const androidAuth = useAndroidAuth();
   const iosAuth = useIOSAuth();
-  const navigation = useNavigation();
   const { authenticateUser } = useAuthService();
-
+  const navigation = useNavigation();
+  
   const isIOS = Platform.OS === 'ios';
   
   // Get platform-specific state
@@ -44,9 +45,20 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   const userName = isIOS ? iosAuth.userName : null;
   const isSupported = isIOS || androidAuth.isConnected; // iOS always supported, Android check connection
 
-  const signIn = async () => {
+
+  const handleSignInIOS = async () : Promise<void> => {
     if (isIOS) {
       await iosAuth.authenticate();
+      console.log('DUALAUTH: isAuthenticated', isAuthenticated);
+      if (isAuthenticated) {
+        navigation.navigate('HomeStack' as never);
+      }
+    }
+  }
+
+  const signIn = async () => {
+    if (isIOS) {
+      await handleSignInIOS();
     } else {
       // Android sign in: connect wallet and check if user exists
       await androidAuth.connect();
@@ -75,7 +87,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
         // throw new Error('No account found for this wallet');
 
         // take back to the welcome screen and show a message that the account is not registered
-        navigation.navigate('Welcome' as never);
+        // navigation.navigate('Welcome' as never);
       }
 
       await authenticateUser({
@@ -88,8 +100,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
 
   const signUp = async (name: string) => {
     if (isIOS) {
-      // iOS: Use Dynamic authentication which handles everything
-      await iosAuth.authenticate();
+      await handleSignInIOS();
     } else {
       // Android: Connect wallet and register user
       await androidAuth.connect();
@@ -146,6 +157,9 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user');
     await AsyncStorage.removeItem('wallet_address');
+
+    // disconnect the wallet from the dynamic client
+    await dynamicClientService.signOut();
 
     if (isIOS) {
       await iosAuth.signOut();

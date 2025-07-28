@@ -17,19 +17,57 @@ type OnboardingStep = 'welcome' | 'signup' | 'connecting' | 'social';
 
 export function OnboardingFlow({}: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
-  const { signIn, signUp, isAuthenticated } = useDualAuth();
+  const { signIn, signUp, isAuthenticated, walletAddress } = useDualAuth();
   const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
   const navigation = useNavigation();
 
+  useEffect(() => {
+    console.log('🔍 Auth State Change:', {
+      currentStep,
+      isAuthenticated,
+      walletAddress
+    });
+
+    // Always handle disconnect/logout, regardless of current state
+    if (!isAuthenticated || !walletAddress) {
+      setCurrentStep('welcome');
+      return;
+    }
+
+    // Handle successful authentication only when not actively connecting
+    if (isAuthenticated && walletAddress && currentStep === 'welcome') {
+      navigation.navigate('HomeStack' as never);
+    }
+  }, [isAuthenticated, walletAddress, currentStep, navigation]);
+
   const handleGetStarted = async () => {
     // Go to signup screen to collect name and email first
-    setCurrentStep('signup');
+
+    // for android, we should go to the signup screen
+    if (Platform.OS === 'android') {
+      setCurrentStep('signup');
+    } else {
+      // for ios, we should be able to call the signin function
+      try {
+        setCurrentStep('connecting');
+        const result = await signIn();
+        
+        // Check if sign in was successful
+        if (isAuthenticated && walletAddress) {
+          navigation.navigate('HomeStack' as never);
+        }
+      } catch (error) {
+        console.warn('iOS sign in failed:', error);
+        // showError(error instanceof Error ? error.message : 'Sign in failed');
+        setCurrentStep('welcome');
+      }
+    }
   };
 
   const handleSignIn = async () => {
     try {
       setCurrentStep('connecting');
-      const result = await signIn();
+      await signIn();
       // Only navigate if we're still in the connecting step (user hasn't navigated away)
       if (currentStep === 'connecting') {
         navigation.navigate('HomeStack' as never);

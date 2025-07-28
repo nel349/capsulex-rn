@@ -36,6 +36,7 @@ import { useCapsuleService } from '../services/capsuleService';
 import { useBalance } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import type { Capsule } from '../types/api';
+import { dynamicClientService } from '../services/dynamicClientService';
 
 // Enhanced capsule type that merges blockchain and database data
 interface EnhancedCapsule extends CapsuleWithStatus {
@@ -74,10 +75,24 @@ export function HubScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
 
-  // if the user is not authenticated, we should navigate to the welcome screen
+
+  // lets hide the dynamic client from the screen
+  useEffect(() => {
+    
+    const hideDynamicClient = async () => {
+      // wait for 2
+      dynamicClientService.refreshClient();
+      if (dynamicClientService.getDynamicClient()?.ui.userProfile) {
+        dynamicClientService.getDynamicClient()?.ui.userProfile.hide();
+      }
+    };
+    hideDynamicClient();
+  }, []);
+
+  // if the user is not authenticated, we should navigate to the onboarding screen
   useEffect(() => {
     if (!isAuthenticated) {
-      navigation.navigate('Welcome' as never);
+      navigation.navigate('Onboarding' as never);
     }
   }, [isAuthenticated]);
 
@@ -363,6 +378,8 @@ export function HubScreen() {
 
   // Render not connected state
   if (!isAuthenticated) {
+    // if the user is not authenticated, we should navigate to the welcome screen
+    // navigation.navigate('Welcome' as never);
     return (
       <View style={[styles.screenContainer, styles.centered]}>
         <Avatar.Icon size={80} icon="wallet" style={styles.walletIcon} />

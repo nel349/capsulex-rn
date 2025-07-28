@@ -60,6 +60,31 @@ export interface Capsule {
   posted_to_social: boolean;
 }
 
+export interface UserInfo {
+  email?: string;
+  environmentId: string;
+  lastVerifiedCredentialId: string;
+  lists: any[]; // Adjust if you know the structure of lists
+  metadata: {}; // Adjust if you know the structure of metadata
+  missingFields: any[]; // Adjust if you know the structure of missingFields
+  newUser: boolean;
+  sessionId: string;
+  userId: string;
+  verifiedCredentials: Array<{
+    address?: string;
+    chain?: string;
+    format: string;
+    id: string;
+    lastSelectedAt?: string;
+    nameService?: any; // Adjust if you know the structure
+    publicIdentifier: string;
+    signInEnabled: boolean;
+    walletName?: string;
+    walletProperties?: any; // Adjust if you know the structure
+    email?: string;
+  }>;
+}
+
 // Game Types
 export interface CapsuleGame {
   game_id: string;

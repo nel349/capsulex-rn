@@ -172,6 +172,7 @@ export function IOSAuthProvider({ children }: IOSAuthProviderProps) {
         await dynamicClientService.showAuthUI(async (isAuthenticated, userInfo) => {
           console.log('🔔 showAuthUI callback received:', isAuthenticated);
           setShowDynamicUserProfile(false);
+          // State updates (setWalletAddress, setUserName, setIsAuthenticated) are handled in addAuthStateListener
         });
         
 

@@ -76,9 +76,7 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   const handleSignInIOS = async () : Promise<void> => {
     if (isIOS) {
       await iosAuth.authenticate();
-      if (isAuthenticated) {
-        navigation.navigate('HomeStack' as never);
-      }
+      // Navigation will be handled by WelcomeScreen's useEffect when auth state updates
     }
   }
 

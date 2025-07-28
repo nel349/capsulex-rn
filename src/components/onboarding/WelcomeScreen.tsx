@@ -1,11 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Button, Text } from 'react-native-paper';
-
-import { useDualAuth } from '../../providers/DualAuthProvider';
-import { dynamicClientService } from '../../services/dynamicClientService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -13,27 +8,8 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
-  const navigation = useNavigation();
-  const { walletAddress, userName } = useDualAuth();
 
 
-  // for ios, we should check if the user is authenticated and take the user to the home screen
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = await AsyncStorage.getItem('auth-token');
-
-      console.log('🔍 token', token);
-      if (token) {
-        navigation.navigate('HomeStack' as never);
-      }
-    };
-    if (Platform.OS === 'ios') {
-      console.log('🔍 Checking auth for ios');
-      console.log('🔍 userName', userName);
-      console.log('🔍 walletAddress', walletAddress);
-      checkAuth();
-    }
-  }, [userName, walletAddress]);
 
   return (
     <View style={styles.container}>

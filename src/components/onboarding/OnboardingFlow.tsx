@@ -55,16 +55,15 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
     } else {
       // for ios, we should be able to call the signin function
       try {
+        console.log('🔍 iOS Get Started - Starting sign in flow');
         setCurrentStep('connecting');
-        const result = await signIn();
+        await signIn();
+        console.log('🔍 iOS Get Started - Sign in completed successfully');
         
-        // Check if sign in was successful
-        if (isAuthenticated && walletAddress) {
-          navigation.navigate('HomeStack' as never);
-        }
+        // Navigation will be handled by useEffect when auth state changes
       } catch (error) {
-        console.warn('iOS sign in failed:', error);
-        // showError(error instanceof Error ? error.message : 'Sign in failed');
+        console.error('🔍 iOS Get Started - Sign in failed:', error);
+        showError(error instanceof Error ? error.message : 'Sign in failed');
         setCurrentStep('welcome');
       }
     }
@@ -74,10 +73,7 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
     try {
       setCurrentStep('connecting');
       await signIn();
-      // Only navigate if we're still in the connecting step (user hasn't navigated away)
-      if (currentStep === 'connecting') {
-        navigation.navigate('HomeStack' as never);
-      }
+      // Navigation will be handled by useEffect when auth state changes
     } catch (error) {
       console.error('Sign in failed:', error);
       

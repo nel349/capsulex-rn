@@ -80,16 +80,13 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const AppStack = () => {
   const { isAuthenticated } = useDualAuth();
   
-  // Determine initial route based on authentication status
-  const initialRouteName = isAuthenticated ? 'HomeStack' : 'Onboarding';
-  
   console.log('🔍 AppStack Debug:', {
     isAuthenticated,
-    initialRouteName,
   });
 
+  // Always start with Onboarding - let individual screens handle navigation based on auth state
   return (
-    <Stack.Navigator initialRouteName={initialRouteName}>
+    <Stack.Navigator initialRouteName="Onboarding">
       <Stack.Screen
         name="Onboarding"
         component={OnboardingFlow}

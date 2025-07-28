@@ -26,7 +26,7 @@ import {
   Avatar,
 } from 'react-native-paper';
 
-import { useAuth } from '../contexts';
+import { useDualAuth } from '../providers';
 import type {
   CapsuleWithStatus,
   WalletCapsulesResponse,
@@ -36,6 +36,7 @@ import { useCapsuleService } from '../services/capsuleService';
 import { useBalance } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import type { Capsule } from '../types/api';
+import { dynamicClientService } from '../services/dynamicClientService';
 
 // Enhanced capsule type that merges blockchain and database data
 interface EnhancedCapsule extends CapsuleWithStatus {
@@ -53,7 +54,7 @@ type HubScreenNavigationProp = NativeStackNavigationProp<
 
 export function HubScreen() {
   const navigation = useNavigation<HubScreenNavigationProp>();
-  const { isAuthenticated, walletAddress } = useAuth();
+  const { isAuthenticated, walletAddress } = useDualAuth();
   const [capsuleData, setCapsuleData] = useState<
     WalletCapsulesResponse['data'] | null
   >(null);
@@ -73,6 +74,27 @@ export function HubScreen() {
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
+
+
+  // lets hide the dynamic client from the screen
+  useEffect(() => {
+    
+    const hideDynamicClient = async () => {
+      // wait for 2
+      dynamicClientService.refreshClient();
+      if (dynamicClientService.getDynamicClient()?.ui.userProfile) {
+        dynamicClientService.getDynamicClient()?.ui.userProfile.hide();
+      }
+    };
+    hideDynamicClient();
+  }, []);
+
+  // if the user is not authenticated, we should navigate to the onboarding screen
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigation.navigate('Onboarding' as never);
+    }
+  }, [isAuthenticated]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -226,7 +248,7 @@ export function HubScreen() {
 
       // Vibrate if there are newly ready capsules
       if (enhancedData.summary.ready_to_reveal > 0) {
-        Vibration.vibrate([100, 50, 100]);
+        // Vibration.vibrate([100, 50, 100]);
       }
     } catch (error) {
       console.error('Error fetching capsule data:', error);
@@ -246,7 +268,7 @@ export function HubScreen() {
   // Pull to refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    Vibration.vibrate(50); // Haptic feedback
+    // Vibration.vibrate(50); // Haptic feedback
     await fetchCapsuleData();
     await queryClient.invalidateQueries({ queryKey: ['solana-balance'] });
     setRefreshing(false);
@@ -356,6 +378,8 @@ export function HubScreen() {
 
   // Render not connected state
   if (!isAuthenticated) {
+    // if the user is not authenticated, we should navigate to the welcome screen
+    // navigation.navigate('Welcome' as never);
     return (
       <View style={[styles.screenContainer, styles.centered]}>
         <Avatar.Icon size={80} icon="wallet" style={styles.walletIcon} />

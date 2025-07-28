@@ -21,11 +21,11 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
-import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import type { CapsuleGame, Guess, GuessesApiResponse } from '../types/api';
+import { useDualAuth } from '../providers';
 
 type RootStackParamList = {
   Game: {
@@ -38,7 +38,7 @@ type GameScreenProps = NativeStackScreenProps<RootStackParamList, 'Game'>;
 
 export function GameScreen({ route }: GameScreenProps) {
   const { capsule_id, action = 'view' } = route.params;
-  const { isAuthenticated, walletAddress, reconnectWallet } = useAuth();
+  const { isAuthenticated, walletAddress, connectWallet } = useDualAuth();
   const { submitGuess } = useCapsulexProgram();
   const [game, setGame] = useState<CapsuleGame | null>(null);
   const [guesses, setGuesses] = useState<Guess[]>([]);
@@ -90,8 +90,8 @@ export function GameScreen({ route }: GameScreenProps) {
       if (!isAuthenticated) {
         console.log('🔍 Wallet not authenticated, attempting reconnection...');
         try {
-          const reconnectionSuccess = await reconnectWallet();
-          if (reconnectionSuccess) {
+          await connectWallet();
+          if (walletAddress) {
             console.log('✅ Wallet reconnected successfully');
             // Reload game data after successful reconnection
             await loadGameData();
@@ -105,7 +105,7 @@ export function GameScreen({ route }: GameScreenProps) {
     };
 
     checkWalletConnection();
-  }, [isAuthenticated, reconnectWallet, loadGameData]);
+  }, [isAuthenticated, connectWallet, loadGameData]);
 
   // Refresh game data
   const handleRefresh = useCallback(async () => {
@@ -188,8 +188,8 @@ export function GameScreen({ route }: GameScreenProps) {
       // Double-check wallet connection before transaction
       if (!isAuthenticated) {
         showInfo('Reconnecting wallet...');
-        const reconnectionSuccess = await reconnectWallet();
-        if (!reconnectionSuccess) {
+        await connectWallet();
+        if (!walletAddress) {
           showError('Failed to reconnect wallet. Please try again.');
           return;
         }
@@ -281,8 +281,8 @@ export function GameScreen({ route }: GameScreenProps) {
         showInfo('Wallet connection expired. Attempting to reconnect...');
 
         try {
-          const reconnectionSuccess = await reconnectWallet();
-          if (reconnectionSuccess) {
+          await connectWallet();
+          if (walletAddress) {
             showInfo(
               'Wallet reconnected. Please try submitting your guess again.'
             );

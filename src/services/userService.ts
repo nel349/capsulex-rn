@@ -41,12 +41,14 @@ export class UserService {
   async registerWalletUser(
     walletAddress: string,
     walletType: WalletType,
-    name?: string
+    name?: string,
+    email?: string
   ): Promise<AuthResponse> {
     return this.registerUser({
       wallet_address: walletAddress,
       auth_type: walletType,
       name,
+      email,
     });
   }
 

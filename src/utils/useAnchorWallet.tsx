@@ -6,11 +6,11 @@ import {
 import { useMemo, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { useAuth } from '../contexts';
 import { dynamicClientService } from '../services/dynamicClientService';
 
 import { useAuthorization } from './useAuthorization';
 import { useMobileWallet } from './useMobileWallet';
+import { useDualAuth } from '../providers';
 
 export interface AnchorWallet {
   publicKey: PublicKey;
@@ -26,7 +26,7 @@ export interface AnchorWallet {
 
 export function useAnchorWallet(): AnchorWallet | undefined {
   const { selectedAccount } = useAuthorization();
-  const { isAuthenticated, walletAddress } = useAuth();
+  const { isAuthenticated, walletAddress } = useDualAuth();
   const mobileWallet = useMobileWallet();
   const [dynamicClientReady, setDynamicClientReady] = useState(false);
 

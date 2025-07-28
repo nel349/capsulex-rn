@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/core';
 import { StyleSheet } from 'react-native';
 import { Appbar } from 'react-native-paper';
 
-import { TopBarWalletMenu, TopBarPrivyButton } from './top-bar-ui';
+import { TopBarWalletMenu } from './top-bar-ui';
 
 export function TopBar() {
   const navigation = useNavigation();
@@ -10,7 +10,6 @@ export function TopBar() {
   return (
     <Appbar.Header mode="small" style={styles.topBar}>
       <TopBarWalletMenu />
-      <TopBarPrivyButton />
       <Appbar.Action
         icon="cog"
         mode="contained-tonal"

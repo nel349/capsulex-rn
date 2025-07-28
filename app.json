@@ -4,13 +4,13 @@
     "slug": "capsulex-app-rn",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/capsulex-icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "capsulex",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "assetBundlePatterns": [
       "**/*"

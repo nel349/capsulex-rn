@@ -1,35 +1,21 @@
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Linking, Alert } from 'react-native';
-import { Button, IconButton, Menu } from 'react-native-paper';
+import { Linking, Alert, View } from 'react-native';
+import { IconButton, Menu } from 'react-native-paper';
 
 import { dynamicClient } from '../../../App';
-import { ellipsify } from '../../utils/ellipsify';
-import type { Account } from '../../utils/useAuthorization';
 import { useAuthorization } from '../../utils/useAuthorization';
-import { useMobileWallet } from '../../utils/useMobileWallet';
 import { useCluster } from '../cluster/cluster-data-access';
 
 export function TopBarWalletButton({
-  selectedAccount,
-  openMenu,
 }: {
-  selectedAccount: Account | null;
-  openMenu: () => void;
 }) {
-  const { connect } = useMobileWallet();
+    // const { connect } = useDualAuth();
   return (
-    <Button
-      icon="wallet"
-      mode="contained-tonal"
-      style={{ alignSelf: 'center' }}
-      onPress={selectedAccount ? openMenu : connect}
-    >
-      {selectedAccount
-        ? ellipsify(selectedAccount.publicKey.toBase58())
-        : 'Connect'}
-    </Button>
+    <View>
+      {/* add a button here that says "Connect" and when pressed, it will connect the wallet */}
+    </View>
   );
 }
 
@@ -73,7 +59,7 @@ export function TopBarWalletMenu() {
   const [visible, setVisible] = useState(false);
   const openMenu = () => setVisible(true);
   const closeMenu = () => setVisible(false);
-  const { disconnect } = useMobileWallet();
+  // const { disconnect } = useMobileWallet();
 
   const copyAddressToClipboard = async () => {
     if (selectedAccount) {
@@ -97,10 +83,7 @@ export function TopBarWalletMenu() {
       visible={visible}
       onDismiss={closeMenu}
       anchor={
-        <TopBarWalletButton
-          selectedAccount={selectedAccount}
-          openMenu={openMenu}
-        />
+        <TopBarWalletButton />
       }
     >
       <Menu.Item
@@ -113,14 +96,14 @@ export function TopBarWalletMenu() {
         title="View Explorer"
         leadingIcon="open-in-new"
       />
-      <Menu.Item
+      {/* <Menu.Item
         onPress={async () => {
           await disconnect();
           closeMenu();
         }}
         title="Disconnect"
         leadingIcon="link-off"
-      />
+      /> */}
     </Menu>
   );
 }

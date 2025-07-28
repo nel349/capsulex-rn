@@ -1,8 +1,14 @@
 import { Platform } from 'react-native';
 
+import { dynamicClient } from '../../App';
+import { Commitment } from '@solana/web3.js';
+import { UserInfo } from '../types/api';
+
+type DynamicClient = typeof dynamicClient;
+
 // Dynamic client service to avoid require cycles
 class DynamicClientService {
-  private client: any = null;
+  private client: DynamicClient | null = null;
   private initialized = false;
 
   getDynamicClient() {
@@ -13,8 +19,7 @@ class DynamicClientService {
     if (!this.initialized) {
       try {
         // Use dynamic import to avoid require cycle
-        const AppModule = require('../../App');
-        this.client = AppModule.dynamicClient;
+        this.client = dynamicClient;
         if (!this.client) {
           console.warn('Dynamic client not found in App module');
         } else {
@@ -133,15 +138,27 @@ class DynamicClientService {
     const client = this.getDynamicClient();
     if (this.isUserAuthenticated()) {
       return {
-        address: client.wallets.primary.address,
-        name: client.auth.authenticatedUser?.email || 'User',
+        address: client?.wallets?.primary?.address || '',
+        name: client?.auth?.authenticatedUser?.email || 'User',
       };
     }
     return null;
   }
 
+  // Helper method to refresh/reconnect the client
+  refreshClient(): void {
+    console.log('🔄 Refreshing Dynamic client...');
+    this.initialized = false;
+    this.client = null;
+    // Force re-initialization on next getDynamicClient call
+    this.getDynamicClient();
+  }
+
   // Helper method to show auth UI
-  async showAuthUI(): Promise<void> {
+  async showAuthUI(callback: (isAuthenticated: boolean, userInfo?: UserInfo) => void): Promise<void> {
+
+    this.addAuthStateListener(callback);
+
     const client = this.getDynamicClient();
     if (client) {
       await client.ui.auth.show();
@@ -150,8 +167,79 @@ class DynamicClientService {
     }
   }
 
+  // Add event listener for auth state changes
+  addAuthStateListener(callback: (isAuthenticated: boolean, userInfo?: UserInfo) => void): () => void {
+    const client = this.getDynamicClient();
+    if (!client) {
+      console.warn('Cannot add auth state listener - no client available');
+      return () => {};
+    }
+
+    if (client.auth && typeof client.auth.on === 'function') {
+      console.log('🔊 Adding ALL Dynamic event listeners for debugging... Inside the function');
+      
+      const handleAuthSuccess = (user: any) => {
+        console.log('🔔 ✅ AUTH SUCCESS:', user);
+        callback(true, user);
+      };
+      
+      const handleAuthFailed = (error: any) => {
+        console.log('🔔 ❌ AUTH FAILED:', error);
+      };
+      
+      const handleLoggedOut = () => {
+        console.log('🔔 🚪 LOGGED OUT');
+        callback(false);
+      };
+      
+      const handleAuthInit = () => {
+        console.log('🔔 🚀 AUTH INIT');
+      };
+      
+      const handleUserChanged = (user: any) => {
+        console.log('🔔 👤 USER CHANGED:', user);
+        callback(!!user, user);
+      };
+      
+      // Listen to ALL auth events for debugging
+      client.auth.on('authSuccess', handleAuthSuccess);
+      client.auth.on('authFailed', handleAuthFailed);
+      client.auth.on('loggedOut', handleLoggedOut);
+      client.auth.on('authInit', handleAuthInit);
+      client.auth.on('authenticatedUserChanged', handleUserChanged);
+      
+      // Also listen to UI events
+      if (client.ui && typeof client.ui.on === 'function') {
+        const handleAuthFlowClosed = () => {
+          console.log('🔔 🚪 AUTH FLOW CLOSED');
+        };
+        
+        const handleAuthFlowCancelled = () => {
+          console.log('🔔 ❌ AUTH FLOW CANCELLED');
+        };
+        
+        client.ui.on('authFlowClosed', handleAuthFlowClosed);
+        client.ui.on('authFlowCancelled', handleAuthFlowCancelled);
+      }
+      
+      // Return cleanup function
+      return () => {
+        if (client.auth && typeof client.auth.off === 'function') {
+          client.auth.off('authSuccess', handleAuthSuccess);
+          client.auth.off('authFailed', handleAuthFailed);
+          client.auth.off('loggedOut', handleLoggedOut);
+          client.auth.off('authInit', handleAuthInit);
+          client.auth.off('authenticatedUserChanged', handleUserChanged);
+        }
+      };
+    }
+
+    console.warn('Dynamic client does not support auth state listeners');
+    return () => {};
+  }
+
   // Helper method to get Solana connection
-  getConnection(options?: { commitment?: string }) {
+  getConnection(options?: { commitment?: Commitment }) {
     const client = this.getDynamicClient();
     if (client) {
       return client.solana.getConnection(
@@ -202,6 +290,14 @@ class DynamicClientService {
       throw new Error(
         `Failed to get wallet signer: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    }
+  }
+
+  // sign out the user from the dynamic client
+  async signOut() {
+    const client = this.getDynamicClient();
+    if (client) {
+      await client.auth.logout();
     }
   }
 

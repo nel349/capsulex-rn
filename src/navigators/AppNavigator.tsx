@@ -18,7 +18,9 @@ import {
   adaptNavigationTheme,
 } from 'react-native-paper';
 
-import { AppWrapper } from '../components/app-wrapper';
+import { OnboardingFlow } from '../components/onboarding';
+import { SocialSetup } from '../components/onboarding/SocialSetup';
+import { DualAuthProvider, useDualAuth } from '../providers';
 import * as Screens from '../screens';
 
 import { HomeNavigator } from './HomeNavigator';
@@ -37,7 +39,8 @@ import { HomeNavigator } from './HomeNavigator';
  */
 
 type RootStackParamList = {
-  Main: undefined;
+  Onboarding: undefined;
+  SocialSetup: undefined;
   HomeStack: undefined;
   Home: undefined;
   Settings: undefined;
@@ -75,11 +78,23 @@ declare global {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppStack = () => {
+  const { isAuthenticated } = useDualAuth();
+  
+  console.log('🔍 AppStack Debug:', {
+    isAuthenticated,
+  });
+
+  // Always start with Onboarding - let individual screens handle navigation based on auth state
   return (
-    <Stack.Navigator initialRouteName={'Main'}>
+    <Stack.Navigator initialRouteName="Onboarding">
       <Stack.Screen
-        name="Main"
-        component={AppWrapper}
+        name="Onboarding"
+        component={OnboardingFlow}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SocialSetup"
+        component={SocialSetup}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -160,8 +175,10 @@ export const AppNavigator = (props: NavigationProps) => {
       theme={colorScheme === 'dark' ? CombinedDarkTheme : CombinedDefaultTheme}
       {...props}
     >
-      <StatusBar />
-      <AppStack />
+      <DualAuthProvider>
+        <StatusBar />
+        <AppStack />
+      </DualAuthProvider>
     </NavigationContainer>
   );
 };

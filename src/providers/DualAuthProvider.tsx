@@ -84,11 +84,8 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
     if (isIOS) {
       await handleSignInIOS();
     } else {
-      // Android sign in: connect wallet and check if user exists
-      await androidAuth.connect();
-      
-      // Get the wallet address directly - connection already completed
-      const currentWalletAddress = androidAuth.walletAddress;
+      // Android sign in: connect wallet and get address directly
+      const currentWalletAddress = await androidAuth.connect();
       
       console.log('🔍 Android sign-in state:', {
         isConnected: androidAuth.isConnected,

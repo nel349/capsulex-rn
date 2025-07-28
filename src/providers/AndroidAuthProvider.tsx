@@ -9,7 +9,7 @@ interface AndroidAuthState {
   walletAddress: string | null;
   isConnected: boolean;
   isConnecting: boolean;
-  connect: () => Promise<void>;
+  connect: () => Promise<string>; // Return the wallet address directly
   disconnect: () => Promise<void>;
 }
 
@@ -38,20 +38,33 @@ export function AndroidAuthProvider({ children }: AndroidAuthProviderProps) {
     }
   }, [currentWalletAddress]);
 
-  const connect = async () => {
-    if (Platform.OS !== 'android') return;
+  const connect = async (): Promise<string> => {
+    if (Platform.OS !== 'android') throw new Error('Android only');
     
-    console.log('📱 AndroidAuth: Starting wallet connection...');
-    console.log('🔍 AndroidAuth: Current selected account before connect:', {
-      hasAccount: !!selectedAccount,
-      address: selectedAccount?.publicKey?.toBase58(),
-    });
+    // console.log('📱 AndroidAuth: Starting wallet connection...');
+    // console.log('🔍 AndroidAuth: Current selected account before connect:', {
+    //   hasAccount: !!selectedAccount,
+    //   address: selectedAccount?.publicKey?.toBase58(),
+    // });
     
     setIsConnecting(true);
     try {
       console.log('🔗 AndroidAuth: Calling mobileWalletConnect...');
-      await mobileWalletConnect();
-      console.log('✅ AndroidAuth: Mobile wallet connect completed');
+      const accountResult = await mobileWalletConnect();
+      // console.log(` Selected account: ${selectedAccount?.publicKey?.toBase58()}`);
+
+      // console.log('🔍 AndroidAuth: Account result:', accountResult);
+      
+      // Convert the account address to base58 format for consistency
+      const base58Address = accountResult.publicKey.toBase58();
+      // console.log('🔍 AndroidAuth: Base58 address:', base58Address);
+      // console.log('✅ AndroidAuth: Mobile wallet connect completed');
+      
+      setPersistedWalletAddress(base58Address);
+      
+      // Return the address immediately so DualAuthProvider can use it
+      return base58Address;
+      
     } catch (error) {
       console.error('❌ AndroidAuth: Mobile wallet connect failed:', error);
       console.error('❌ AndroidAuth: Error details:', {
@@ -62,11 +75,6 @@ export function AndroidAuthProvider({ children }: AndroidAuthProviderProps) {
       throw error;
     } finally {
       setIsConnecting(false);
-      console.log('🔍 AndroidAuth: Connection attempt finished. Current state:', {
-        walletAddress: selectedAccount?.publicKey?.toBase58(),
-        isConnected: !!selectedAccount?.publicKey,
-        hasSelectedAccount: !!selectedAccount,
-      });
     }
   };
 
@@ -75,9 +83,12 @@ export function AndroidAuthProvider({ children }: AndroidAuthProviderProps) {
     
     try {
       console.log('🔍 AndroidAuth: Disconnecting and clearing all auth data');
-      setPersistedWalletAddress(null);
       
-      // Clear JWT tokens and auth data from AsyncStorage
+      // Clear local state first
+      setPersistedWalletAddress(null);
+      setIsConnecting(false);
+      
+      // Clear JWT tokens and auth data from AsyncStorage (Android only)
       await AsyncStorage.removeItem('auth-token');
       await AsyncStorage.removeItem('auth-user');
       await AsyncStorage.removeItem('token');
@@ -85,6 +96,8 @@ export function AndroidAuthProvider({ children }: AndroidAuthProviderProps) {
       await AsyncStorage.removeItem('wallet_address');
       
       await mobileWalletDisconnect();
+      
+      console.log('✅ AndroidAuth: Disconnect completed');
     } catch (error) {
       console.error('Android wallet disconnect failed:', error);
     }

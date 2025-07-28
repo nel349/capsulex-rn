@@ -23,7 +23,6 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
-import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
 import { useCapsuleService } from '../services/capsuleService';
@@ -31,6 +30,7 @@ import { useSolanaService } from '../services/solana';
 import { twitterService } from '../services/twitterService';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import { VaultKeyManager } from '../utils/vaultKey';
+import { useDualAuth } from '../providers';
 
 interface SOLBalance {
   balance: number;
@@ -41,7 +41,7 @@ interface SOLBalance {
 type CreateMode = 'time_capsule' | 'social_post';
 
 export function CreateCapsuleScreen() {
-  const { isAuthenticated, walletAddress, reconnectWallet } = useAuth();
+  const { isAuthenticated, walletAddress, connectWallet } = useDualAuth();
   const { createCapsule } = useCapsulexProgram();
   const { createCapsule: createCapsuleInDB } = useCapsuleService();
   
@@ -167,9 +167,10 @@ export function CreateCapsuleScreen() {
   ): Promise<boolean> => {
     try {
       showInfo('Attempting to reconnect your wallet...');
-      const reconnectionSuccess = await reconnectWallet();
-
-      if (reconnectionSuccess) {
+      await connectWallet();
+      
+      // Check if wallet is now connected by verifying we have a wallet address
+      if (walletAddress) {
         showInfo('Wallet reconnected! Retrying capsule creation...');
         // Small delay to let the UI update
         await new Promise(resolve => setTimeout(resolve, 1000));

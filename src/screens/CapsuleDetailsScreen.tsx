@@ -13,11 +13,11 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
-import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import type { CapsuleWithStatus } from '../services/capsuleApi';
 import type { Capsule } from '../types/api';
 import { VaultKeyManager } from '../utils/vaultKey';
+import { useDualAuth } from '../providers';
 
 // Type definitions
 
@@ -47,7 +47,7 @@ export function CapsuleDetailsScreen() {
   const [fullCapsuleData, setFullCapsuleData] = useState<Capsule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { isAuthenticated, walletAddress } = useAuth();
+  const { isAuthenticated, walletAddress } = useDualAuth();
   const { snackbar, showError, showSuccess, hideSnackbar } = useSnackbar();
 
   // Process the enhanced capsule data from HubScreen

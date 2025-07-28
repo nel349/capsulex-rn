@@ -10,15 +10,14 @@ import {
   Card,
   Chip,
   Avatar,
-  IconButton,
   Divider,
   ActivityIndicator,
   SegmentedButtons,
 } from 'react-native-paper';
 
-import { useAuth } from '../contexts';
 import { apiService } from '../services/api';
 import { ApiResponse } from '../types/api';
+import { useDualAuth } from '../providers';
 
 interface LeaderboardEntry {
   rank: number;
@@ -59,7 +58,7 @@ interface UserStatsAPIResponse extends ApiResponse<UserStats> {
 type TimeFrame = 'all-time' | 'weekly' | 'monthly';
 
 export function LeaderboardScreen() {
-  const { isAuthenticated, walletAddress } = useAuth();
+  const { isAuthenticated, walletAddress } = useDualAuth();
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('all-time');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);

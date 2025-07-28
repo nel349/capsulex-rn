@@ -12,12 +12,12 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
-import { useAuth } from '../contexts';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { apiService } from '../services/api';
 import { twitterService } from '../services/twitterService';
 import { useMobileWallet } from '../utils/useMobileWallet';
 import { VaultKeyManager } from '../utils/vaultKey';
+import { useDualAuth } from '../providers';
 
 interface UserProfile {
   wallet: string;
@@ -40,7 +40,7 @@ export function ProfileScreen() {
   const { snackbar, showSuccess, showError, showInfo, hideSnackbar } =
     useSnackbar();
 
-  const { isAuthenticated, walletAddress } = useAuth();
+  const { isAuthenticated, walletAddress } = useDualAuth();
   const { disconnect } = useMobileWallet();
   const [profile, setProfile] = useState<UserProfile>({
     wallet: walletAddress || '',

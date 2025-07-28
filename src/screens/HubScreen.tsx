@@ -26,7 +26,7 @@ import {
   Avatar,
 } from 'react-native-paper';
 
-import { useAuth } from '../contexts';
+import { useDualAuth } from '../providers';
 import type {
   CapsuleWithStatus,
   WalletCapsulesResponse,
@@ -53,7 +53,7 @@ type HubScreenNavigationProp = NativeStackNavigationProp<
 
 export function HubScreen() {
   const navigation = useNavigation<HubScreenNavigationProp>();
-  const { isAuthenticated, walletAddress } = useAuth();
+  const { isAuthenticated, walletAddress } = useDualAuth();
   const [capsuleData, setCapsuleData] = useState<
     WalletCapsulesResponse['data'] | null
   >(null);

@@ -18,7 +18,8 @@ import {
   adaptNavigationTheme,
 } from 'react-native-paper';
 
-import { AppWrapper } from '../components/app-wrapper';
+import { OnboardingFlow } from '../components/onboarding';
+import { useDualAuth } from '../providers';
 import * as Screens from '../screens';
 
 import { HomeNavigator } from './HomeNavigator';
@@ -71,6 +72,33 @@ declare global {
   }
 }
 
+// Auth Gate Component - handles routing between onboarding and main app
+function AuthGate() {
+  const { isAuthenticated, isOnboardingComplete, setOnboardingComplete } = useDualAuth();
+
+  console.log('🔍 AuthGate Debug:', {
+    isAuthenticated,
+    isOnboardingComplete,
+  });
+
+  // Show main app if authenticated and onboarding complete
+  if (isAuthenticated && isOnboardingComplete) {
+    console.log('✅ Authenticated and onboarded - showing main app');
+    return <HomeNavigator />;
+  }
+
+  // Show onboarding flow
+  console.log('🔄 Showing onboarding flow');
+  return (
+    <OnboardingFlow
+      onComplete={() => {
+        console.log('🎉 Onboarding completed');
+        setOnboardingComplete(true);
+      }}
+    />
+  );
+}
+
 // Documentation: https://reactnavigation.org/docs/stack-navigator/
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -79,7 +107,7 @@ const AppStack = () => {
     <Stack.Navigator initialRouteName={'Main'}>
       <Stack.Screen
         name="Main"
-        component={AppWrapper}
+        component={AuthGate}
         options={{ headerShown: false }}
       />
       <Stack.Screen

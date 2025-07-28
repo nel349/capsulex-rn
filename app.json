@@ -19,7 +19,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.capsulex.app",
       "associatedDomains": [
-        "applinks:capsulex.app",
         "applinks:capsulex.app"
       ],
       "infoPlist": {

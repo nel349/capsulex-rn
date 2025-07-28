@@ -10,6 +10,7 @@ import { AppSnackbar } from '../ui/AppSnackbar';
 import { WelcomeScreen } from './WelcomeScreen';
 import { SignUpScreen } from './SignUpScreen';
 import { SocialSetup } from './SocialSetup';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface OnboardingFlowProps {}
 
@@ -21,12 +22,14 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
   const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
   const navigation = useNavigation();
 
+
+
   useEffect(() => {
-    console.log('🔍 Auth State Change:', {
-      currentStep,
-      isAuthenticated,
-      walletAddress
-    });
+    // console.log('🔍 Auth State Change:', {
+    //   currentStep,
+    //   isAuthenticated,
+    //   walletAddress
+    // });
 
     // Only reset to welcome if user was previously authenticated and now isn't
     if (!isAuthenticated || !walletAddress) {

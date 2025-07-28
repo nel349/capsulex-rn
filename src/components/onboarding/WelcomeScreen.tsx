@@ -4,6 +4,8 @@ import { Button, Text } from 'react-native-paper';
 
 import { useDualAuth } from '../../providers/DualAuthProvider';
 import { dynamicClientService } from '../../services/dynamicClientService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -11,24 +13,27 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
+  const navigation = useNavigation();
+  const { walletAddress, userName } = useDualAuth();
 
-  const { walletAddress, userName, isAuthenticated } = useDualAuth();
 
-
-  // refresh the dynamic client always
+  // for ios, we should check if the user is authenticated and take the user to the home screen
   useEffect(() => {
-    
-    // get wallet address from the dual auth provider
-    
+    const checkAuth = async () => {
+      const token = await AsyncStorage.getItem('auth-token');
 
-    if (isAuthenticated && walletAddress) {
-      onGetStarted();
+      console.log('🔍 token', token);
+      if (token) {
+        navigation.navigate('HomeStack' as never);
+      }
+    };
+    if (Platform.OS === 'ios') {
+      console.log('🔍 Checking auth for ios');
+      console.log('🔍 userName', userName);
+      console.log('🔍 walletAddress', walletAddress);
+      checkAuth();
     }
-
-    console.log('isAuthenticated', isAuthenticated);
-    console.log('walletAddress', walletAddress);
-    console.log('userName', userName);
-  }, [isAuthenticated, walletAddress, userName]);
+  }, [userName, walletAddress]);
 
   return (
     <View style={styles.container}>

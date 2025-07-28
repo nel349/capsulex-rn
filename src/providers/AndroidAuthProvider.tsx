@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Platform } from 'react-native';
 
@@ -20,11 +21,22 @@ interface AndroidAuthProviderProps {
 
 export function AndroidAuthProvider({ children }: AndroidAuthProviderProps) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [persistedWalletAddress, setPersistedWalletAddress] = useState<string | null>(null);
   const { selectedAccount } = useAuthorization();
   const { connect: mobileWalletConnect, disconnect: mobileWalletDisconnect } = useMobileWallet();
 
-  const walletAddress = selectedAccount?.publicKey?.toBase58() || null;
+  // Use persisted wallet address if selectedAccount is temporarily null due to React Query timing
+  const currentWalletAddress = selectedAccount?.publicKey?.toBase58() || null;
+  const walletAddress = currentWalletAddress || persistedWalletAddress;
   const isConnected = !!walletAddress;
+
+  // Update persisted address when selectedAccount changes
+  useEffect(() => {
+    if (currentWalletAddress) {
+      console.log('🔍 AndroidAuth: Updating persisted wallet address:', currentWalletAddress);
+      setPersistedWalletAddress(currentWalletAddress);
+    }
+  }, [currentWalletAddress]);
 
   const connect = async () => {
     if (Platform.OS !== 'android') return;
@@ -62,6 +74,16 @@ export function AndroidAuthProvider({ children }: AndroidAuthProviderProps) {
     if (Platform.OS !== 'android') return;
     
     try {
+      console.log('🔍 AndroidAuth: Disconnecting and clearing all auth data');
+      setPersistedWalletAddress(null);
+      
+      // Clear JWT tokens and auth data from AsyncStorage
+      await AsyncStorage.removeItem('auth-token');
+      await AsyncStorage.removeItem('auth-user');
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      await AsyncStorage.removeItem('wallet_address');
+      
       await mobileWalletDisconnect();
     } catch (error) {
       console.error('Android wallet disconnect failed:', error);

@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { dynamicClientService } from '../services/dynamicClientService';
 import { useAuthService } from '../services/authService';
 import { useReactiveClient } from '@dynamic-labs/react-hooks'
+import { useNavigation } from '@react-navigation/native';
 
 interface IOSAuthState {
   walletAddress: string | null;
@@ -27,7 +28,7 @@ export function IOSAuthProvider({ children }: IOSAuthProviderProps) {
   const [userName, setUserName] = useState<string | null>(null);
   const { authenticateUser, clearAuth } = useAuthService();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+  const navigation = useNavigation();
 
   const useDynamic = () => {
     const client = dynamicClientService.getDynamicClient();
@@ -123,12 +124,14 @@ export function IOSAuthProvider({ children }: IOSAuthProviderProps) {
             name: name,
           });
 
+          console.log('🔍 Setting React state from already authenticated user:', { address, name });
           setWalletAddress(address);
           setUserName(name);
           
           // Save dynamic auth state
           await AsyncStorage.setItem('dynamic_auth_enabled', 'true');
           await AsyncStorage.setItem('dynamic_wallet_address', address);
+          await AsyncStorage.setItem('user_name', name);
           return true;
         }
       }
@@ -143,52 +146,58 @@ export function IOSAuthProvider({ children }: IOSAuthProviderProps) {
         authResolver = resolve;
       });
       
-      const removeListener = dynamicClientService.addAuthStateListener((isAuthenticated, userInfo) => {
-        console.log('🔔 Auth event received:', isAuthenticated, userInfo);
+      // Show auth UI - use callback for state updates (no duplicate listener)
+      await dynamicClientService.showAuthUI(async (isAuthenticated, userInfo) => {
+        console.log('🔔 showAuthUI callback received:', isAuthenticated, userInfo);
+        console.log('🔍 Callback parameters check:', { isAuthenticated, hasUserInfo: !!userInfo });
+        // setShowDynamicUserProfile(false);
+        
         if (isAuthenticated && userInfo) {
+          console.log('🔍 Inside auth callback block, parsing credentials...');
           // Find wallet credential (blockchain format)
           const walletCredential = userInfo?.verifiedCredentials?.find(cred => cred.format === 'blockchain');
           // Find email credential (email format)  
           const emailCredential = userInfo?.verifiedCredentials?.find(cred => cred.format === 'email');
           
+          console.log('🔍 Parsed credentials:', { walletCredential, emailCredential });
+          
           const walletAddress = walletCredential?.address || '';
           const userName = emailCredential?.email || userInfo?.email || '';
           
-          console.log('🔔 Setting React state from auth listener:', { walletAddress, userName });
+          console.log('🔔 Setting React state from showAuthUI callback:', { walletAddress, userName });
+          
+          // Authenticate with backend to get JWT token
+          await authenticateUser({
+            wallet_address: walletAddress,
+            auth_type: 'wallet',
+            name: userName,
+          });
+          
           setWalletAddress(walletAddress);
           setUserName(userName);
-          setIsAuthenticated(true);
           
+          console.log('🔍 About to save to AsyncStorage...');
           // Save to storage for next app launch
-          AsyncStorage.setItem('dynamic_wallet_address', walletAddress);
-          AsyncStorage.setItem('user_name', userName);
+          await AsyncStorage.setItem('dynamic_wallet_address', walletAddress);
+          await AsyncStorage.setItem('user_name', userName);
+
+          console.log('🔍 Auth result in showAuthUI callback:', { walletAddress, userName, isAuthenticated, userInfo });
           
           authResolver(true);
         }
       });
+
+      // Wait for auth success event or timeout
+      const timeoutPromise = new Promise<boolean>((resolve) => {
+        setTimeout(() => resolve(false), 5000); // 5 second timeout
+      });
       
-      try {
-        // Show auth UI - state updates now handled in addAuthStateListener
-        await dynamicClientService.showAuthUI(async (isAuthenticated, userInfo) => {
-          console.log('🔔 showAuthUI callback received:', isAuthenticated);
-          setShowDynamicUserProfile(false);
-          // State updates (setWalletAddress, setUserName, setIsAuthenticated) are handled in addAuthStateListener
-        });
-        
-
-        
-        // Wait for auth success event or timeout
-        const timeoutPromise = new Promise<boolean>((resolve) => {
-          setTimeout(() => resolve(false), 10000); // 10 second timeout
-        });
-
-
-        
-        const authResult = await Promise.race([authPromise, timeoutPromise]);
-        console.log('🔍 Auth result:', authResult);
-        
-      } finally {
-        removeListener();
+      const authResult = await Promise.race([authPromise, timeoutPromise]);
+      console.log('🔍 Auth result:', authResult);
+      
+      // If auth succeeded via callback, return true early
+      if (authResult) {
+        return true;
       }
 
       dynamicClientService.refreshClient();

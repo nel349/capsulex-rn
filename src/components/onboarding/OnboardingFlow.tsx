@@ -62,9 +62,9 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
         
         // Navigation will be handled by useEffect when auth state changes
       } catch (error) {
-        console.error('🔍 iOS Get Started - Sign in failed:', error);
-        showError(error instanceof Error ? error.message : 'Sign in failed');
-        setCurrentStep('welcome');
+        // console.error('🔍 iOS Get Started - Sign in failed:', error);
+        // showError(error instanceof Error ? error.message : 'Sign in failed');
+        // setCurrentStep('welcome');
       }
     }
   };

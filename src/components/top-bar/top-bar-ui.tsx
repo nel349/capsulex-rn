@@ -8,7 +8,7 @@ import { dynamicClient } from '../../../App';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useCluster } from '../cluster/cluster-data-access';
 
-export function TopBarWalletButton({}: {}) {
+export function TopBarWalletButton() {
   // const { connect } = useDualAuth();
   return (
     <View>
@@ -23,7 +23,6 @@ export function TopBarPrivyButton() {
       await dynamicClient.ui.auth.show();
       // Alert.alert('Success', 'Successfully connected with Privy!');
     } catch (error) {
-      console.error('Privy login error:', error);
       Alert.alert('Login Error', 'Failed to connect with Privy');
     }
   };
@@ -55,7 +54,6 @@ export function TopBarWalletMenu() {
   const { selectedAccount } = useAuthorization();
   const { getExplorerUrl } = useCluster();
   const [visible, setVisible] = useState(false);
-  const openMenu = () => setVisible(true);
   const closeMenu = () => setVisible(false);
   // const { disconnect } = useMobileWallet();
 

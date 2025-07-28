@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 
-import { useDualAuth } from '../../providers/DualAuthProvider';
-
 interface SignUpScreenProps {
+  // eslint-disable-next-line no-unused-vars
   onSubmit: (name: string, email: string) => void;
   onBack: () => void;
 }

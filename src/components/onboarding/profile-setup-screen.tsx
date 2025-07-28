@@ -40,14 +40,8 @@ export function ProfileSetupScreen({
     setIsLoading(true);
 
     try {
-      console.log('🔄 Updating user profile:', {
-        walletAddress,
-        name: name.trim(),
-      });
-
       // User is already registered and authenticated, just update the name
       // TODO: Add updateUser API call when needed
-      console.log('✅ User profile updated with name:', name.trim());
 
       showSuccess(
         `Welcome to CapsuleX, ${name.trim()}! Profile setup complete!`

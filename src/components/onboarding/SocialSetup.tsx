@@ -3,11 +3,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, Text } from 'react-native-paper';
 
-import { useDualAuth } from '../../providers/DualAuthProvider';
-
-interface SocialSetupProps {}
-
-export function SocialSetup({}: SocialSetupProps) {
+export function SocialSetup() {
   const [isConnecting, setIsConnecting] = useState(false);
   const navigation = useNavigation();
 

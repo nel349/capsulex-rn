@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
@@ -9,14 +8,11 @@ import { useDualAuth } from '../../providers/DualAuthProvider';
 import { AppSnackbar } from '../ui/AppSnackbar';
 
 import { SignUpScreen } from './SignUpScreen';
-import { SocialSetup } from './SocialSetup';
 import { WelcomeScreen } from './WelcomeScreen';
-
-interface OnboardingFlowProps {}
 
 type OnboardingStep = 'welcome' | 'signup' | 'connecting' | 'social';
 
-export function OnboardingFlow({}: OnboardingFlowProps) {
+export function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const { signIn, signUp, isAuthenticated, walletAddress } = useDualAuth();
   const { snackbar, showError, showInfo, hideSnackbar } = useSnackbar();
@@ -53,11 +49,8 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
     } else {
       // for ios, we should be able to call the signin function
       try {
-        console.log('🔍 iOS Get Started - Starting sign in flow');
         setCurrentStep('connecting');
         await signIn();
-        console.log('🔍 iOS Get Started - Sign in completed successfully');
-
         // Navigation will be handled by useEffect when auth state changes
       } catch (error) {
         // console.error('🔍 iOS Get Started - Sign in failed:', error);
@@ -96,7 +89,7 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
       await signUp(name, email);
       // Only navigate if we're still in the connecting step (user hasn't navigated away)
       if (currentStep === 'connecting') {
-        navigation.navigate('SocialSetup' as never);
+        navigation.navigate('HomeStack' as never);
       }
     } catch (error) {
       console.error('Signup failed:', error);
@@ -105,21 +98,8 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
     }
   };
 
-  const handleSocialConnect = async () => {
-    // TODO: Implement X/Twitter OAuth integration
-    // Navigate directly to main app after social connect
-    navigation.navigate('HomeStack' as never);
-  };
-
-  const handleSocialSkip = () => {
-    // Navigate directly to main app after skipping social
-    navigation.navigate('HomeStack' as never);
-  };
-
   const handleBack = () => {
-    if (currentStep === 'social') {
-      setCurrentStep('signup');
-    } else if (currentStep === 'signup') {
+    if (currentStep === 'signup') {
       setCurrentStep('welcome');
     } else if (currentStep === 'connecting') {
       setCurrentStep('welcome');
@@ -149,15 +129,6 @@ export function OnboardingFlow({}: OnboardingFlowProps) {
             </Text>
             <Text variant="bodyLarge" style={styles.connectingSubtitle}>
               Please approve the connection
-            </Text>
-          </View>
-        );
-
-      case 'social':
-        return (
-          <View style={styles.centerContainer}>
-            <Text variant="headlineMedium" style={styles.connectingTitle}>
-              Redirecting to social setup...
             </Text>
           </View>
         );

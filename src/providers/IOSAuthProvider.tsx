@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
 import { Platform } from 'react-native';
+
 import { useAuthService } from '../services/authService';
 import { dynamicClientService } from '../services/dynamicClientService';
 

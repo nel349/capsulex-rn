@@ -162,9 +162,7 @@ export function CreateCapsuleScreen() {
     setShowTimePicker(true);
   };
 
-  const attemptReconnectionAndRetry = async (
-    _originalError: Error
-  ): Promise<boolean> => {
+  const attemptReconnectionAndRetry = async (): Promise<boolean> => {
     try {
       showInfo('Attempting to reconnect your wallet...');
       await connectWallet();
@@ -194,7 +192,7 @@ export function CreateCapsuleScreen() {
     }
   };
 
-  const handleCreateSocialPost = async (_isRetry: boolean = false) => {
+  const handleCreateSocialPost = async () => {
     try {
       console.log('📱 Creating social post...');
 
@@ -264,7 +262,7 @@ export function CreateCapsuleScreen() {
 
     // Handle social post mode differently
     if (createMode === 'social_post') {
-      return handleCreateSocialPost(isRetry);
+      return handleCreateSocialPost();
     }
 
     try {
@@ -422,7 +420,7 @@ export function CreateCapsuleScreen() {
         error.message.includes('wallet connection has expired')
       ) {
         // Attempt reconnection and retry
-        const reconnectionSuccess = await attemptReconnectionAndRetry(error);
+        const reconnectionSuccess = await attemptReconnectionAndRetry();
         if (reconnectionSuccess) {
           // Retry the operation
           return handleCreateCapsule(true);

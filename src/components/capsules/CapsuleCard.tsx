@@ -22,7 +22,7 @@ interface CapsuleCardProps {
   capsule: EnhancedCapsule;
   type: 'ready' | 'pending' | 'revealed';
   isRevealing: boolean;
-  onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
+  onRevealCapsule?: (targetCapsule: CapsuleWithStatus) => void;
   glowAnim?: Animated.Value;
   width: number;
 }
@@ -95,13 +95,13 @@ const styles = StyleSheet.create({
   },
   card: {
     ...components.premiumCard,
-    height: 350, // Increased from 240 to accommodate all content
+    minHeight: 400, // Minimum height, but can grow
     overflow: 'visible',
   },
   cardContent: {
     flex: 1,
-    justifyContent: 'space-between',
     padding: spacing.md,
+    gap: spacing.sm,
   },
 
   // Card Type Styles

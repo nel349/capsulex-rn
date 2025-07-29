@@ -5,9 +5,9 @@ export const animations = {
     normal: 300,
     slow: 500,
   },
-  
+
   easing: {
     easeInOut: 'ease-in-out',
     easeOut: 'ease-out',
   },
-} as const; 
+} as const;

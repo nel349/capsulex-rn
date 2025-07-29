@@ -13,7 +13,7 @@ export const typography = {
     lineHeight: 36,
     letterSpacing: -0.5,
   },
-  
+
   // Headlines
   headlineLarge: {
     fontSize: 24,
@@ -30,7 +30,7 @@ export const typography = {
     fontWeight: '600' as const,
     lineHeight: 24,
   },
-  
+
   // Titles
   titleLarge: {
     fontSize: 16,
@@ -47,7 +47,7 @@ export const typography = {
     fontWeight: '600' as const,
     lineHeight: 16,
   },
-  
+
   // Body text
   bodyLarge: {
     fontSize: 16,
@@ -64,7 +64,7 @@ export const typography = {
     fontWeight: 'normal' as const,
     lineHeight: 16,
   },
-  
+
   // Labels
   labelLarge: {
     fontSize: 14,
@@ -84,4 +84,4 @@ export const typography = {
     lineHeight: 14,
     letterSpacing: 0.1,
   },
-} as const; 
+} as const;

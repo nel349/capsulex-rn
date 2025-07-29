@@ -17,7 +17,7 @@ export function CapsuleCardHeader({ type }: CapsuleCardHeaderProps) {
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
     };
-    
+
     switch (type) {
       case 'ready':
         return { ...baseChipStyle, ...styles.readyChip };
@@ -45,14 +45,17 @@ export function CapsuleCardHeader({ type }: CapsuleCardHeaderProps) {
 
   return (
     <View style={styles.header}>
-      <Chip 
-        mode="flat" 
-        style={getChipStyle()} 
-        textStyle={[styles.chipText, { 
-          color: colors.text,
-          fontSize: 12,
-          fontWeight: 'bold',
-        }]}
+      <Chip
+        mode="flat"
+        style={getChipStyle()}
+        textStyle={[
+          styles.chipText,
+          {
+            color: colors.text,
+            fontSize: 12,
+            fontWeight: 'bold',
+          },
+        ]}
       >
         {getChipLabel()}
       </Chip>

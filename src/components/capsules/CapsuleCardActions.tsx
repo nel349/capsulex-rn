@@ -4,11 +4,12 @@ import { Button } from 'react-native-paper';
 
 import type { CapsuleWithStatus } from '../../services/capsuleApi';
 import { colors, spacing, borderRadius } from '../../theme';
-import type { EnhancedCapsule, CapsuleCardBaseProps } from './types';
+
+import type { CapsuleCardBaseProps } from './types';
 
 interface CapsuleCardActionsProps extends CapsuleCardBaseProps {
   isRevealing: boolean;
-  onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
+  onRevealCapsule?: (targetCapsule: CapsuleWithStatus) => void;
 }
 
 export function CapsuleCardActions({
@@ -17,23 +18,24 @@ export function CapsuleCardActions({
   isRevealing,
   onRevealCapsule,
 }: CapsuleCardActionsProps) {
+  // Only render actions section when there's actually content to show
+  if (type !== 'ready' || !onRevealCapsule) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
-      {/* Action Button for Ready Cards */}
-      {type === 'ready' && onRevealCapsule && (
-        <Button
-          mode="contained"
-          onPress={() => onRevealCapsule(capsule)}
-          style={styles.revealButton}
-          contentStyle={styles.revealButtonContent}
-          loading={isRevealing}
-          disabled={isRevealing}
-          buttonColor={colors.premiumOrange}
-        >
-          {isRevealing ? '⏳ Revealing...' : '🚀 REVEAL NOW!'}
-        </Button>
-      )}
+      <Button
+        mode="contained"
+        onPress={() => onRevealCapsule(capsule)}
+        style={styles.revealButton}
+        contentStyle={styles.revealButtonContent}
+        loading={isRevealing}
+        disabled={isRevealing}
+        buttonColor={colors.premiumOrange}
+      >
+        {isRevealing ? '⏳ Revealing...' : '🚀 REVEAL NOW!'}
+      </Button>
     </View>
   );
 }

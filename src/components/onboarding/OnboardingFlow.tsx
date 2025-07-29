@@ -5,13 +5,18 @@ import { Text } from 'react-native-paper';
 
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { useDualAuth } from '../../providers/DualAuthProvider';
+import { dynamicClientService } from '../../services/dynamicClientService';
 import { AppSnackbar } from '../ui/AppSnackbar';
 
 import { SignUpScreen } from './SignUpScreen';
 import { WelcomeScreen } from './WelcomeScreen';
-import { dynamicClientService } from '../../services/dynamicClientService';
 
-type OnboardingStep = 'welcome' | 'signup' | 'connecting' | 'social' | 'complete';
+type OnboardingStep =
+  | 'welcome'
+  | 'signup'
+  | 'connecting'
+  | 'social'
+  | 'complete';
 
 export function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');

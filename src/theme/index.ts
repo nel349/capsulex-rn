@@ -9,13 +9,13 @@ export { components } from './components';
 export { animations } from './animations';
 
 // Import modules for theme object
-import { colors } from './colors';
-import { typography } from './typography';
-import { spacing, borderRadius } from './spacing';
-import { shadows } from './shadows';
-import { layout } from './layout';
-import { components } from './components';
 import { animations } from './animations';
+import { colors } from './colors';
+import { components } from './components';
+import { layout } from './layout';
+import { shadows } from './shadows';
+import { spacing, borderRadius } from './spacing';
+import { typography } from './typography';
 
 // Create a comprehensive theme object
 export const theme = {
@@ -29,4 +29,4 @@ export const theme = {
   animations,
 } as const;
 
-export default theme; 
+export default theme;

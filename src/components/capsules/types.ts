@@ -21,4 +21,4 @@ export interface EnhancedCapsule extends CapsuleWithStatus {
 export interface CapsuleCardBaseProps {
   capsule: EnhancedCapsule;
   type: 'ready' | 'pending' | 'revealed';
-} 
+}

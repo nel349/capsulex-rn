@@ -4,12 +4,12 @@ import React from 'react';
 import { useTheme } from 'react-native-paper';
 
 import { TopBar } from '../components/top-bar/top-bar-feature';
-import { colors } from '../theme';
 import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
 import { DiscoverScreen } from '../screens/DiscoverScreen';
 import { HubScreen } from '../screens/HubScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
 

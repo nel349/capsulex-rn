@@ -21,7 +21,7 @@ export const shadows = {
     shadowRadius: 16,
     elevation: 12,
   },
-  
+
   // Premium glow effects
   premiumGlow: {
     shadowColor: '#E6B800',
@@ -30,7 +30,7 @@ export const shadows = {
     shadowRadius: 16,
     elevation: 8,
   },
-  
+
   readyGlow: {
     shadowColor: '#FF6B35',
     shadowOffset: { width: 0, height: 0 },
@@ -38,4 +38,4 @@ export const shadows = {
     shadowRadius: 12,
     elevation: 8,
   },
-} as const; 
+} as const;

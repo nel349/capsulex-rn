@@ -38,7 +38,14 @@ import { useCapsuleService } from '../services/capsuleService';
 import { dynamicClientService } from '../services/dynamicClientService';
 import { useBalance } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
-import { colors, typography, spacing, layout, shadows, components } from '../theme';
+import {
+  colors,
+  typography,
+  spacing,
+  layout,
+  shadows,
+  components,
+} from '../theme';
 import type { Capsule } from '../types/api';
 
 // Enhanced capsule type that merges blockchain and database data
@@ -93,7 +100,9 @@ export function HubScreen() {
   // Authentication guard - navigate to onboarding if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      console.log('🔍 HubScreen - User not authenticated, navigating to onboarding screen');
+      console.log(
+        '🔍 HubScreen - User not authenticated, navigating to onboarding screen'
+      );
       navigation.navigate('Onboarding' as never);
     }
   }, [isAuthenticated, navigation]);
@@ -198,7 +207,7 @@ export function HubScreen() {
       // Fetch database data
       const databaseCapsules = await getMyCapsules();
       // console.log(`🔍 HubScreen - Found ${databaseCapsules.length} database capsules`);
-      
+
       // Debug: Log first few database capsules to understand structure
       // databaseCapsules.slice(0, 3).forEach((dbCapsule, index) => {
       //   console.log(`🔍 Database capsule ${index}:`, {
@@ -234,10 +243,12 @@ export function HubScreen() {
           };
 
           // Try direct matching by various keys first
-          let matchedCapsule = databaseMap.get(blockchainCapsule.publicKey);
-          
+          const matchedCapsule = databaseMap.get(blockchainCapsule.publicKey);
+
           if (matchedCapsule) {
-            console.log(`✅ HubScreen - Matched by publicKey: ${blockchainCapsule.publicKey}`);
+            console.log(
+              `✅ HubScreen - Matched by publicKey: ${blockchainCapsule.publicKey}`
+            );
             enhancedCapsule.databaseData = matchedCapsule;
             return enhancedCapsule;
           }
@@ -250,7 +261,7 @@ export function HubScreen() {
           for (const dbCapsule of databaseCapsules) {
             const dbTime = new Date(dbCapsule.created_at).getTime() / 1000;
             const timeDiff = Math.abs(blockchainTime - dbTime);
-            
+
             if (timeDiff < smallestTimeDiff) {
               smallestTimeDiff = timeDiff;
               bestMatch = dbCapsule;

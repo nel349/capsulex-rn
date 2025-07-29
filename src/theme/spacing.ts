@@ -7,7 +7,7 @@ export const spacing = {
   xl: 32,
   xxl: 48,
   xxxl: 64,
-  
+
   // Component specific spacing
   cardPadding: 20,
   sectionPadding: 24,
@@ -22,4 +22,4 @@ export const borderRadius = {
   lg: 16,
   xl: 20,
   full: 50,
-} as const; 
+} as const;

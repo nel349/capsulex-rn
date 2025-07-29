@@ -15,7 +15,7 @@ interface WelcomeScreenProps {
 export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
   // snackbar for errors
   const { snackbar, hideSnackbar } = useSnackbar();
-  
+
   // State to control video rendering and playback to ensure main thread initialization
   const [showVideo, setShowVideo] = useState(false);
   const [shouldPlayVideo, setShouldPlayVideo] = useState(false);

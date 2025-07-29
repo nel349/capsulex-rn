@@ -4,7 +4,8 @@ import { Text, ProgressBar } from 'react-native-paper';
 
 import { CapsuleApiService } from '../../services/capsuleApi';
 import { colors, spacing, typography, borderRadius } from '../../theme';
-import type { EnhancedCapsule, CapsuleCardBaseProps } from './types';
+
+import type { CapsuleCardBaseProps } from './types';
 
 interface CapsuleCardContentProps extends CapsuleCardBaseProps {}
 
@@ -26,16 +27,22 @@ export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
     // First, try to get actual text content from contentStorage
     if (capsule.account?.contentStorage?.text) {
       const textContent = capsule.account.contentStorage.text;
-      
+
       // Handle different text content structures
       if (typeof textContent === 'string') {
-        return textContent.length > 120 ? `${textContent.substring(0, 120)}...` : textContent;
+        return textContent.length > 120
+          ? `${textContent.substring(0, 120)}...`
+          : textContent;
       } else if (typeof textContent === 'object' && textContent.content) {
         const content = textContent.content;
-        return content.length > 120 ? `${content.substring(0, 120)}...` : content;
+        return content.length > 120
+          ? `${content.substring(0, 120)}...`
+          : content;
       } else if (typeof textContent === 'object' && textContent.text) {
         const content = textContent.text;
-        return content.length > 120 ? `${content.substring(0, 120)}...` : content;
+        return content.length > 120
+          ? `${content.substring(0, 120)}...`
+          : content;
       }
     }
 
@@ -72,43 +79,12 @@ export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
     return `📦 Time capsule created on ${new Date(capsule.account.createdAt * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   };
 
-  // Helper function to get content label
-  const getContentLabel = (): string => {
-    // Check if there's media content
-    const hasMedia = capsule.databaseData?.has_media || 
-                    (capsule.databaseData?.media_urls && capsule.databaseData.media_urls.length > 0);
-
-    // If we have actual text content, show with type indicator
-    if (capsule.account?.contentStorage?.text) {
-      return hasMedia ? '📝🎬 MIXED CONTENT:' : '📝 TEXT CONTENT:';
-    }
-
-    // Show media type if available
-    if (hasMedia) {
-      if (type === 'revealed') {
-        return '🎬 REVEALED MEDIA:';
-      } else if (type === 'ready') {
-        return '🎬 MEDIA READY:';
-      } else {
-        return '🎬 MEDIA WAITING:';
-      }
-    }
-
-    // Show different labels based on type and content availability
-    if (type === 'revealed') {
-      return '🎉 REVEALED CONTENT:';
-    } else if (type === 'ready') {
-      return '🔓 READY TO REVEAL:';
-    } else {
-      return '⏳ WAITING TO REVEAL:';
-    }
-  };
 
   // Helper function to get content text styling
   const getContentTextStyle = () => {
     // If we have actual readable text content, use primary text styling
     if (capsule.account?.contentStorage?.text) {
-      return { 
+      return {
         color: colors.text,
         fontWeight: '400' as const,
       };
@@ -174,13 +150,13 @@ export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
   const getTimeUntilReveal = (): string => {
     const now = Math.floor(Date.now() / 1000);
     const timeLeft = capsule.account.revealDate - now;
-    
+
     if (timeLeft <= 0) return 'Ready now!';
-    
+
     const days = Math.floor(timeLeft / 86400);
     const hours = Math.floor((timeLeft % 86400) / 3600);
     const minutes = Math.floor((timeLeft % 3600) / 60);
-    
+
     if (days > 0) {
       return `${days}d ${hours}h`;
     } else if (hours > 0) {
@@ -197,71 +173,74 @@ export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
         <View style={styles.metadataRow}>
           <Text style={styles.metadataLabel}>ID:</Text>
           <Text style={styles.metadataValue}>
-            {capsule.databaseData?.capsule_id 
-              ? capsule.databaseData.capsule_id.slice(0, 8) + '...' + capsule.databaseData.capsule_id.slice(-4)
-              : capsule.publicKey.slice(0, 8) + '...' + capsule.publicKey.slice(-4)
-            }
+            {capsule.databaseData?.capsule_id
+              ? capsule.databaseData.capsule_id.slice(0, 8) +
+                '...' +
+                capsule.databaseData.capsule_id.slice(-4)
+              : capsule.publicKey.slice(0, 8) +
+                '...' +
+                capsule.publicKey.slice(-4)}
           </Text>
         </View>
         <View style={styles.metadataRow}>
           <Text style={styles.metadataLabel}>CREATED:</Text>
           <Text style={styles.metadataValue}>
-            {new Date(capsule.account.createdAt * 1000).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            })}
+            {new Date(capsule.account.createdAt * 1000).toLocaleDateString(
+              'en-US',
+              {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              }
+            )}
           </Text>
         </View>
       </View>
 
       {/* Content Preview */}
       <View style={styles.contentPreview}>
-        <Text variant="bodySmall" style={styles.contentLabel}>
-          {getContentLabel()}
-        </Text>
         <Text
           variant="bodyMedium"
           style={[styles.contentText, getContentTextStyle()]}
-          numberOfLines={3}
-          ellipsizeMode="tail"
         >
           {getContentPreview()}
         </Text>
       </View>
 
-      {/* Reveal Date Section */}
-      <View style={styles.dateSection}>
-        <Text variant="bodySmall" style={styles.dateLabel}>
-          {type === 'revealed' ? '✅ REVEALED ON:' : '🕒 REVEALS ON:'}
-        </Text>
-        <Text variant="titleSmall" style={styles.dateText}>
-          {new Date(capsule.account.revealDate * 1000).toLocaleDateString(
-            'en-US',
-            {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            }
+      {/* Reveal Date Section - only show for pending and revealed cards */}
+      {type !== 'ready' && (
+        <View style={styles.dateSection}>
+          <Text variant="bodySmall" style={styles.dateLabel}>
+            {type === 'revealed' ? '✅ REVEALED ON:' : '🕒 REVEALS ON:'}
+          </Text>
+          <Text variant="titleSmall" style={styles.dateText}>
+            {new Date(capsule.account.revealDate * 1000).toLocaleDateString(
+              'en-US',
+              {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              }
+            )}
+          </Text>
+          {type === 'pending' && (
+            <View style={styles.progressSection}>
+              <Text style={styles.countdownText}>
+                {getTimeUntilReveal()} remaining
+              </Text>
+              <ProgressBar
+                progress={CapsuleApiService.getCountdownProgress(
+                  capsule.account.createdAt,
+                  capsule.account.revealDate
+                )}
+                style={styles.progressBar}
+                color={colors.primary}
+              />
+            </View>
           )}
-        </Text>
-        {type === 'pending' && (
-          <View style={styles.progressSection}>
-            <Text style={styles.countdownText}>
-              {getTimeUntilReveal()} remaining
-            </Text>
-            <ProgressBar
-              progress={CapsuleApiService.getCountdownProgress(
-                capsule.account.createdAt,
-                capsule.account.revealDate
-              )}
-              style={styles.progressBar}
-              color={colors.primary}
-            />
-          </View>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -303,17 +282,8 @@ const styles = StyleSheet.create({
 
   // Content Preview
   contentPreview: {
-    flex: 1,
     marginBottom: spacing.md,
     minHeight: 70,
-  },
-  contentLabel: {
-    ...typography.labelSmall,
-    color: colors.textSecondary, // Brighter for better contrast
-    marginBottom: spacing.xs,
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
   },
   contentText: {
     ...typography.bodyMedium,
@@ -326,7 +296,7 @@ const styles = StyleSheet.create({
   dateSection: {
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
   },
   dateLabel: {
     ...typography.labelSmall,

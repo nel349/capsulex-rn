@@ -26,6 +26,7 @@ import {
   Avatar,
 } from 'react-native-paper';
 
+import { HorizontalCapsuleList } from '../components/capsules';
 import { useDualAuth } from '../providers';
 import type {
   CapsuleWithStatus,
@@ -36,6 +37,7 @@ import { useCapsuleService } from '../services/capsuleService';
 import { dynamicClientService } from '../services/dynamicClientService';
 import { useBalance } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import { colors, typography, spacing, layout, shadows, components } from '../theme';
 import type { Capsule } from '../types/api';
 
 // Enhanced capsule type that merges blockchain and database data
@@ -461,7 +463,7 @@ export function HubScreen() {
               </Text>
               <Text
                 variant="headlineSmall"
-                style={[styles.statValue, { color: '#FF6B35' }]}
+                style={[styles.statValue, { color: colors.premiumOrange }]}
               >
                 {stats.ready_to_reveal}
               </Text>
@@ -469,174 +471,34 @@ export function HubScreen() {
           </Card>
         </View>
 
-        {/* Ready to Reveal Section */}
+        {/* Ready to Reveal Section - Netflix Style */}
         {readyCapsules.length > 0 && (
-          <View style={styles.section}>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <Text variant="titleLarge" style={styles.sectionTitleReady}>
-                🔥 Ready to Reveal ({readyCapsules.length})
-              </Text>
-            </Animated.View>
-
-            {readyCapsules.map(capsule => (
-              <Animated.View
-                key={capsule.publicKey}
-                style={[
-                  styles.readyCard,
-                  {
-                    shadowColor: '#FF6B35',
-                    shadowOpacity: glowAnim,
-                    elevation: 8,
-                  },
-                  revealingCapsules.has(capsule.publicKey) &&
-                    styles.revealingCard,
-                ]}
-              >
-                <Card
-                  style={[styles.capsuleCard, styles.readyCardInner]}
-                  onPress={() =>
-                    navigation.navigate('CapsuleDetails', { capsule: capsule })
-                  }
-                >
-                  <Card.Content>
-                    <View style={styles.capsuleHeader}>
-                      <Chip
-                        mode="flat"
-                        style={styles.readyChip}
-                        textStyle={styles.readyChipText}
-                      >
-                        🔥 READY NOW
-                      </Chip>
-                      <Text variant="bodySmall" style={styles.timeText}>
-                        {new Date(
-                          capsule.account.revealDate * 1000
-                        ).toLocaleDateString()}
-                      </Text>
-                    </View>
-
-                    <Text variant="bodyMedium" style={styles.capsuleContent}>
-                      Content:{' '}
-                      {capsule.account.encryptedContent.substring(0, 50)}...
-                    </Text>
-
-                    <Button
-                      mode="contained"
-                      onPress={() => handleRevealCapsule(capsule)}
-                      style={styles.revealButton}
-                      contentStyle={styles.revealButtonContent}
-                      loading={revealingCapsules.has(capsule.publicKey)}
-                      disabled={revealingCapsules.has(capsule.publicKey)}
-                    >
-                      {revealingCapsules.has(capsule.publicKey)
-                        ? '⏳ Revealing...'
-                        : '🚀 REVEAL NOW!'}
-                    </Button>
-                  </Card.Content>
-                </Card>
-              </Animated.View>
-            ))}
-          </View>
+          <HorizontalCapsuleList
+            title="🔥 Ready to Reveal"
+            capsules={readyCapsules}
+            type="ready"
+            onRevealCapsule={handleRevealCapsule}
+            revealingCapsules={revealingCapsules}
+            glowAnim={glowAnim}
+          />
         )}
 
-        {/* Pending Capsules Section */}
+        {/* Pending Capsules Section - Netflix Style */}
         {pendingCapsules.length > 0 && (
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              ⏳ Pending ({pendingCapsules.length})
-            </Text>
-
-            {pendingCapsules.map(capsule => {
-              const timeLeft = capsule.timeToReveal || 0;
-              const progress = CapsuleApiService.getCountdownProgress(
-                capsule.account.createdAt,
-                capsule.account.revealDate
-              );
-
-              return (
-                <Card
-                  key={capsule.publicKey}
-                  style={styles.capsuleCard}
-                  onPress={() =>
-                    navigation.navigate('CapsuleDetails', { capsule: capsule })
-                  }
-                >
-                  <Card.Content>
-                    <View style={styles.capsuleHeader}>
-                      <Chip mode="outlined" style={styles.pendingChip}>
-                        ⏳ Pending
-                      </Chip>
-                      <Text variant="bodySmall" style={styles.timeText}>
-                        {new Date(
-                          capsule.account.revealDate * 1000
-                        ).toLocaleDateString()}
-                      </Text>
-                    </View>
-
-                    <Text variant="bodyMedium" style={styles.capsuleContent}>
-                      Content:{' '}
-                      {capsule.account.encryptedContent.substring(0, 50)}...
-                    </Text>
-
-                    <View style={styles.countdownContainer}>
-                      <Text variant="bodySmall" style={styles.countdownLabel}>
-                        Reveals in:{' '}
-                        {CapsuleApiService.formatTimeUntil(timeLeft)}
-                      </Text>
-                      <ProgressBar
-                        progress={progress}
-                        style={styles.progressBar}
-                        color="#2196F3"
-                      />
-                    </View>
-                  </Card.Content>
-                </Card>
-              );
-            })}
-          </View>
+          <HorizontalCapsuleList
+            title="⏳ Pending"
+            capsules={pendingCapsules}
+            type="pending"
+          />
         )}
 
-        {/* Revealed Capsules Section */}
+        {/* Revealed Capsules Section - Netflix Style */}
         {revealedCapsules.length > 0 && (
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              ✅ Revealed ({revealedCapsules.length})
-            </Text>
-
-            {revealedCapsules.map(capsule => (
-              <Card
-                key={capsule.publicKey}
-                style={styles.capsuleCard}
-                onPress={() =>
-                  navigation.navigate('CapsuleDetails', { capsule: capsule })
-                }
-              >
-                <Card.Content>
-                  <View style={styles.capsuleHeader}>
-                    <Chip mode="flat" style={styles.revealedChip}>
-                      ✅ Revealed
-                    </Chip>
-                    <IconButton
-                      icon="share"
-                      size={20}
-                      onPress={() => Alert.alert('Share', 'Open Twitter post')}
-                    />
-                  </View>
-
-                  <Text variant="bodyMedium" style={styles.capsuleContent}>
-                    Content: {capsule.account.encryptedContent.substring(0, 50)}
-                    ...
-                  </Text>
-
-                  <Text variant="bodySmall" style={styles.revealedText}>
-                    Revealed on{' '}
-                    {new Date(
-                      capsule.account.revealDate * 1000
-                    ).toLocaleDateString()}
-                  </Text>
-                </Card.Content>
-              </Card>
-            ))}
-          </View>
+          <HorizontalCapsuleList
+            title="✅ Revealed"
+            capsules={revealedCapsules}
+            type="revealed"
+          />
         )}
 
         {/* Empty State */}
@@ -667,157 +529,85 @@ export function HubScreen() {
 
 const styles = StyleSheet.create({
   screenContainer: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
+    ...layout.screenContainer,
   },
   centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+    ...layout.centered,
+    padding: spacing.sectionPadding,
   },
+  // Netflix-inspired header
   header: {
-    padding: 20,
-    backgroundColor: 'white',
+    ...layout.heroSection,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   title: {
-    fontWeight: 'bold',
-    marginBottom: 4,
-    color: '#1a1a1a',
+    ...typography.headlineLarge,
+    marginBottom: spacing.xs,
+    color: colors.text,
   },
   subtitle: {
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
   },
   loadingText: {
-    marginTop: 16,
-    color: '#666',
+    ...typography.bodyMedium,
+    marginTop: spacing.md,
+    color: colors.textSecondary,
   },
   walletIcon: {
-    backgroundColor: '#2196F3',
-    marginBottom: 16,
+    backgroundColor: colors.primary,
+    marginBottom: spacing.md,
   },
   errorTitle: {
-    color: '#d32f2f',
-    marginBottom: 8,
+    ...typography.headlineSmall,
+    color: colors.error,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   errorSubtitle: {
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   retryButton: {
-    backgroundColor: '#2196F3',
+    ...components.primaryButton,
   },
+  // Premium stats section
   statsContainer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    ...layout.contentSection,
+    gap: spacing.md,
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'white',
+    ...components.card,
   },
   statLabel: {
-    color: '#666',
-    marginBottom: 4,
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   statValue: {
-    fontWeight: 'bold',
-    color: '#2196F3',
+    ...typography.headlineSmall,
+    color: colors.primary,
   },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    marginBottom: 12,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  sectionTitleReady: {
-    marginBottom: 12,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    fontSize: 20,
-  },
-  capsuleCard: {
-    marginBottom: 12,
-    backgroundColor: 'white',
-  },
-  readyCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#FFF8F6', // Add solid background for efficient shadow rendering
-  },
-  readyCardInner: {
-    backgroundColor: '#FFF8F6',
-    borderColor: '#FF6B35',
-    borderWidth: 2,
-  },
-  capsuleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  readyChip: {
-    backgroundColor: '#FF6B35',
-  },
-  readyChipText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  pendingChip: {
-    backgroundColor: '#FFF3E0',
-    borderColor: '#FF9800',
-  },
-  revealedChip: {
-    backgroundColor: '#E8F5E8',
-    color: '#4CAF50',
-  },
-  timeText: {
-    color: '#666',
-  },
-  capsuleContent: {
-    marginBottom: 12,
-    lineHeight: 20,
-    color: '#333',
-  },
-  countdownContainer: {
-    marginTop: 8,
-  },
-  countdownLabel: {
-    color: '#666',
-    marginBottom: 4,
-  },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-  },
-  revealButton: {
-    backgroundColor: '#FF6B35',
-    marginTop: 8,
-  },
-  revealButtonContent: {
-    paddingVertical: 4,
-  },
-  revealedText: {
-    color: '#4CAF50',
-    marginTop: 4,
-  },
+
+  // Premium empty state
   emptyState: {
     alignItems: 'center',
-    padding: 48,
+    ...layout.premiumSpacing,
   },
   emptyTitle: {
-    marginBottom: 8,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    ...typography.headlineSmall,
+    marginBottom: spacing.sm,
+    color: colors.text,
   },
   emptySubtitle: {
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   bottomSpacing: {
@@ -825,12 +615,9 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#2196F3',
-  },
-  revealingCard: {
-    opacity: 0.7, // Make the card slightly transparent
-    backgroundColor: '#f0f0f0', // Slightly gray out the card
+    right: spacing.md,
+    bottom: spacing.md,
+    backgroundColor: colors.primary,
+    ...shadows.medium,
   },
 });

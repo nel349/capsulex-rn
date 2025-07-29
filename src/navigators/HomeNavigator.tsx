@@ -4,6 +4,7 @@ import React from 'react';
 import { useTheme } from 'react-native-paper';
 
 import { TopBar } from '../components/top-bar/top-bar-feature';
+import { colors } from '../theme';
 import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
 import { DiscoverScreen } from '../screens/DiscoverScreen';
 import { HubScreen } from '../screens/HubScreen';
@@ -68,11 +69,11 @@ export function HomeNavigator() {
               );
           }
         },
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.outline,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
         },
       })}
     >

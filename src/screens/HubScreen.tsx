@@ -481,12 +481,12 @@ export function HubScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text variant="headlineMedium" style={styles.title}>
-            Your Capsules 🗂️
+          <Text variant="headlineLarge" style={styles.title}>
+            Time Capsules
           </Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
+          <Text variant="bodyLarge" style={styles.subtitle}>
             {stats.ready_to_reveal > 0
-              ? `🔥 ${stats.ready_to_reveal} ready to reveal!`
+              ? `${stats.ready_to_reveal} ready to reveal`
               : `${stats.pending} pending • ${capsuleData?.total_capsules || 0} total`}
           </Text>
         </View>
@@ -519,10 +519,10 @@ export function HubScreen() {
           </Card>
         </View>
 
-        {/* Ready to Reveal Section - Netflix Style */}
+        {/* Ready to Reveal Section */}
         {readyCapsules.length > 0 && (
           <HorizontalCapsuleList
-            title="🔥 Ready to Reveal"
+            title="Ready to Reveal"
             capsules={readyCapsules}
             type="ready"
             onRevealCapsule={handleRevealCapsule}
@@ -531,19 +531,19 @@ export function HubScreen() {
           />
         )}
 
-        {/* Pending Capsules Section - Netflix Style */}
+        {/* Pending Capsules Section */}
         {pendingCapsules.length > 0 && (
           <HorizontalCapsuleList
-            title="⏳ Pending"
+            title="Pending"
             capsules={pendingCapsules}
             type="pending"
           />
         )}
 
-        {/* Revealed Capsules Section - Netflix Style */}
+        {/* Revealed Capsules Section */}
         {revealedCapsules.length > 0 && (
           <HorizontalCapsuleList
-            title="✅ Revealed"
+            title="Revealed"
             capsules={revealedCapsules}
             type="revealed"
           />
@@ -553,7 +553,7 @@ export function HubScreen() {
         {(!capsuleData || capsuleData.total_capsules === 0) && (
           <View style={styles.emptyState}>
             <Text variant="headlineSmall" style={styles.emptyTitle}>
-              No capsules yet 📭
+              No capsules yet
             </Text>
             <Text variant="bodyMedium" style={styles.emptySubtitle}>
               Create your first time capsule to get started
@@ -569,7 +569,7 @@ export function HubScreen() {
         icon="plus"
         style={styles.fab}
         onPress={handleCreateCapsule}
-        label="Create Capsule"
+        label="New Capsule"
       />
     </View>
   );

@@ -33,13 +33,13 @@ export function CapsuleCardHeader({ type }: CapsuleCardHeaderProps) {
   const getChipLabel = () => {
     switch (type) {
       case 'ready':
-        return '🔥 READY NOW';
+        return 'READY NOW';
       case 'pending':
-        return '⏳ Pending';
+        return 'PENDING';
       case 'revealed':
-        return '✅ Revealed';
+        return 'REVEALED';
       default:
-        return 'Unknown';
+        return 'UNKNOWN';
     }
   };
 

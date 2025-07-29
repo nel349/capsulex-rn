@@ -46,37 +46,37 @@ export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
       }
     }
 
-    // For revealed capsules, show more encouraging messages
+    // For revealed capsules, show professional messages
     if (type === 'revealed') {
       if (capsule.databaseData?.content_encrypted) {
         try {
           const parsed = JSON.parse(capsule.databaseData.content_encrypted);
           if (parsed.encryptedData) {
-            return '🎉 Your time capsule has been revealed! The encrypted content is now accessible and ready to be decrypted.';
+            return 'This time capsule has been revealed and is ready for decryption.';
           }
         } catch {
-          return '📖 Your time capsule content is now available to view in full detail.';
+          return 'This time capsule content is now available for viewing.';
         }
       }
-      return '✨ This time capsule has been successfully revealed! Tap to explore the full content.';
+      return 'This time capsule has been successfully revealed. Tap to view the full content.';
     }
 
-    // For ready capsules, show excitement
+    // For ready capsules, show professional message
     if (type === 'ready') {
-      return '🔥 This time capsule is ready to be revealed right now! Tap the reveal button to unlock your memories and see what you stored away.';
+      return 'This time capsule is ready to be revealed. Tap the reveal button to unlock the stored content.';
     }
 
-    // For pending capsules, show anticipation
+    // For pending capsules, show professional message
     if (type === 'pending') {
       const timeLeft = getTimeUntilReveal();
       if (capsule.databaseData?.content_encrypted) {
-        return `⏳ Your encrypted memories are safely stored and waiting. Just ${timeLeft} until you can reveal what you've preserved.`;
+        return `Your encrypted content is securely stored. Reveals in ${timeLeft}.`;
       }
-      return `🕰️ This time capsule is patiently waiting to be opened. The countdown continues with ${timeLeft} remaining.`;
+      return `This time capsule will be available for reveal in ${timeLeft}.`;
     }
 
     // Final fallback
-    return `📦 Time capsule created on ${new Date(capsule.account.createdAt * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+    return `Time capsule created on ${new Date(capsule.account.createdAt * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   };
 
 
@@ -211,7 +211,7 @@ export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
       {type !== 'ready' && (
         <View style={styles.dateSection}>
           <Text variant="bodySmall" style={styles.dateLabel}>
-            {type === 'revealed' ? '✅ REVEALED ON:' : '🕒 REVEALS ON:'}
+            {type === 'revealed' ? 'REVEALED ON:' : 'REVEALS ON:'}
           </Text>
           <Text variant="titleSmall" style={styles.dateText}>
             {new Date(capsule.account.revealDate * 1000).toLocaleDateString(

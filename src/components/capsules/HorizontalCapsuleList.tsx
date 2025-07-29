@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Text, Icon } from 'react-native-paper';
 
 import type { CapsuleWithStatus } from '../../services/capsuleApi';
 import { colors, typography, spacing } from '../../theme';
@@ -58,9 +58,16 @@ export function HorizontalCapsuleList({
     <View style={styles.container}>
       {/* Section Title */}
       <View style={styles.titleContainer}>
-        <Text variant="titleLarge" style={[styles.title, getTitleStyle(type)]}>
-          {title} ({sortedCapsules.length})
-        </Text>
+        <View style={styles.titleRow}>
+          <Icon
+            source={getIconForType(type)}
+            size={24}
+            color={getTitleStyle(type).color}
+          />
+          <Text variant="titleLarge" style={[styles.title, getTitleStyle(type)]}>
+            {title} ({sortedCapsules.length})
+          </Text>
+        </View>
       </View>
 
       {/* Horizontal Scrolling List */}
@@ -96,6 +103,20 @@ const getTitleStyle = (type: 'ready' | 'pending' | 'revealed') => {
   }
 };
 
+// Helper function for section icons
+const getIconForType = (type: 'ready' | 'pending' | 'revealed') => {
+  switch (type) {
+    case 'ready':
+      return 'flash';
+    case 'pending':
+      return 'clock-outline';
+    case 'revealed':
+      return 'check-circle';
+    default:
+      return 'archive';
+  }
+};
+
 const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.xl,
@@ -103,6 +124,11 @@ const styles = StyleSheet.create({
   titleContainer: {
     paddingHorizontal: spacing.screenPadding,
     marginBottom: spacing.md,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   title: {
     ...typography.titleLarge,

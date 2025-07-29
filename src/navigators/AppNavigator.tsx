@@ -43,7 +43,7 @@ type RootStackParamList = {
   SocialSetup: undefined;
   HomeStack: undefined;
   Home: undefined;
-  Settings: undefined;
+  NetworkSettings: undefined;
   CapsuleDetails: {
     capsule: {
       capsule_id: string;
@@ -96,7 +96,7 @@ const AppStack = () => {
         component={HomeNavigator}
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="Settings" component={Screens.SettingsScreen} />
+      <Stack.Screen name="NetworkSettings" component={Screens.NetworkSettingsScreen} />
       <Stack.Screen
         name="CapsuleDetails"
         component={Screens.CapsuleDetailsScreen}
@@ -131,7 +131,7 @@ const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       CapsuleDetails: 'capsule/:capsule_id',
-      Settings: 'settings',
+      NetworkSettings: 'network-settings',
     },
   },
 };

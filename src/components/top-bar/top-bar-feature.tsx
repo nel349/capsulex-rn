@@ -23,15 +23,6 @@ export function TopBar() {
           resizeMode="contain"
         />
       </View>
-
-      {/* Settings - Right */}
-      <Appbar.Action
-        icon="cog"
-        mode="contained-tonal"
-        onPress={() => {
-          navigation.navigate('Settings');
-        }}
-      />
     </Appbar.Header>
   );
 }

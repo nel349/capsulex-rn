@@ -1,3 +1,5 @@
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Alert, Share } from 'react-native';
 import {
@@ -19,6 +21,15 @@ import { useAuthService } from '../services/authService';
 import { twitterService } from '../services/twitterService';
 import { VaultKeyManager } from '../utils/vaultKey';
 
+type RootStackParamList = {
+  NetworkSettings: undefined;
+};
+
+type ProfileScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'NetworkSettings'
+>;
+
 interface UserProfile {
   wallet: string;
   displayName?: string;
@@ -37,6 +48,7 @@ interface UserProfile {
 }
 
 export function ProfileScreen() {
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { snackbar, showSuccess, showError, showInfo, hideSnackbar } =
     useSnackbar();
 
@@ -594,31 +606,40 @@ export function ProfileScreen() {
 
             <Divider />
 
-            <List.Item
-              title="Public Profile"
-              description="Allow others to see your capsules"
-              left={props => <List.Icon {...props} icon="earth" />}
-              right={() => (
-                <Switch
-                  value={profile.settings.publicProfile}
-                  onValueChange={value => updateSetting('publicProfile', value)}
-                />
-              )}
-            />
+<List.Item
+  title="Network Settings"
+  description="Manage blockchain network settings"
+  left={props => <List.Icon {...props} icon="server" />}
+  onPress={() => navigation.navigate('NetworkSettings')}
+/>
 
-            <Divider />
+<Divider />
 
-            <List.Item
-              title="Auto-Reveal"
-              description="Automatically post capsules when time comes"
-              left={props => <List.Icon {...props} icon="clock-time-four" />}
-              right={() => (
-                <Switch
-                  value={profile.settings.autoReveal}
-                  onValueChange={value => updateSetting('autoReveal', value)}
-                />
-              )}
-            />
+<List.Item
+  title="Public Profile"
+  description="Allow others to see your capsules"
+  left={props => <List.Icon {...props} icon="earth" />}
+  right={() => (
+    <Switch
+      value={profile.settings.publicProfile}
+      onValueChange={value => updateSetting('publicProfile', value)}
+    />
+  )}
+/>
+
+<Divider />
+
+<List.Item
+  title="Auto-Reveal"
+  description="Automatically post capsules when time comes"
+  left={props => <List.Icon {...props} icon="clock-time-four" />}
+  right={() => (
+    <Switch
+      value={profile.settings.autoReveal}
+      onValueChange={value => updateSetting('autoReveal', value)}
+    />
+  )}
+/>
 
             <Divider />
 

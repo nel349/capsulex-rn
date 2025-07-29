@@ -14,7 +14,7 @@ import {
   Vibration,
   AppState,
 } from 'react-native';
-import { Text, Card, FAB, Button, ActivityIndicator } from 'react-native-paper';
+import { Text, Card, Button, ActivityIndicator } from 'react-native-paper';
 
 import { HorizontalCapsuleList } from '../components/capsules';
 import { useDualAuth } from '../providers';
@@ -413,10 +413,6 @@ export function HubScreen() {
     );
   };
 
-  // Handle create capsule
-  const handleCreateCapsule = () => {
-    Alert.alert('Create Capsule', 'Navigate to capsule creation screen');
-  };
 
   // Render loading state
   if (loading) {
@@ -547,19 +543,14 @@ export function HubScreen() {
             <Text variant="bodyMedium" style={styles.emptySubtitle}>
               Create your first time capsule to get started
             </Text>
+            <Text variant="bodySmall" style={styles.emptyHint}>
+              💡 Tap the "Create" tab below to begin
+            </Text>
           </View>
         )}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-
-      {/* Create FAB */}
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={handleCreateCapsule}
-        label="New Capsule"
-      />
     </View>
   );
 }
@@ -647,14 +638,14 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
+  emptyHint: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    fontStyle: 'italic',
+  },
   bottomSpacing: {
     height: 100,
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.md,
-    backgroundColor: colors.primary,
-    ...shadows.medium,
   },
 });

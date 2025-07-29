@@ -1,6 +1,7 @@
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
+import { View } from 'react-native';
 
 import { TopBar } from '../components/top-bar/top-bar-feature';
 import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
@@ -35,11 +36,19 @@ export function HomeNavigator() {
               );
             case 'Create':
               return (
-                <MaterialCommunityIcon
-                  name={focused ? 'plus-circle' : 'plus-circle-outline'}
-                  size={size}
-                  color={color}
-                />
+                <View style={{
+                  backgroundColor: focused ? 'transparent' : colors.primary + '20',
+                  borderRadius: 20,
+                  padding: 2,
+                  borderWidth: focused ? 0 : 2,
+                  borderColor: colors.primary + '40',
+                }}>
+                  <MaterialCommunityIcon
+                    name={focused ? 'plus-circle' : 'plus-circle-outline'}
+                    size={size + 1} // Slightly larger
+                    color={focused ? color : colors.primary}
+                  />
+                </View>
               );
             case 'Discover':
               return (
@@ -81,14 +90,14 @@ export function HomeNavigator() {
         options={{ tabBarLabel: 'Hub' }}
       />
       <Tab.Screen
-        name="Create"
-        component={CreateCapsuleScreen}
-        options={{ tabBarLabel: 'Create' }}
-      />
-      <Tab.Screen
         name="Discover"
         component={DiscoverScreen}
         options={{ tabBarLabel: 'Discover' }}
+      />
+      <Tab.Screen
+        name="Create"
+        component={CreateCapsuleScreen}
+        options={{ tabBarLabel: 'Create' }}
       />
       <Tab.Screen
         name="Leaderboards"

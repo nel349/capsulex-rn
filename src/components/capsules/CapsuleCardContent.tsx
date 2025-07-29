@@ -10,14 +10,14 @@ interface CapsuleCardContentProps extends CapsuleCardBaseProps {}
 export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
   // Debug logging to understand capsule data structure
   if (__DEV__) {
-    console.log(`🔍 CapsuleCardContent [${type}] - ${capsule.publicKey}:`, {
-      hasContentStorage: !!capsule.account?.contentStorage?.text,
-      contentStorageType: typeof capsule.account?.contentStorage?.text,
-      hasDatabaseContent: !!capsule.databaseData?.content_encrypted,
-      hasBlockchainContent: !!capsule.account?.encryptedContent,
-      isRevealed: capsule.account?.isRevealed,
-      status: capsule.status,
-    });
+    // console.log(`🔍 CapsuleCardContent [${type}] - ${capsule.publicKey}:`, {
+    //   hasContentStorage: !!capsule.account?.contentStorage?.text,
+    //   contentStorageType: typeof capsule.account?.contentStorage?.text,
+    //   hasDatabaseContent: !!capsule.databaseData?.content_encrypted,
+    //   hasBlockchainContent: !!capsule.account?.encryptedContent,
+    //   isRevealed: capsule.account?.isRevealed,
+    //   status: capsule.status,
+    // });
   }
 
   // Helper function to get content preview

@@ -13,6 +13,7 @@ import {
   Animated,
   Vibration,
   AppState,
+  Platform,
 } from 'react-native';
 import {
   Text,
@@ -89,12 +90,13 @@ export function HubScreen() {
     hideDynamicClient();
   }, []);
 
-  // if the user is not authenticated, we should navigate to the onboarding screen
+  // Authentication guard - navigate to onboarding if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
+      console.log('🔍 HubScreen - User not authenticated, navigating to onboarding screen');
       navigation.navigate('Onboarding' as never);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigation]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -426,22 +428,7 @@ export function HubScreen() {
     );
   }
 
-  // Render not connected state
-  if (!isAuthenticated) {
-    // if the user is not authenticated, we should navigate to the welcome screen
-    // navigation.navigate('Welcome' as never);
-    return (
-      <View style={[styles.screenContainer, styles.centered]}>
-        <Avatar.Icon size={80} icon="wallet" style={styles.walletIcon} />
-        <Text variant="headlineMedium" style={styles.title}>
-          Welcome to CapsuleX
-        </Text>
-        <Text variant="bodyLarge" style={styles.subtitle}>
-          Connect your wallet to start creating time capsules
-        </Text>
-      </View>
-    );
-  }
+  // Authentication handled by useEffect above - no need to render
 
   // Render error state
   if (error) {

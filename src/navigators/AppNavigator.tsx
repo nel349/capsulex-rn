@@ -78,12 +78,6 @@ declare global {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppStack = () => {
-  const { isAuthenticated } = useDualAuth();
-
-  console.log('🔍 AppStack Debug:', {
-    isAuthenticated,
-  });
-
   // Always start with Onboarding - let individual screens handle navigation based on auth state
   return (
     <Stack.Navigator initialRouteName="Onboarding">

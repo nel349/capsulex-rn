@@ -46,8 +46,14 @@ function DualAuthProviderInner({ children }: DualAuthProviderProps) {
   const walletConnected = isIOS
     ? iosAuth.isAuthenticated
     : androidAuth.isConnected;
-  // Both platforms require wallet connection AND valid token, but handle differently
-  const isAuthenticated = walletConnected && hasValidToken;
+  
+  // iOS-specific: Additional Dynamic client session validation
+  const isDynamicSessionValid = isIOS 
+    ? !!dynamicClientService.getDynamicClient()?.auth?.authenticatedUser
+    : true; // Android doesn't use Dynamic client
+  
+  // Both platforms require wallet connection AND valid token, iOS also needs valid Dynamic session
+  const isAuthenticated = walletConnected && hasValidToken && isDynamicSessionValid;
   const isConnecting = isIOS
     ? iosAuth.isAuthenticating
     : androidAuth.isConnecting;

@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Text, ProgressBar } from 'react-native-paper';
 
-import { colors, spacing, typography } from '../../theme';
+import { CapsuleApiService } from '../../services/capsuleApi';
+import { colors, spacing, typography, borderRadius } from '../../theme';
 import type { EnhancedCapsule, CapsuleCardBaseProps } from './types';
 
 interface CapsuleCardContentProps extends CapsuleCardBaseProps {}
@@ -246,9 +247,19 @@ export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
           )}
         </Text>
         {type === 'pending' && (
-          <Text style={styles.countdownText}>
-            {getTimeUntilReveal()} remaining
-          </Text>
+          <View style={styles.progressSection}>
+            <Text style={styles.countdownText}>
+              {getTimeUntilReveal()} remaining
+            </Text>
+            <ProgressBar
+              progress={CapsuleApiService.getCountdownProgress(
+                capsule.account.createdAt,
+                capsule.account.revealDate
+              )}
+              style={styles.progressBar}
+              color={colors.primary}
+            />
+          </View>
         )}
       </View>
     </View>
@@ -337,6 +348,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     marginTop: spacing.xs / 2,
+    marginBottom: spacing.xs,
     fontStyle: 'italic',
+  },
+  progressSection: {
+    marginTop: spacing.xs / 2,
+  },
+  progressBar: {
+    height: 4,
+    borderRadius: borderRadius.xs,
+    backgroundColor: colors.borderLight,
   },
 });

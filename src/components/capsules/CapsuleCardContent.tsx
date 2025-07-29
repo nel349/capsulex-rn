@@ -79,7 +79,6 @@ export function CapsuleCardContent({ capsule, type }: CapsuleCardContentProps) {
     return `Time capsule created on ${new Date(capsule.account.createdAt * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   };
 
-
   // Helper function to get content text styling
   const getContentTextStyle = () => {
     // If we have actual readable text content, use primary text styling

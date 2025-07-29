@@ -22,7 +22,7 @@ interface CapsuleCardProps {
   capsule: EnhancedCapsule;
   type: 'ready' | 'pending' | 'revealed';
   isRevealing: boolean;
-  onRevealCapsule?: (targetCapsule: CapsuleWithStatus) => void;
+  onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
   glowAnim?: Animated.Value;
   width: number;
 }

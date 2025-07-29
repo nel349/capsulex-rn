@@ -9,7 +9,7 @@ import type { CapsuleCardBaseProps } from './types';
 
 interface CapsuleCardActionsProps extends CapsuleCardBaseProps {
   isRevealing: boolean;
-  onRevealCapsule?: (targetCapsule: CapsuleWithStatus) => void;
+  onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
 }
 
 export function CapsuleCardActions({

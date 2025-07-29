@@ -34,7 +34,7 @@ export function HorizontalCapsuleList({
     return a.account.revealDate - b.account.revealDate;
   });
 
-  const renderCapsuleCard = (capsule: EnhancedCapsule, _index: number) => {
+  const renderCapsuleCard = (capsule: EnhancedCapsule) => {
     const isRevealing = revealingCapsules.has(capsule.publicKey);
 
     return (
@@ -64,7 +64,10 @@ export function HorizontalCapsuleList({
             size={24}
             color={getTitleStyle(type).color}
           />
-          <Text variant="titleLarge" style={[styles.title, getTitleStyle(type)]}>
+          <Text
+            variant="titleLarge"
+            style={[styles.title, getTitleStyle(type)]}
+          >
             {title} ({sortedCapsules.length})
           </Text>
         </View>
@@ -79,9 +82,7 @@ export function HorizontalCapsuleList({
         snapToInterval={CARD_WIDTH + CARD_SPACING}
         snapToAlignment="start"
       >
-        {sortedCapsules.map((capsule, index) =>
-          renderCapsuleCard(capsule, index)
-        )}
+        {sortedCapsules.map(capsule => renderCapsuleCard(capsule))}
         {/* Add spacing at the end */}
         <View style={styles.endSpacing} />
       </ScrollView>

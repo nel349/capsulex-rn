@@ -1,4 +1,6 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import * as anchor from '@coral-xyz/anchor';
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Address } from '@solana/kit';
@@ -464,44 +466,57 @@ export function HubScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text variant="headlineLarge" style={styles.title}>
-            Time Capsules
-          </Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>
-            {stats.ready_to_reveal > 0
-              ? `${stats.ready_to_reveal} ready to reveal`
-              : `${stats.pending} pending • ${capsuleData?.total_capsules || 0} total`}
-          </Text>
-        </View>
-
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <Text variant="labelLarge" style={styles.statLabel}>
-                SOL Balance
-              </Text>
-              <Text variant="headlineSmall" style={styles.statValue}>
-                {balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}
-              </Text>
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <Text variant="labelLarge" style={styles.statLabel}>
-                Ready Now
-              </Text>
-              <Text
-                variant="headlineSmall"
-                style={[styles.statValue, { color: colors.premiumOrange }]}
-              >
-                {stats.ready_to_reveal}
-              </Text>
-            </Card.Content>
-          </Card>
+        {/* Unified Hero Section with Gradient Background */}
+        <View style={styles.heroContainer}>
+          <LinearGradient
+            colors={[
+              colors.surfaceVariant,
+              colors.primary + '15',
+              colors.surfaceVariant,
+            ]}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.gradient}
+          >
+            <View style={styles.titleContainer}>
+              <MaterialCommunityIcon name="timer-sand" size={32} color={colors.primary} style={styles.titleIcon} />
+              <Text style={styles.heroTitle}>Time Capsules</Text>
+            </View>
+            <View style={styles.subtitleContainer}>
+              {stats.ready_to_reveal > 0 ? (
+                <Text style={styles.heroSubtitle}>
+                  <Text style={styles.highlightText}>{stats.ready_to_reveal}</Text>
+                  <Text style={styles.subtitleText}> capsules ready to reveal </Text>
+                  <Text style={styles.accentText}>🔥</Text>
+                </Text>
+              ) : (
+                <Text style={styles.heroSubtitle}>
+                  <Text style={styles.highlightText}>{stats.pending}</Text>
+                  <Text style={styles.subtitleText}> pending • </Text>
+                  <Text style={styles.highlightText}>{capsuleData?.total_capsules || 0}</Text>
+                  <Text style={styles.subtitleText}> total capsules</Text>
+                </Text>
+              )}
+            </View>
+            <View style={styles.heroStats}>
+              <View style={styles.statItem}>
+                <MaterialCommunityIcon name="wallet" size={28} color={colors.primary} />
+                <Text style={styles.statValue}>{balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}</Text>
+                <Text style={styles.statLabel}>SOL Balance</Text>
+              </View>
+              <View style={styles.statItem}>
+                <MaterialCommunityIcon name="fire" size={28} color={colors.premiumOrange} />
+                <Text style={styles.statValue}>{stats.ready_to_reveal}</Text>
+                <Text style={styles.statLabel}>Ready Now</Text>
+              </View>
+              <View style={styles.statItem}>
+                <MaterialCommunityIcon name="clock-outline" size={28} color={colors.primary} />
+                <Text style={styles.statValue}>{stats.pending}</Text>
+                <Text style={styles.statLabel}>Pending</Text>
+              </View>
+            </View>
+          </LinearGradient>
         </View>
 
         {/* Ready to Reveal Section */}
@@ -563,20 +578,70 @@ const styles = StyleSheet.create({
     ...layout.centered,
     padding: spacing.sectionPadding,
   },
-  // Netflix-inspired header
-  header: {
-    ...layout.heroSection,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  // Modern Hero Section
+  heroContainer: {
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.medium,
+    overflow: 'hidden', // Ensures gradient respects border radius
   },
-  title: {
-    ...typography.headlineLarge,
-    marginBottom: spacing.xs,
+  gradient: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  titleIcon: {
+    marginRight: spacing.sm,
+  },
+  heroTitle: {
+    ...typography.displayMedium,
+    color: colors.text,
+    fontWeight: 'bold',
+    textShadowColor: colors.primary + '20',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  subtitleContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  highlightText: {
+    ...typography.titleLarge,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  subtitleText: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
+  },
+  accentText: {
+    fontSize: 18,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    ...typography.headlineMedium,
     color: colors.text,
   },
-  subtitle: {
-    ...typography.bodyMedium,
+  statLabel: {
+    ...typography.labelMedium,
     color: colors.textSecondary,
   },
   loadingText: {
@@ -602,25 +667,6 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     ...components.primaryButton,
-  },
-  // Premium stats section
-  statsContainer: {
-    flexDirection: 'row',
-    ...layout.contentSection,
-    gap: spacing.md,
-  },
-  statCard: {
-    flex: 1,
-    ...components.card,
-  },
-  statLabel: {
-    ...typography.labelMedium,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  statValue: {
-    ...typography.headlineSmall,
-    color: colors.primary,
   },
 
   // Premium empty state

@@ -20,7 +20,7 @@ import {
 
 import { OnboardingFlow } from '../components/onboarding';
 import { SocialSetup } from '../components/onboarding/SocialSetup';
-import { DualAuthProvider, useDualAuth } from '../providers';
+import { DualAuthProvider } from '../providers';
 import * as Screens from '../screens';
 
 import { HomeNavigator } from './HomeNavigator';

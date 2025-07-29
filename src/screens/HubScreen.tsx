@@ -13,19 +13,8 @@ import {
   Animated,
   Vibration,
   AppState,
-  Platform,
 } from 'react-native';
-import {
-  Text,
-  Card,
-  FAB,
-  IconButton,
-  Chip,
-  ProgressBar,
-  Button,
-  ActivityIndicator,
-  Avatar,
-} from 'react-native-paper';
+import { Text, Card, FAB, Button, ActivityIndicator } from 'react-native-paper';
 
 import { HorizontalCapsuleList } from '../components/capsules';
 import { useDualAuth } from '../providers';
@@ -33,7 +22,7 @@ import type {
   CapsuleWithStatus,
   WalletCapsulesResponse,
 } from '../services/capsuleApi';
-import { capsuleApi, CapsuleApiService } from '../services/capsuleApi';
+import { capsuleApi } from '../services/capsuleApi';
 import { useCapsuleService } from '../services/capsuleService';
 import { dynamicClientService } from '../services/dynamicClientService';
 import { useBalance } from '../services/solana';

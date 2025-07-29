@@ -1,7 +1,6 @@
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { useTheme } from 'react-native-paper';
 
 import { TopBar } from '../components/top-bar/top-bar-feature';
 import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
@@ -20,7 +19,6 @@ const Tab = createBottomTabNavigator();
  * More info: https://reactnavigation.org/docs/bottom-tab-navigator/
  */
 export function HomeNavigator() {
-  const theme = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({

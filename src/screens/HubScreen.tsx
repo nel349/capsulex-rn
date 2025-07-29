@@ -182,14 +182,42 @@ export function HubScreen() {
         return;
       }
 
+      // Debug: Log first few blockchain capsules to understand structure
+      // console.log(`🔍 HubScreen - Found ${blockchainResponse.data.total_capsules} blockchain capsules`);
+      // blockchainResponse.data.all_capsules.slice(0, 3).forEach((bcCapsule, index) => {
+      //   console.log(`🔍 Blockchain capsule ${index}:`, {
+      //     publicKey: bcCapsule.publicKey,
+      //     createdAt: bcCapsule.account.createdAt,
+      //     encryptedContent: bcCapsule.account.encryptedContent?.substring(0, 50) + '...',
+      //     creator: bcCapsule.account.creator
+      //   });
+      // });
+
       // Fetch database data
       const databaseCapsules = await getMyCapsules();
+      // console.log(`🔍 HubScreen - Found ${databaseCapsules.length} database capsules`);
+      
+      // Debug: Log first few database capsules to understand structure
+      // databaseCapsules.slice(0, 3).forEach((dbCapsule, index) => {
+      //   console.log(`🔍 Database capsule ${index}:`, {
+      //     capsule_id: dbCapsule.capsule_id,
+      //     on_chain_tx: dbCapsule.on_chain_tx,
+      //     created_at: dbCapsule.created_at,
+      //     has_content: !!dbCapsule.content_encrypted,
+      //     content_preview: dbCapsule.content_encrypted?.substring(0, 50) + '...'
+      //   });
+      // });
 
-      // Create a map of database capsules by transaction signature for quick lookup
+      // Create a simple map for matching - let's keep it simple like it was before
       const databaseMap = new Map<string, Capsule>();
       databaseCapsules.forEach(dbCapsule => {
+        // Try multiple keys for matching
         if (dbCapsule.on_chain_tx) {
           databaseMap.set(dbCapsule.on_chain_tx, dbCapsule);
+        }
+        // Also try capsule_id as a key
+        if (dbCapsule.capsule_id) {
+          databaseMap.set(dbCapsule.capsule_id, dbCapsule);
         }
       });
 
@@ -197,30 +225,52 @@ export function HubScreen() {
       const enhanceCapsulesArray = (
         capsules: CapsuleWithStatus[]
       ): EnhancedCapsule[] => {
-        return capsules.map(blockchainCapsule => {
-          // Try to find matching database capsule
-          // Note: We need to implement a way to link blockchain publicKey to database on_chain_tx
-          // For now, we'll use a placeholder approach
+        return capsules.map((blockchainCapsule, index) => {
           const enhancedCapsule: EnhancedCapsule = {
             ...blockchainCapsule,
-            databaseData: undefined, // Will be populated when we can match them
+            databaseData: undefined,
           };
 
-          // Try to find database match by searching for recent transactions
-          // This is a temporary solution - ideally the blockchain data should include tx signature
-          for (const [, dbCapsule] of databaseMap.entries()) {
-            // Simple heuristic: match by creation time proximity and content hash
-            const blockchainTime = blockchainCapsule.account.createdAt;
+          // Try direct matching by various keys first
+          let matchedCapsule = databaseMap.get(blockchainCapsule.publicKey);
+          
+          if (matchedCapsule) {
+            console.log(`✅ HubScreen - Matched by publicKey: ${blockchainCapsule.publicKey}`);
+            enhancedCapsule.databaseData = matchedCapsule;
+            return enhancedCapsule;
+          }
+
+          // Match by comparing creation times (more reliable than exact matching)
+          const blockchainTime = blockchainCapsule.account.createdAt;
+          let bestMatch: Capsule | null = null;
+          let smallestTimeDiff = Infinity;
+
+          for (const dbCapsule of databaseCapsules) {
             const dbTime = new Date(dbCapsule.created_at).getTime() / 1000;
             const timeDiff = Math.abs(blockchainTime - dbTime);
-
-            // If created within 5 minutes and creator matches
-            if (timeDiff < 300 && dbCapsule.user_id) {
-              enhancedCapsule.databaseData = dbCapsule;
-              break;
+            
+            if (timeDiff < smallestTimeDiff) {
+              smallestTimeDiff = timeDiff;
+              bestMatch = dbCapsule;
             }
           }
 
+          // Use the best time match if it's within a reasonable window (30 minutes)
+          if (bestMatch && smallestTimeDiff < 1800) {
+            enhancedCapsule.databaseData = bestMatch;
+            // console.log(`✅ HubScreen - Matched by time (${smallestTimeDiff}s diff): ${blockchainCapsule.publicKey} -> ${bestMatch.capsule_id}`);
+            return enhancedCapsule;
+          }
+
+          // Fallback: assign in order if time matching fails
+          if (databaseCapsules[index]) {
+            enhancedCapsule.databaseData = databaseCapsules[index];
+            // console.log(`✅ HubScreen - Fallback assignment: database capsule ${index} to blockchain capsule ${blockchainCapsule.publicKey}`);
+            return enhancedCapsule;
+          }
+
+          // If no match found
+          // console.log(`⚠️ HubScreen - No database match for capsule: ${blockchainCapsule.publicKey}`);
           return enhancedCapsule;
         });
       };

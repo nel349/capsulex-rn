@@ -30,6 +30,26 @@ export const components = {
     ...shadows.readyGlow,
   },
   
+  // Pending Card
+  pendingCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.cardPadding,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    ...shadows.medium,
+  },
+  
+  // Revealed Card
+  revealedCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.cardPadding,
+    borderWidth: 1,
+    borderColor: colors.success,
+    ...shadows.medium,
+  },
+  
   // Button Styles
   primaryButton: {
     backgroundColor: colors.primary,

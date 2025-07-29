@@ -1,23 +1,16 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
-import {
-  TouchableOpacity,
-  Animated,
-  StyleSheet,
-} from 'react-native';
+import { TouchableOpacity, Animated, StyleSheet } from 'react-native';
 import { Card } from 'react-native-paper';
 
 import type { CapsuleWithStatus } from '../../services/capsuleApi';
-import { colors, spacing, borderRadius, components } from '../../theme';
-import { CapsuleCardHeader } from './CapsuleCardHeader';
-import { CapsuleCardContent } from './CapsuleCardContent';
-import { CapsuleCardActions } from './CapsuleCardActions';
+import { colors, spacing, components } from '../../theme';
 
-// Enhanced capsule type that merges blockchain and database data
-interface EnhancedCapsule extends CapsuleWithStatus {
-  databaseData?: any; // Additional database fields including content_encrypted
-}
+import { CapsuleCardActions } from './CapsuleCardActions';
+import { CapsuleCardContent } from './CapsuleCardContent';
+import { CapsuleCardHeader } from './CapsuleCardHeader';
+import type { EnhancedCapsule } from './types';
 
 type RootStackParamList = {
   CapsuleDetails: { capsule: EnhancedCapsule };
@@ -63,6 +56,8 @@ export function CapsuleCard({
         { width },
         styles.cardContainer,
         type === 'ready' && {
+          backgroundColor: colors.surface,
+          borderRadius: 16,
           shadowColor: colors.premiumOrange,
           shadowOpacity: glowAnim || 0.5,
           shadowRadius: 16,
@@ -81,7 +76,7 @@ export function CapsuleCard({
           <Card.Content style={styles.cardContent}>
             <CapsuleCardHeader type={type} />
             <CapsuleCardContent capsule={capsule} type={type} />
-            <CapsuleCardActions 
+            <CapsuleCardActions
               capsule={capsule}
               type={type}
               isRevealing={isRevealing}
@@ -100,35 +95,31 @@ const styles = StyleSheet.create({
   },
   card: {
     ...components.premiumCard,
-    height: 240, // Fixed height for consistency
+    height: 350, // Increased from 240 to accommodate all content
+    overflow: 'visible',
   },
   cardContent: {
     flex: 1,
     justifyContent: 'space-between',
+    padding: spacing.md,
   },
-  
+
   // Card Type Styles
   readyCard: {
-    borderColor: colors.premiumOrange,
-    borderWidth: 2,
-    backgroundColor: colors.surface,
+    ...components.readyCard,
   },
   pendingCard: {
-    borderColor: colors.warning,
-    borderWidth: 1,
-    backgroundColor: colors.surface,
+    ...components.pendingCard,
   },
   revealedCard: {
-    borderColor: colors.success,
-    borderWidth: 1,
-    backgroundColor: colors.surface,
+    ...components.revealedCard,
   },
   defaultCard: {
     backgroundColor: colors.surface,
   },
-  
+
   // States
   revealingCard: {
     opacity: 0.7,
   },
-}); 
+});

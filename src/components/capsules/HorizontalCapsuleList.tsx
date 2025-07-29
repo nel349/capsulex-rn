@@ -1,20 +1,12 @@
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import type { CapsuleWithStatus } from '../../services/capsuleApi';
 import { colors, typography, spacing } from '../../theme';
-import { CapsuleCard } from './CapsuleCard';
 
-// Enhanced capsule type that merges blockchain and database data
-interface EnhancedCapsule extends CapsuleWithStatus {
-  databaseData?: any; // Additional database fields including content_encrypted
-}
+import { CapsuleCard } from './CapsuleCard';
+import type { EnhancedCapsule } from './types';
 
 interface HorizontalCapsuleListProps {
   title: string;
@@ -26,7 +18,7 @@ interface HorizontalCapsuleListProps {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = screenWidth * 0.75; // 75% of screen width
+const CARD_WIDTH = screenWidth * 0.8; // Increased to 80% for richer content
 const CARD_SPACING = spacing.md;
 
 export function HorizontalCapsuleList({
@@ -42,7 +34,7 @@ export function HorizontalCapsuleList({
     return a.account.revealDate - b.account.revealDate;
   });
 
-  const renderCapsuleCard = (capsule: EnhancedCapsule, index: number) => {
+  const renderCapsuleCard = (capsule: EnhancedCapsule, _index: number) => {
     const isRevealing = revealingCapsules.has(capsule.publicKey);
 
     return (
@@ -80,7 +72,9 @@ export function HorizontalCapsuleList({
         snapToInterval={CARD_WIDTH + CARD_SPACING}
         snapToAlignment="start"
       >
-        {sortedCapsules.map((capsule, index) => renderCapsuleCard(capsule, index))}
+        {sortedCapsules.map((capsule, index) =>
+          renderCapsuleCard(capsule, index)
+        )}
         {/* Add spacing at the end */}
         <View style={styles.endSpacing} />
       </ScrollView>
@@ -112,7 +106,6 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.titleLarge,
-    fontWeight: 'bold',
   },
   scrollContainer: {
     paddingLeft: spacing.screenPadding,
@@ -120,4 +113,4 @@ const styles = StyleSheet.create({
   endSpacing: {
     width: spacing.screenPadding,
   },
-}); 
+});

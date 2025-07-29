@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Chip, IconButton } from 'react-native-paper';
 
-import { colors, typography, spacing } from '../../theme';
+import { colors, typography, spacing, components } from '../../theme';
 
 interface CapsuleCardHeaderProps {
   type: 'ready' | 'pending' | 'revealed';
@@ -10,15 +10,23 @@ interface CapsuleCardHeaderProps {
 
 export function CapsuleCardHeader({ type }: CapsuleCardHeaderProps) {
   const getChipStyle = () => {
+    const baseChipStyle = {
+      minHeight: 36,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    };
+    
     switch (type) {
       case 'ready':
-        return styles.readyChip;
+        return { ...baseChipStyle, ...styles.readyChip };
       case 'pending':
-        return styles.pendingChip;
+        return { ...baseChipStyle, ...styles.pendingChip };
       case 'revealed':
-        return styles.revealedChip;
+        return { ...baseChipStyle, ...styles.revealedChip };
       default:
-        return styles.defaultChip;
+        return { ...baseChipStyle, ...styles.defaultChip };
     }
   };
 
@@ -37,10 +45,14 @@ export function CapsuleCardHeader({ type }: CapsuleCardHeaderProps) {
 
   return (
     <View style={styles.header}>
-      <Chip
-        mode="flat"
-        style={getChipStyle()}
-        textStyle={styles.chipText}
+      <Chip 
+        mode="flat" 
+        style={getChipStyle()} 
+        textStyle={[styles.chipText, { 
+          color: colors.text,
+          fontSize: 12,
+          fontWeight: 'bold',
+        }]}
       >
         {getChipLabel()}
       </Chip>
@@ -49,7 +61,9 @@ export function CapsuleCardHeader({ type }: CapsuleCardHeaderProps) {
           icon="share"
           size={20}
           iconColor={colors.text}
-          onPress={() => console.log('Share capsule')}
+          onPress={() => {
+            // TODO: Implement share functionality
+          }}
         />
       )}
     </View>
@@ -62,17 +76,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.sm,
+    minHeight: 36,
   },
-  
+
   // Chip Styles
   readyChip: {
-    backgroundColor: colors.premiumOrange,
+    ...components.chipReady,
   },
   pendingChip: {
-    backgroundColor: colors.warning,
+    ...components.chipPending,
   },
   revealedChip: {
-    backgroundColor: colors.success,
+    ...components.chipSuccess,
   },
   defaultChip: {
     backgroundColor: colors.surface,
@@ -82,4 +97,4 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: 'bold',
   },
-}); 
+});

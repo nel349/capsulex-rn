@@ -4,25 +4,19 @@ import { Text, ProgressBar, Button } from 'react-native-paper';
 
 import type { CapsuleWithStatus } from '../../services/capsuleApi';
 import { CapsuleApiService } from '../../services/capsuleApi';
-import { colors, spacing, borderRadius } from '../../theme';
+import { colors, spacing, borderRadius, components } from '../../theme';
+import type { EnhancedCapsule, CapsuleCardBaseProps } from './types';
 
-// Enhanced capsule type that merges blockchain and database data
-interface EnhancedCapsule extends CapsuleWithStatus {
-  databaseData?: any; // Additional database fields including content_encrypted
-}
-
-interface CapsuleCardActionsProps {
-  capsule: EnhancedCapsule;
-  type: 'ready' | 'pending' | 'revealed';
+interface CapsuleCardActionsProps extends CapsuleCardBaseProps {
   isRevealing: boolean;
   onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
 }
 
-export function CapsuleCardActions({ 
-  capsule, 
-  type, 
-  isRevealing, 
-  onRevealCapsule 
+export function CapsuleCardActions({
+  capsule,
+  type,
+  isRevealing,
+  onRevealCapsule,
 }: CapsuleCardActionsProps) {
   const timeLeft = capsule.timeToReveal || 0;
   const progress = CapsuleApiService.getCountdownProgress(
@@ -66,28 +60,32 @@ export function CapsuleCardActions({
 
 const styles = StyleSheet.create({
   container: {
-    // Empty container allows for consistent spacing
+    flexShrink: 0,
   },
-  
+
   // Progress Section
   progressSection: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   progressLabel: {
     color: colors.textSecondary,
     marginBottom: spacing.xs,
+    fontSize: 12,
+    fontWeight: '500',
   },
   progressBar: {
-    height: 4,
+    height: 6,
     borderRadius: borderRadius.xs,
     backgroundColor: colors.borderLight,
   },
-  
+
   // Action Button
   revealButton: {
-    marginTop: spacing.sm,
+    borderRadius: borderRadius.md,
+    minHeight: 60,
   },
   revealButtonContent: {
     paddingVertical: spacing.xs,
+    minHeight: 60,
   },
-}); 
+});

@@ -19,7 +19,7 @@ interface HorizontalCapsuleListProps {
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth * 0.8; // Increased to 80% for richer content
-const CARD_SPACING = spacing.md;
+const CARD_SPACING = spacing.md + spacing.sm * 2; // Account for margin on both sides of the card
 
 export function HorizontalCapsuleList({
   title,
@@ -135,9 +135,10 @@ const styles = StyleSheet.create({
     ...typography.titleLarge,
   },
   scrollContainer: {
-    paddingLeft: spacing.screenPadding,
+    paddingHorizontal: spacing.screenPadding, // Add horizontal padding for shadows
+    paddingVertical: spacing.md, // Add vertical padding for top/bottom shadows
   },
   endSpacing: {
-    width: spacing.screenPadding,
+    width: 0, // No need for end spacing if paddingHorizontal is used
   },
 });

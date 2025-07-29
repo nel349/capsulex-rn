@@ -55,13 +55,14 @@ export function CapsuleCard({
       style={[
         { width },
         styles.cardContainer,
+        { margin: spacing.sm }, // Add margin here to give space for shadow
         type === 'ready' && {
           backgroundColor: colors.surface,
           borderRadius: 16,
           shadowColor: colors.premiumOrange,
           shadowOpacity: glowAnim || 0.5,
-          shadowRadius: 16,
-          elevation: 12,
+          shadowRadius: 24, // Increased from 16
+          elevation: 20, // Increased from 12
         },
         isRevealing && styles.revealingCard,
       ]}

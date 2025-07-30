@@ -4,7 +4,7 @@ import {
   View,
   ScrollView,
   RefreshControl,
-  Alert,
+  Platform,
 } from 'react-native';
 import {
   Text,
@@ -15,6 +15,8 @@ import {
   Searchbar,
   ActivityIndicator,
 } from 'react-native-paper';
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import {
   discoverService,
@@ -22,6 +24,13 @@ import {
   type ActiveGame,
   type LeaderboardEntry,
 } from '../services/discoverService';
+import {
+  colors,
+  typography,
+  spacing,
+  layout,
+  shadows,
+} from '../theme';
 
 type TabType = 'feed' | 'games' | 'leaderboard';
 
@@ -146,25 +155,99 @@ export function DiscoverScreen() {
     return `${minutes}m`;
   };
 
+  // Render hero content (shared between iOS gradient and Android fallback)
+  const renderHeroContent = () => (
+    <>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcon
+          name="compass"
+          size={32}
+          color={colors.primary}
+          style={styles.titleIcon}
+        />
+        <Text style={styles.heroTitle}>Discover</Text>
+      </View>
+      <View style={styles.subtitleContainer}>
+        {activeGames.length > 0 ? (
+          <Text style={styles.heroSubtitle}>
+            <Text style={styles.highlightText}>{activeGames.length}</Text>
+            <Text style={styles.subtitleText}> active games • </Text>
+            <Text style={styles.highlightText}>{revealedCapsules.length}</Text>
+            <Text style={styles.subtitleText}> revealed capsules</Text>
+          </Text>
+        ) : (
+          <Text style={styles.heroSubtitle}>
+            <Text style={styles.highlightText}>{revealedCapsules.length}</Text>
+            <Text style={styles.subtitleText}> public capsules • </Text>
+            <Text style={styles.highlightText}>{leaderboard.length}</Text>
+            <Text style={styles.subtitleText}> community leaders</Text>
+          </Text>
+        )}
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="star"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>{revealedCapsules.length}</Text>
+          <Text style={styles.statLabel}>Revealed</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="gamepad-variant"
+            size={28}
+            color={colors.premiumOrange}
+          />
+          <Text style={styles.statValue}>{activeGames.length}</Text>
+          <Text style={styles.statLabel}>Active Games</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="trophy"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>{leaderboard.length}</Text>
+          <Text style={styles.statLabel}>Leaders</Text>
+        </View>
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.screenContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Discover
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          Explore public time capsules from the community
-        </Text>
+      {/* Unified Hero Section with Gradient Background */}
+      <View style={styles.heroContainer}>
+        <LinearGradient
+          colors={[
+            colors.surface,
+            Platform.OS === 'android'
+              ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
+              : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
+            colors.surface,
+          ]}
+          locations={[0, 0.5, 1]}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 0, y: 0 }}
+          style={[
+            styles.gradient,
+            styles.gradientFix, // Force proper dimensions
+            Platform.OS === 'android' && styles.androidGradientEnhancement,
+          ]}
+        >
+          {renderHeroContent()}
+        </LinearGradient>
       </View>
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {[
-            { key: 'feed', label: 'Recent Reveals', icon: '✨' },
-            { key: 'games', label: 'Active Games', icon: '🎮' },
-            { key: 'leaderboard', label: 'Leaders', icon: '🏆' },
+            { key: 'feed', label: 'Recent Reveals', icon: 'star' },
+            { key: 'games', label: 'Active Games', icon: 'gamepad-variant' },
+            { key: 'leaderboard', label: 'Leaders', icon: 'trophy' },
           ].map(tab => (
             <Chip
               key={tab.key}
@@ -172,8 +255,21 @@ export function DiscoverScreen() {
               selected={activeTab === tab.key}
               onPress={() => setActiveTab(tab.key as TabType)}
               style={styles.tabChip}
+              icon={() => (
+                <MaterialCommunityIcon
+                  name={tab.icon as any}
+                  size={18}
+                  color={activeTab === tab.key ? colors.primary : colors.primaryVariant}
+                />
+              )}
             >
-              {tab.icon} {tab.label}
+              <Text
+                style={{
+                  color: activeTab === tab.key ? colors.text : colors.textSecondary,
+                }}
+              >
+                {tab.label}
+              </Text>
             </Chip>
           ))}
         </ScrollView>
@@ -254,9 +350,17 @@ export function DiscoverScreen() {
                       </View>
                       <View style={styles.headerRight}>
                         {capsule.twitter_username && (
-                          <Text variant="bodySmall" style={styles.platform}>
-                            🐦 @{capsule.twitter_username}
-                          </Text>
+                          <View style={styles.platformContainer}>
+                            <MaterialCommunityIcon
+                              name="twitter"
+                              size={14}
+                              color={colors.primary}
+                              style={styles.platformIcon}
+                            />
+                            <Text variant="bodySmall" style={styles.platform}>
+                              @{capsule.twitter_username}
+                            </Text>
+                          </View>
                         )}
                         <IconButton
                           icon="dots-vertical"
@@ -278,10 +382,17 @@ export function DiscoverScreen() {
                             ? styles.revealedChip
                             : styles.pendingChip,
                         ]}
+                        icon={() => (
+                          <MaterialCommunityIcon
+                            name={capsule.revealed ? "check-circle" : "clock-outline"}
+                            size={16}
+                            color={capsule.revealed ? colors.success : colors.warning}
+                          />
+                        )}
                       >
                         {capsule.revealed
-                          ? `✅ Revealed ${capsule.revealed_at_timestamp ? formatTimestamp(capsule.revealed_at_timestamp) : ''}`
-                          : `⏰ Reveals in ${formatCountdown(capsule.reveal_date_timestamp)}`}
+                          ? `Revealed ${capsule.revealed_at_timestamp ? formatTimestamp(capsule.revealed_at_timestamp) : ''}`
+                          : `Reveals in ${formatCountdown(capsule.reveal_date_timestamp)}`}
                       </Chip>
                     </View>
 
@@ -369,27 +480,73 @@ export function DiscoverScreen() {
                         </Text>
                       </View>
                       <View style={styles.headerRight}>
-                        <Text variant="bodySmall" style={styles.gameStats}>
-                          🎮 {game.total_participants} players
-                        </Text>
+                        <View style={styles.gameStatsHeader}>
+                          <MaterialCommunityIcon
+                            name="account-group"
+                            size={14}
+                            color={colors.textSecondary}
+                            style={styles.statsIcon}
+                          />
+                          <Text variant="bodySmall" style={styles.gameStats}>
+                            {game.total_participants} players
+                          </Text>
+                        </View>
                       </View>
                     </View>
 
                     {/* Game Content Hint */}
-                    <Text variant="bodyMedium" style={styles.content}>
-                      💡 {game.content_hint}
-                    </Text>
+                    <View style={styles.contentHintContainer}>
+                      <MaterialCommunityIcon
+                        name="lightbulb-outline"
+                        size={16}
+                        color={colors.primary}
+                        style={styles.hintIcon}
+                      />
+                      <Text variant="bodyMedium" style={styles.content}>
+                        {game.content_hint}
+                      </Text>
+                    </View>
 
                     {/* Game Stats */}
                     <View style={styles.gameStatsContainer}>
-                      <Chip mode="outlined" style={styles.statChip}>
-                        📝 {game.current_guesses}/{game.max_guesses} guesses
+                      <Chip 
+                        mode="outlined" 
+                        style={styles.statChip}
+                        icon={() => (
+                          <MaterialCommunityIcon
+                            name="pencil"
+                            size={16}
+                            color={colors.textSecondary}
+                          />
+                        )}
+                      >
+                        {game.current_guesses}/{game.max_guesses} guesses
                       </Chip>
-                      <Chip mode="outlined" style={styles.statChip}>
-                        🏆 {game.winners_found}/{game.max_winners} winners
+                      <Chip 
+                        mode="outlined" 
+                        style={styles.statChip}
+                        icon={() => (
+                          <MaterialCommunityIcon
+                            name="trophy"
+                            size={16}
+                            color={colors.premiumOrange}
+                          />
+                        )}
+                      >
+                        {game.winners_found}/{game.max_winners} winners
                       </Chip>
-                      <Chip mode="outlined" style={[styles.statChip, game.is_active ? styles.activeChip : styles.inactiveChip]}>
-                        {game.is_active ? '🟢 Active' : '🔴 Ended'}
+                      <Chip 
+                        mode="outlined" 
+                        style={[styles.statChip, game.is_active ? styles.activeChip : styles.inactiveChip]}
+                        icon={() => (
+                          <MaterialCommunityIcon
+                            name={game.is_active ? "check-circle" : "close-circle"}
+                            size={16}
+                            color={game.is_active ? colors.success : colors.error}
+                          />
+                        )}
+                      >
+                        {game.is_active ? 'Active' : 'Ended'}
                       </Chip>
                     </View>
 
@@ -398,11 +555,18 @@ export function DiscoverScreen() {
                       <Chip
                         mode="outlined"
                         style={[styles.statusChip, styles.gameChip]}
+                        icon={() => (
+                          <MaterialCommunityIcon
+                            name={game.time_until_reveal > 0 ? "clock-outline" : "check-circle"}
+                            size={16}
+                            color={game.time_until_reveal > 0 ? colors.warning : colors.success}
+                          />
+                        )}
                       >
                         {game.time_until_reveal > 0 ? (
-                          `⏰ Reveals in ${Math.floor(game.time_until_reveal / 3600)}h ${Math.floor((game.time_until_reveal % 3600) / 60)}m`
+                          `Reveals in ${Math.floor(game.time_until_reveal / 3600)}h ${Math.floor((game.time_until_reveal % 3600) / 60)}m`
                         ) : (
-                          '✅ Ready to reveal!'
+                          'Ready to reveal!'
                         )}
                       </Chip>
                     </View>
@@ -482,12 +646,20 @@ export function DiscoverScreen() {
                           {formatWalletAddress(entry.wallet_address)}
                         </Text>
                         {entry.twitter_username && (
-                          <Text
-                            variant="bodySmall"
-                            style={styles.twitterHandle}
-                          >
-                            🐦 @{entry.twitter_username}
-                          </Text>
+                          <View style={styles.twitterContainer}>
+                            <MaterialCommunityIcon
+                              name="twitter"
+                              size={12}
+                              color={colors.primary}
+                              style={styles.twitterIcon}
+                            />
+                            <Text
+                              variant="bodySmall"
+                              style={styles.twitterHandle}
+                            >
+                              @{entry.twitter_username}
+                            </Text>
+                          </View>
                         )}
                       </View>
                       <View style={styles.leaderboardStats}>
@@ -527,14 +699,13 @@ export function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   screenContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+    ...layout.screenContainer,
   },
   header: {
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   title: {
     fontWeight: 'bold',
@@ -545,23 +716,26 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   tabChip: {
     marginRight: 8,
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
   },
   searchBar: {
     elevation: 0,
   },
   filterContainer: {
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -584,6 +758,9 @@ const styles = StyleSheet.create({
   capsuleCard: {
     margin: 16,
     marginBottom: 8,
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   authorHeader: {
     flexDirection: 'row',
@@ -611,25 +788,47 @@ const styles = StyleSheet.create({
   },
   authorName: {
     fontWeight: 'bold',
+    color: colors.text,
   },
   authorWallet: {
-    color: '#666',
+    color: colors.textSecondary,
     fontSize: 12,
     fontFamily: 'monospace',
   },
   headerRight: {
     alignItems: 'flex-end',
   },
-  platform: {
-    color: '#666',
+  platformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
+  },
+  platformIcon: {
+    marginRight: 4,
+  },
+  platform: {
+    color: colors.primary,
+  },
+  gameStatsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statsIcon: {
+    marginRight: 4,
   },
   gameStats: {
-    color: '#666',
-    marginBottom: 4,
+    color: colors.textSecondary,
+  },
+  twitterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  twitterIcon: {
+    marginRight: 2,
   },
   twitterHandle: {
-    color: '#1DA1F2',
+    color: colors.primary,
     fontSize: 12,
   },
   statusContainer: {
@@ -663,16 +862,26 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 4,
   },
-  content: {
+  contentHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: 16,
+  },
+  hintIcon: {
+    marginRight: 8,
+    marginTop: 2,
+  },
+  content: {
+    flex: 1,
     lineHeight: 20,
+    color: colors.text,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border,
     paddingTop: 8,
   },
   timestamp: {
@@ -719,9 +928,93 @@ const styles = StyleSheet.create({
   emptyTitle: {
     marginBottom: 8,
     fontWeight: 'bold',
+    color: colors.text,
   },
   emptySubtitle: {
     color: '#666',
     textAlign: 'center',
+  },
+  
+  // Modern Hero Section (from HubScreen)
+  heroContainer: {
+    minHeight: 200, //fit content
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.medium,
+    overflow: 'hidden', // Ensures gradient respects border radius
+  },
+  gradient: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  titleIcon: {
+    marginRight: spacing.sm,
+  },
+  heroTitle: {
+    ...typography.displayMedium,
+    color: colors.text,
+    fontWeight: 'bold',
+    textShadowColor: colors.primary + '20',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  subtitleContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  highlightText: {
+    ...typography.titleLarge,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  subtitleText: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    ...typography.headlineMedium,
+    color: colors.text,
+  },
+  statLabel: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+  },
+  // Fix for LinearGradient rendering issues
+  gradientFix: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200, // Ensure minimum height for gradient to render
+  },
+  // Android gradient enhancement - match iOS visual impact
+  androidGradientEnhancement: {
+    borderWidth: 1,
+    borderColor: colors.primary + '30', // More visible border
+    elevation: 6, // Higher elevation for more shadow
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15, // More visible shadow
+    shadowRadius: 10,
+    // Add a subtle overlay effect
+    backgroundColor: 'rgba(29, 161, 242, 0.02)', // Very subtle base tint
   },
 });

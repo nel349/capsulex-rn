@@ -1,10 +1,10 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import * as anchor from '@coral-xyz/anchor';
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Address } from '@solana/kit';
 import { useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
@@ -16,6 +16,7 @@ import {
   AppState,
   Platform,
 } from 'react-native';
+import { Text, Card, Button, ActivityIndicator } from 'react-native-paper';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -23,7 +24,6 @@ import Animated, {
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
-import { Text, Card, Button, ActivityIndicator } from 'react-native-paper';
 
 import { HorizontalCapsuleList } from '../components/capsules';
 import { useDualAuth } from '../providers';
@@ -410,7 +410,12 @@ export function HubScreen() {
   const renderHeroContent = () => (
     <>
       <View style={styles.titleContainer}>
-        <MaterialCommunityIcon name="timer-sand" size={32} color={colors.primary} style={styles.titleIcon} />
+        <MaterialCommunityIcon
+          name="timer-sand"
+          size={32}
+          color={colors.primary}
+          style={styles.titleIcon}
+        />
         <Text style={styles.heroTitle}>Time Capsules</Text>
       </View>
       <View style={styles.subtitleContainer}>
@@ -424,24 +429,40 @@ export function HubScreen() {
           <Text style={styles.heroSubtitle}>
             <Text style={styles.highlightText}>{stats.pending}</Text>
             <Text style={styles.subtitleText}> pending • </Text>
-            <Text style={styles.highlightText}>{capsuleData?.total_capsules || 0}</Text>
+            <Text style={styles.highlightText}>
+              {capsuleData?.total_capsules || 0}
+            </Text>
             <Text style={styles.subtitleText}> total capsules</Text>
           </Text>
         )}
       </View>
       <View style={styles.heroStats}>
         <View style={styles.statItem}>
-          <MaterialCommunityIcon name="wallet" size={28} color={colors.primary} />
-          <Text style={styles.statValue}>{balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}</Text>
+          <MaterialCommunityIcon
+            name="wallet"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>
+            {balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}
+          </Text>
           <Text style={styles.statLabel}>SOL Balance</Text>
         </View>
         <View style={styles.statItem}>
-          <MaterialCommunityIcon name="fire" size={28} color={colors.premiumOrange} />
+          <MaterialCommunityIcon
+            name="fire"
+            size={28}
+            color={colors.premiumOrange}
+          />
           <Text style={styles.statValue}>{stats.ready_to_reveal}</Text>
           <Text style={styles.statLabel}>Ready Now</Text>
         </View>
         <View style={styles.statItem}>
-          <MaterialCommunityIcon name="clock-outline" size={28} color={colors.primary} />
+          <MaterialCommunityIcon
+            name="clock-outline"
+            size={28}
+            color={colors.primary}
+          />
           <Text style={styles.statValue}>{stats.pending}</Text>
           <Text style={styles.statLabel}>Pending</Text>
         </View>

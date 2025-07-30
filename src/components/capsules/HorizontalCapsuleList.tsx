@@ -36,13 +36,6 @@ export function HorizontalCapsuleList({
 
   const renderCapsuleCard = (capsule: EnhancedCapsule) => {
     const isRevealing = revealingCapsules.has(capsule.publicKey);
-    
-    console.log(`🎯 Rendering ${type} capsule:`, {
-      publicKey: capsule.publicKey.slice(0, 8),
-      type,
-      hasGlowAnim: !!glowAnim,
-      isRevealing
-    });
 
     return (
       <CapsuleCard

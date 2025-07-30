@@ -606,40 +606,40 @@ export function ProfileScreen() {
 
             <Divider />
 
-<List.Item
-  title="Network Settings"
-  description="Manage blockchain network settings"
-  left={props => <List.Icon {...props} icon="server" />}
-  onPress={() => navigation.navigate('NetworkSettings')}
-/>
+            <List.Item
+              title="Network Settings"
+              description="Manage blockchain network settings"
+              left={props => <List.Icon {...props} icon="server" />}
+              onPress={() => navigation.navigate('NetworkSettings')}
+            />
 
-<Divider />
+            <Divider />
 
-<List.Item
-  title="Public Profile"
-  description="Allow others to see your capsules"
-  left={props => <List.Icon {...props} icon="earth" />}
-  right={() => (
-    <Switch
-      value={profile.settings.publicProfile}
-      onValueChange={value => updateSetting('publicProfile', value)}
-    />
-  )}
-/>
+            <List.Item
+              title="Public Profile"
+              description="Allow others to see your capsules"
+              left={props => <List.Icon {...props} icon="earth" />}
+              right={() => (
+                <Switch
+                  value={profile.settings.publicProfile}
+                  onValueChange={value => updateSetting('publicProfile', value)}
+                />
+              )}
+            />
 
-<Divider />
+            <Divider />
 
-<List.Item
-  title="Auto-Reveal"
-  description="Automatically post capsules when time comes"
-  left={props => <List.Icon {...props} icon="clock-time-four" />}
-  right={() => (
-    <Switch
-      value={profile.settings.autoReveal}
-      onValueChange={value => updateSetting('autoReveal', value)}
-    />
-  )}
-/>
+            <List.Item
+              title="Auto-Reveal"
+              description="Automatically post capsules when time comes"
+              left={props => <List.Icon {...props} icon="clock-time-four" />}
+              right={() => (
+                <Switch
+                  value={profile.settings.autoReveal}
+                  onValueChange={value => updateSetting('autoReveal', value)}
+                />
+              )}
+            />
 
             <Divider />
 

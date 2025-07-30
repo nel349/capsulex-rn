@@ -3,7 +3,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Card } from 'react-native-paper';
-import Animated, { useAnimatedStyle, interpolateColor, interpolate } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  interpolateColor,
+  interpolate,
+} from 'react-native-reanimated';
 
 import type { CapsuleWithStatus } from '../../services/capsuleApi';
 import { colors, spacing, components } from '../../theme';

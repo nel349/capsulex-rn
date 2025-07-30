@@ -96,7 +96,10 @@ const AppStack = () => {
         component={HomeNavigator}
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="NetworkSettings" component={Screens.NetworkSettingsScreen} />
+      <Stack.Screen
+        name="NetworkSettings"
+        component={Screens.NetworkSettingsScreen}
+      />
       <Stack.Screen
         name="CapsuleDetails"
         component={Screens.CapsuleDetailsScreen}

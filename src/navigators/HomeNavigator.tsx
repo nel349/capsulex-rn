@@ -36,13 +36,17 @@ export function HomeNavigator() {
               );
             case 'Create':
               return (
-                <View style={{
-                  backgroundColor: focused ? 'transparent' : colors.primary + '20',
-                  borderRadius: 20,
-                  padding: 2,
-                  borderWidth: focused ? 0 : 2,
-                  borderColor: colors.primary + '40',
-                }}>
+                <View
+                  style={{
+                    backgroundColor: focused
+                      ? 'transparent'
+                      : colors.primary + '20',
+                    borderRadius: 20,
+                    padding: 2,
+                    borderWidth: focused ? 0 : 2,
+                    borderColor: colors.primary + '40',
+                  }}
+                >
                   <MaterialCommunityIcon
                     name={focused ? 'plus-circle' : 'plus-circle-outline'}
                     size={size + 1} // Slightly larger

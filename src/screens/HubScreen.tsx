@@ -521,26 +521,25 @@ export function HubScreen() {
       >
         {/* Unified Hero Section with Gradient Background */}
         <View style={styles.heroContainer}>
-          {Platform.OS === 'ios' ? (
-            <LinearGradient
-              colors={[
-                colors.surfaceVariant,
-                `rgba(29, 161, 242, 0.08)`,
-                colors.surfaceVariant,
-              ]}
-              locations={[0, 0.5, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={styles.gradient}
-            >
-              {renderHeroContent()}
-            </LinearGradient>
-          ) : (
-            // Android: Use a simple background with subtle overlay
-            <View style={[styles.gradient, styles.androidGradientFallback]}>
-              {renderHeroContent()}
-            </View>
-          )}
+          <LinearGradient
+            colors={[
+              colors.surfaceVariant,
+              Platform.OS === 'android' 
+                ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
+                : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
+              colors.surfaceVariant,
+            ]}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={[
+              styles.gradient,
+              styles.gradientFix, // Force proper dimensions
+              Platform.OS === 'android' && styles.androidGradientEnhancement
+            ]}
+          >
+            {renderHeroContent()}
+          </LinearGradient>
         </View>
 
         {/* Ready to Reveal Section */}
@@ -718,11 +717,22 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100,
   },
-  // Android gradient fallback
-  androidGradientFallback: {
-    backgroundColor: colors.surfaceVariant,
-    // Create a subtle blue tint for Android
+  // Fix for LinearGradient rendering issues
+  gradientFix: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200, // Ensure minimum height for gradient to render
+  },
+  // Android gradient enhancement - match iOS visual impact
+  androidGradientEnhancement: {
     borderWidth: 1,
-    borderColor: `${colors.primary}20`, // 20% opacity primary color
+    borderColor: colors.primary + '30', // More visible border
+    elevation: 6, // Higher elevation for more shadow
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15, // More visible shadow
+    shadowRadius: 10,
+    // Add a subtle overlay effect
+    backgroundColor: 'rgba(29, 161, 242, 0.02)', // Very subtle base tint
   },
 });

@@ -1,3 +1,6 @@
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { useQuery } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -15,21 +18,9 @@ import {
   Searchbar,
   ActivityIndicator,
 } from 'react-native-paper';
-import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useQuery } from '@tanstack/react-query';
 
-import {
-  discoverService,
-  type ActiveGame,
-} from '../services/discoverService';
-import {
-  colors,
-  typography,
-  spacing,
-  layout,
-  shadows,
-} from '../theme';
+import { discoverService } from '../services/discoverService';
+import { colors, typography, spacing, layout, shadows } from '../theme';
 
 type TabType = 'feed' | 'games' | 'leaderboard';
 
@@ -92,7 +83,7 @@ export function DiscoverScreen() {
 
   // Combined loading state
   const loading = revealedLoading || gamesLoading || leaderboardLoading;
-  
+
   // Combined refreshing state (only when manually triggered)
   const refreshing = revealedFetching || gamesFetching || leaderboardFetching;
 
@@ -202,11 +193,7 @@ export function DiscoverScreen() {
       </View>
       <View style={styles.heroStats}>
         <View style={styles.statItem}>
-          <MaterialCommunityIcon
-            name="star"
-            size={28}
-            color={colors.primary}
-          />
+          <MaterialCommunityIcon name="star" size={28} color={colors.primary} />
           <Text style={styles.statValue}>{revealedCapsules.length}</Text>
           <Text style={styles.statLabel}>Revealed</Text>
         </View>
@@ -275,13 +262,18 @@ export function DiscoverScreen() {
                 <MaterialCommunityIcon
                   name={tab.icon as any}
                   size={18}
-                  color={activeTab === tab.key ? colors.primary : colors.primaryVariant}
+                  color={
+                    activeTab === tab.key
+                      ? colors.primary
+                      : colors.primaryVariant
+                  }
                 />
               )}
             >
               <Text
                 style={{
-                  color: activeTab === tab.key ? colors.text : colors.textSecondary,
+                  color:
+                    activeTab === tab.key ? colors.text : colors.textSecondary,
                 }}
               >
                 {tab.label}
@@ -400,9 +392,15 @@ export function DiscoverScreen() {
                         ]}
                         icon={() => (
                           <MaterialCommunityIcon
-                            name={capsule.revealed ? "check-circle" : "clock-outline"}
+                            name={
+                              capsule.revealed
+                                ? 'check-circle'
+                                : 'clock-outline'
+                            }
                             size={16}
-                            color={capsule.revealed ? colors.success : colors.warning}
+                            color={
+                              capsule.revealed ? colors.success : colors.warning
+                            }
                           />
                         )}
                       >
@@ -525,8 +523,8 @@ export function DiscoverScreen() {
 
                     {/* Game Stats */}
                     <View style={styles.gameStatsContainer}>
-                      <Chip 
-                        mode="outlined" 
+                      <Chip
+                        mode="outlined"
                         style={styles.statChip}
                         icon={() => (
                           <MaterialCommunityIcon
@@ -538,8 +536,8 @@ export function DiscoverScreen() {
                       >
                         {game.current_guesses}/{game.max_guesses} guesses
                       </Chip>
-                      <Chip 
-                        mode="outlined" 
+                      <Chip
+                        mode="outlined"
                         style={styles.statChip}
                         icon={() => (
                           <MaterialCommunityIcon
@@ -551,14 +549,23 @@ export function DiscoverScreen() {
                       >
                         {game.winners_found}/{game.max_winners} winners
                       </Chip>
-                      <Chip 
-                        mode="outlined" 
-                        style={[styles.statChip, game.is_active ? styles.activeChip : styles.inactiveChip]}
+                      <Chip
+                        mode="outlined"
+                        style={[
+                          styles.statChip,
+                          game.is_active
+                            ? styles.activeChip
+                            : styles.inactiveChip,
+                        ]}
                         icon={() => (
                           <MaterialCommunityIcon
-                            name={game.is_active ? "check-circle" : "close-circle"}
+                            name={
+                              game.is_active ? 'check-circle' : 'close-circle'
+                            }
                             size={16}
-                            color={game.is_active ? colors.success : colors.error}
+                            color={
+                              game.is_active ? colors.success : colors.error
+                            }
                           />
                         )}
                       >
@@ -573,24 +580,33 @@ export function DiscoverScreen() {
                         style={[styles.statusChip, styles.gameChip]}
                         icon={() => (
                           <MaterialCommunityIcon
-                            name={game.time_until_reveal > 0 ? "clock-outline" : "check-circle"}
+                            name={
+                              game.time_until_reveal > 0
+                                ? 'clock-outline'
+                                : 'check-circle'
+                            }
                             size={16}
-                            color={game.time_until_reveal > 0 ? colors.warning : colors.success}
+                            color={
+                              game.time_until_reveal > 0
+                                ? colors.warning
+                                : colors.success
+                            }
                           />
                         )}
                       >
-                        {game.time_until_reveal > 0 ? (
-                          `Reveals in ${Math.floor(game.time_until_reveal / 3600)}h ${Math.floor((game.time_until_reveal % 3600) / 60)}m`
-                        ) : (
-                          'Ready to reveal!'
-                        )}
+                        {game.time_until_reveal > 0
+                          ? `Reveals in ${Math.floor(game.time_until_reveal / 3600)}h ${Math.floor((game.time_until_reveal % 3600) / 60)}m`
+                          : 'Ready to reveal!'}
                       </Chip>
                     </View>
 
                     {/* Footer */}
                     <View style={styles.footer}>
                       <Text variant="bodySmall" style={styles.timestamp}>
-                        Created {formatTimestamp(new Date(game.created_at).getTime() / 1000)}
+                        Created{' '}
+                        {formatTimestamp(
+                          new Date(game.created_at).getTime() / 1000
+                        )}
                       </Text>
                       <View style={styles.actions}>
                         <IconButton
@@ -950,7 +966,7 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  
+
   // Modern Hero Section (from HubScreen)
   heroContainer: {
     minHeight: 200, //fit content

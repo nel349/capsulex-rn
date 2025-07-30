@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { useQuery } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  RefreshControl,
+  Platform,
+} from 'react-native';
 import {
   Text,
   Card,
@@ -12,6 +21,7 @@ import {
 
 import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
+import { colors, typography, spacing, layout, shadows } from '../theme';
 import type { ApiResponse } from '../types/api';
 
 interface LeaderboardEntry {
@@ -55,74 +65,130 @@ type TimeFrame = 'all-time' | 'weekly' | 'monthly';
 export function LeaderboardScreen() {
   const { isAuthenticated, walletAddress } = useDualAuth();
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('all-time');
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  // Load leaderboard data
-  const fetchLeaderboardData = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      // Fetch global leaderboard
-      const leaderboardResponse = (await apiService.get(
+  // React Query for leaderboard data
+  const {
+    data: leaderboard = [],
+    isLoading: leaderboardLoading,
+    refetch: refetchLeaderboard,
+    isFetching: leaderboardFetching,
+  } = useQuery({
+    queryKey: ['leaderboard', timeFrame],
+    queryFn: async () => {
+      const response = (await apiService.get(
         `/leaderboard/global?timeframe=${timeFrame}&limit=50`
       )) as LeaderboardAPIResponse;
+      return response.success ? response.data || [] : [];
+    },
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchOnReconnect: false,
+    retry: 1,
+  });
 
-      if (leaderboardResponse.success) {
-        setLeaderboard(leaderboardResponse.data || []);
-      }
+  // React Query for user stats
+  const {
+    data: userStats = null,
+    isLoading: userStatsLoading,
+    refetch: refetchUserStats,
+    isFetching: userStatsFetching,
+  } = useQuery({
+    queryKey: ['userStats', walletAddress, isAuthenticated],
+    queryFn: async () => {
+      if (!isAuthenticated || !walletAddress) return null;
+      const response = (await apiService.get(
+        `/leaderboard/user/${walletAddress}`
+      )) as UserStatsAPIResponse;
+      return response.success ? response.data : null;
+    },
+    enabled: isAuthenticated && !!walletAddress,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchOnReconnect: false,
+    retry: 1,
+  });
 
-      // Fetch user stats if authenticated
-      if (isAuthenticated && walletAddress) {
-        const userStatsResponse = (await apiService.get(
-          `/leaderboard/user/${walletAddress}`
-        )) as UserStatsAPIResponse;
-
-        if (userStatsResponse.success) {
-          setUserStats(userStatsResponse.data);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching leaderboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [timeFrame, isAuthenticated, walletAddress]);
-
-  // Load data on mount and timeframe change
-  useEffect(() => {
-    fetchLeaderboardData();
-  }, [fetchLeaderboardData]);
+  const loading = leaderboardLoading || userStatsLoading;
+  const refreshing = leaderboardFetching || userStatsFetching;
 
   // Handle refresh
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchLeaderboardData();
-    setRefreshing(false);
-  }, [fetchLeaderboardData]);
-
-  // Get rank color
-  const getRankColor = (rank: number) => {
-    if (rank === 1) return '#FFD700'; // Gold
-    if (rank === 2) return '#C0C0C0'; // Silver
-    if (rank === 3) return '#CD7F32'; // Bronze
-    return '#666666';
+  const onRefresh = async () => {
+    await Promise.all([refetchLeaderboard(), refetchUserStats()]);
   };
 
-  // Get rank emoji
-  const getRankEmoji = (rank: number) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
-    return `#${rank}`;
+  // Get rank icon and color
+  const getRankIcon = (rank: number) => {
+    if (rank === 1) return { name: 'trophy', color: '#FFD700' };
+    if (rank === 2) return { name: 'medal', color: '#C0C0C0' };
+    if (rank === 3) return { name: 'medal-outline', color: '#CD7F32' };
+    return {
+      name: 'numeric-' + Math.min(rank, 9),
+      color: colors.textSecondary,
+    };
   };
+
+  // Render hero content
+  const renderHeroContent = () => (
+    <>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcon
+          name="trophy"
+          size={32}
+          color={colors.primary}
+          style={styles.titleIcon}
+        />
+        <Text style={styles.heroTitle}>Leaderboard</Text>
+      </View>
+      <View style={styles.subtitleContainer}>
+        <Text style={styles.heroSubtitle}>
+          <Text style={styles.highlightText}>{leaderboard.length}</Text>
+          <Text style={styles.subtitleText}> active players • </Text>
+          <Text style={styles.highlightText}>
+            {userStats?.global_rank || 'N/A'}
+          </Text>
+          <Text style={styles.subtitleText}> your rank</Text>
+        </Text>
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="account-group"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>{leaderboard.length}</Text>
+          <Text style={styles.statLabel}>Players</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="star"
+            size={28}
+            color={colors.premiumOrange}
+          />
+          <Text style={styles.statValue}>{userStats?.total_points || 0}</Text>
+          <Text style={styles.statLabel}>Your Points</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="gamepad-variant"
+            size={28}
+            color={colors.success}
+          />
+          <Text style={styles.statValue}>{userStats?.games_won || 0}</Text>
+          <Text style={styles.statLabel}>Your Wins</Text>
+        </View>
+      </View>
+    </>
+  );
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading leaderboard...</Text>
       </View>
     );
@@ -136,6 +202,29 @@ export function LeaderboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Modern Hero Section with Gradient Background */}
+        <View style={styles.heroContainer}>
+          <LinearGradient
+            colors={[
+              colors.surfaceVariant,
+              Platform.OS === 'android'
+                ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
+                : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
+              colors.surfaceVariant,
+            ]}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={[
+              styles.gradient,
+              styles.gradientFix, // Force proper dimensions
+              Platform.OS === 'android' && styles.androidGradientEnhancement,
+            ]}
+          >
+            {renderHeroContent()}
+          </LinearGradient>
+        </View>
+
         {/* Time Frame Selector */}
         <Card style={styles.timeFrameCard}>
           <Card.Content>
@@ -203,9 +292,17 @@ export function LeaderboardScreen() {
         {!isAuthenticated && (
           <Card style={styles.authCard}>
             <Card.Content>
-              <Text style={styles.authText}>
-                🔐 Connect your wallet to see your stats and compete!
-              </Text>
+              <View style={styles.authContainer}>
+                <MaterialCommunityIcon
+                  name="wallet-outline"
+                  size={20}
+                  color={colors.warning}
+                  style={styles.authIcon}
+                />
+                <Text style={styles.authText}>
+                  Connect your wallet to see your stats and compete!
+                </Text>
+              </View>
             </Card.Content>
           </Card>
         )}
@@ -214,14 +311,27 @@ export function LeaderboardScreen() {
         {leaderboard.length >= 3 && (
           <Card style={styles.podiumCard}>
             <Card.Content>
-              <Text variant="titleLarge" style={styles.podiumTitle}>
-                🏆 Top Champions
-              </Text>
+              <View style={styles.podiumTitleContainer}>
+                <MaterialCommunityIcon
+                  name="trophy"
+                  size={24}
+                  color={colors.primary}
+                  style={styles.podiumTitleIcon}
+                />
+                <Text variant="titleLarge" style={styles.podiumTitle}>
+                  Top Champions
+                </Text>
+              </View>
 
               <View style={styles.podium}>
                 {/* Second Place */}
                 <View style={[styles.podiumPosition, styles.secondPlace]}>
-                  <Text style={styles.podiumEmoji}>🥈</Text>
+                  <MaterialCommunityIcon
+                    name="medal"
+                    size={32}
+                    color="#C0C0C0"
+                    style={styles.podiumIcon}
+                  />
                   <Avatar.Text
                     size={40}
                     label={leaderboard[1]?.wallet_address
@@ -243,7 +353,12 @@ export function LeaderboardScreen() {
 
                 {/* First Place */}
                 <View style={[styles.podiumPosition, styles.firstPlace]}>
-                  <Text style={styles.podiumEmoji}>🥇</Text>
+                  <MaterialCommunityIcon
+                    name="trophy"
+                    size={40}
+                    color="#FFD700"
+                    style={styles.podiumIcon}
+                  />
                   <Avatar.Text
                     size={50}
                     label={leaderboard[0]?.wallet_address
@@ -265,7 +380,12 @@ export function LeaderboardScreen() {
 
                 {/* Third Place */}
                 <View style={[styles.podiumPosition, styles.thirdPlace]}>
-                  <Text style={styles.podiumEmoji}>🥉</Text>
+                  <MaterialCommunityIcon
+                    name="medal-outline"
+                    size={32}
+                    color="#CD7F32"
+                    style={styles.podiumIcon}
+                  />
                   <Avatar.Text
                     size={40}
                     label={leaderboard[2]?.wallet_address
@@ -292,9 +412,17 @@ export function LeaderboardScreen() {
         {/* Full Leaderboard */}
         <Card style={styles.leaderboardCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.leaderboardTitle}>
-              📊 Full Rankings
-            </Text>
+            <View style={styles.leaderboardTitleContainer}>
+              <MaterialCommunityIcon
+                name="format-list-numbered"
+                size={20}
+                color={colors.primary}
+                style={styles.leaderboardTitleIcon}
+              />
+              <Text variant="titleMedium" style={styles.leaderboardTitle}>
+                Full Rankings
+              </Text>
+            </View>
 
             {leaderboard.map((entry, index) => (
               <View key={entry.wallet_address}>
@@ -305,14 +433,21 @@ export function LeaderboardScreen() {
                   ]}
                 >
                   <View style={styles.entryLeft}>
-                    <Text
-                      style={[
-                        styles.rankText,
-                        { color: getRankColor(entry.rank) },
-                      ]}
-                    >
-                      {getRankEmoji(entry.rank)}
-                    </Text>
+                    <View style={styles.rankContainer}>
+                      <MaterialCommunityIcon
+                        name={getRankIcon(entry.rank).name as any}
+                        size={20}
+                        color={getRankIcon(entry.rank).color}
+                      />
+                      <Text
+                        style={[
+                          styles.rankText,
+                          { color: getRankIcon(entry.rank).color },
+                        ]}
+                      >
+                        {entry.rank <= 3 ? '' : `#${entry.rank}`}
+                      </Text>
+                    </View>
                     <Avatar.Text
                       size={36}
                       label={entry.wallet_address.slice(0, 2).toUpperCase()}
@@ -331,8 +466,19 @@ export function LeaderboardScreen() {
                           {Math.round(entry.win_rate * 100)}%
                         </Chip>
                         {entry.badge_count > 0 && (
-                          <Chip mode="outlined" compact style={styles.statChip}>
-                            🏆{entry.badge_count}
+                          <Chip
+                            mode="outlined"
+                            compact
+                            style={styles.statChip}
+                            icon={() => (
+                              <MaterialCommunityIcon
+                                name="trophy"
+                                size={12}
+                                color={colors.premiumOrange}
+                              />
+                            )}
+                          >
+                            {entry.badge_count}
                           </Chip>
                         )}
                       </View>
@@ -353,8 +499,14 @@ export function LeaderboardScreen() {
 
             {leaderboard.length === 0 && (
               <View style={styles.emptyState}>
+                <MaterialCommunityIcon
+                  name="target"
+                  size={48}
+                  color={colors.textSecondary}
+                  style={styles.emptyStateIcon}
+                />
                 <Text style={styles.emptyStateText}>
-                  🎯 No rankings yet. Start playing games to earn points!
+                  No rankings yet. Start playing games to earn points!
                 </Text>
               </View>
             )}
@@ -367,21 +519,40 @@ export function LeaderboardScreen() {
           userStats.recent_achievements.length > 0 && (
             <Card style={styles.achievementsCard}>
               <Card.Content>
-                <Text variant="titleMedium" style={styles.achievementsTitle}>
-                  🎉 Recent Achievements
-                </Text>
+                <View style={styles.achievementsTitleContainer}>
+                  <MaterialCommunityIcon
+                    name="star-circle"
+                    size={20}
+                    color={colors.primary}
+                    style={styles.achievementsTitleIcon}
+                  />
+                  <Text variant="titleMedium" style={styles.achievementsTitle}>
+                    Recent Achievements
+                  </Text>
+                </View>
 
                 {userStats.recent_achievements
                   .slice(0, 5)
                   .map((achievement, index) => (
                     <View key={index} style={styles.achievementItem}>
-                      <Text style={styles.achievementEmoji}>
-                        {achievement.type === 'win'
-                          ? '🏆'
-                          : achievement.type === 'badge'
-                            ? '🏅'
-                            : '🎯'}
-                      </Text>
+                      <MaterialCommunityIcon
+                        name={
+                          achievement.type === 'win'
+                            ? 'trophy'
+                            : achievement.type === 'badge'
+                              ? 'medal'
+                              : 'target'
+                        }
+                        size={24}
+                        color={
+                          achievement.type === 'win'
+                            ? colors.success
+                            : achievement.type === 'badge'
+                              ? colors.premiumOrange
+                              : colors.primary
+                        }
+                        style={styles.achievementIcon}
+                      />
                       <View style={styles.achievementInfo}>
                         <Text style={styles.achievementText}>
                           {achievement.type === 'win'
@@ -407,27 +578,110 @@ export function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+    ...layout.screenContainer,
   },
   centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
+    ...layout.centered,
+    padding: spacing.sectionPadding,
   },
   scrollView: {
     flex: 1,
   },
   loadingText: {
-    marginTop: 16,
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
     textAlign: 'center',
+  },
+
+  // Modern Hero Section (from HubScreen pattern)
+  heroContainer: {
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.medium,
+    overflow: 'hidden',
+  },
+  gradient: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  titleIcon: {
+    marginRight: spacing.sm,
+  },
+  heroTitle: {
+    ...typography.displayMedium,
+    color: colors.text,
+    fontWeight: 'bold',
+    textShadowColor: colors.primary + '20',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  subtitleContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  highlightText: {
+    ...typography.titleLarge,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  subtitleText: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    ...typography.headlineMedium,
+    color: colors.text,
+  },
+  statLabel: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+  },
+  // Fix for LinearGradient rendering issues
+  gradientFix: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200,
+  },
+  // Android gradient enhancement
+  androidGradientEnhancement: {
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    backgroundColor: 'rgba(29, 161, 242, 0.02)',
   },
 
   // Time Frame Card
   timeFrameCard: {
-    margin: 16,
-    marginBottom: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   timeFrameButtons: {
     backgroundColor: 'transparent',
@@ -435,74 +689,92 @@ const styles = StyleSheet.create({
 
   // User Stats Card
   userStatsCard: {
-    margin: 16,
-    marginTop: 8,
-    backgroundColor: '#E8F5E8',
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
     borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: colors.success,
   },
   userStatsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   userAvatar: {
-    backgroundColor: '#4CAF50',
-    marginRight: 12,
+    backgroundColor: colors.success,
+    marginRight: spacing.md,
   },
   userStatsInfo: {
     flex: 1,
   },
   userStatsTitle: {
+    ...typography.titleMedium,
+    color: colors.success,
     fontWeight: 'bold',
-    color: '#2E7D32',
   },
   userStatsSubtitle: {
-    color: '#2E7D32',
+    ...typography.bodyMedium,
+    color: colors.success,
     opacity: 0.8,
   },
   userStatsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  statItem: {
+  userStatItem: {
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 20,
+    ...typography.titleLarge,
+    color: colors.success,
     fontWeight: 'bold',
-    color: '#2E7D32',
   },
-  statLabel: {
-    fontSize: 12,
+  userStatLabel: {
+    ...typography.bodySmall,
+    color: colors.success,
     opacity: 0.7,
-    color: '#2E7D32',
   },
 
   // Auth Card
   authCard: {
-    margin: 16,
-    marginTop: 8,
-    backgroundColor: '#FFF3E0',
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    borderLeftColor: colors.warning,
+  },
+  authContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  authIcon: {
+    marginRight: spacing.sm,
   },
   authText: {
-    color: '#E65100',
-    textAlign: 'center',
+    ...typography.bodyMedium,
+    color: colors.warning,
+    flex: 1,
   },
 
   // Podium Card
   podiumCard: {
-    margin: 16,
-    marginTop: 8,
-    backgroundColor: '#F3E5F5',
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+  },
+  podiumTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  podiumTitleIcon: {
+    marginRight: spacing.sm,
   },
   podiumTitle: {
-    textAlign: 'center',
-    marginBottom: 20,
+    ...typography.titleLarge,
+    color: colors.primary,
     fontWeight: 'bold',
-    color: '#7B1FA2',
   },
   podium: {
     flexDirection: 'row',
@@ -512,7 +784,7 @@ const styles = StyleSheet.create({
   },
   podiumPosition: {
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: spacing.sm,
     flex: 1,
   },
   firstPlace: {
@@ -524,130 +796,168 @@ const styles = StyleSheet.create({
   thirdPlace: {
     marginBottom: 40,
   },
-  podiumEmoji: {
-    fontSize: 24,
-    marginBottom: 8,
+  podiumIcon: {
+    marginBottom: spacing.sm,
   },
   podiumAvatar: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   podiumName: {
-    fontSize: 12,
+    ...typography.bodySmall,
+    color: colors.text,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   podiumPoints: {
-    fontSize: 11,
-    opacity: 0.7,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 
   // Leaderboard Card
   leaderboardCard: {
-    margin: 16,
-    marginTop: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  leaderboardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  leaderboardTitleIcon: {
+    marginRight: spacing.sm,
   },
   leaderboardTitle: {
-    marginBottom: 16,
+    ...typography.titleMedium,
+    color: colors.primary,
     fontWeight: 'bold',
   },
   leaderboardEntry: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.sm,
   },
   currentUserEntry: {
-    backgroundColor: '#E8F5E8',
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    backgroundColor: colors.success + '20',
+    marginHorizontal: -spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: spacing.sm,
   },
   entryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
+  rankContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+    minWidth: 40,
+  },
   rankText: {
-    fontSize: 16,
+    ...typography.bodyLarge,
     fontWeight: 'bold',
-    marginRight: 12,
-    minWidth: 32,
+    marginLeft: spacing.xs,
   },
   entryAvatar: {
-    marginRight: 12,
+    backgroundColor: colors.primary,
+    marginRight: spacing.sm,
   },
   entryInfo: {
     flex: 1,
   },
   entryName: {
-    fontSize: 14,
+    ...typography.bodyMedium,
+    color: colors.text,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   entryStats: {
     flexDirection: 'row',
-    gap: 4,
+    gap: spacing.xs,
   },
   statChip: {
     height: 24,
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.border,
   },
   entryRight: {
     alignItems: 'flex-end',
   },
   pointsText: {
-    fontSize: 16,
+    ...typography.titleMedium,
+    color: colors.primary,
     fontWeight: 'bold',
-    color: '#7B1FA2',
   },
   pointsLabel: {
-    fontSize: 11,
-    opacity: 0.7,
+    ...typography.labelSmall,
+    color: colors.textSecondary,
   },
   entryDivider: {
-    marginVertical: 4,
+    marginVertical: spacing.xs,
+    backgroundColor: colors.border,
   },
 
   // Empty State
   emptyState: {
-    padding: 32,
+    ...layout.premiumSpacing,
     alignItems: 'center',
   },
+  emptyStateIcon: {
+    marginBottom: spacing.md,
+  },
   emptyStateText: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     textAlign: 'center',
-    opacity: 0.7,
     fontStyle: 'italic',
   },
 
   // Achievements Card
   achievementsCard: {
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 32,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    marginBottom: spacing.xl,
+    backgroundColor: colors.surfaceVariant,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.premiumOrange,
+  },
+  achievementsTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  achievementsTitleIcon: {
+    marginRight: spacing.sm,
   },
   achievementsTitle: {
-    marginBottom: 16,
+    ...typography.titleMedium,
+    color: colors.premiumOrange,
     fontWeight: 'bold',
   },
   achievementItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
-  achievementEmoji: {
-    fontSize: 20,
-    marginRight: 12,
+  achievementIcon: {
+    marginRight: spacing.sm,
   },
   achievementInfo: {
     flex: 1,
   },
   achievementText: {
-    fontSize: 14,
+    ...typography.bodyMedium,
+    color: colors.text,
     fontWeight: '500',
   },
   achievementDate: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 2,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
 });

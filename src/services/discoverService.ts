@@ -99,9 +99,7 @@ class DiscoverService {
         games: ActiveGame[];
         total: number;
         filters: any;
-      }> = await apiService.get(
-        `/games/active?${params.toString()}`
-      );
+      }> = await apiService.get(`/games/active?${params.toString()}`);
       return Array.isArray(response.data?.games) ? response.data.games : [];
     } catch (error) {
       console.error('Failed to fetch active games:', error);
@@ -155,13 +153,15 @@ class DiscoverService {
         wallet_filter: string;
         capsules: any[];
       }> = await apiService.get(`/capsules/ready-to-reveal${params}`);
-      
+
       // Transform blockchain data to expected format
       const capsules = response.data?.capsules || [];
       return capsules.map((capsule: any) => ({
         id: capsule.publicKey?.toString() || capsule.id,
         content: capsule.account?.encryptedContent || capsule.content,
-        reveal_date_timestamp: capsule.account?.revealDate?.toNumber?.() || capsule.reveal_date_timestamp,
+        reveal_date_timestamp:
+          capsule.account?.revealDate?.toNumber?.() ||
+          capsule.reveal_date_timestamp,
         creator: capsule.account?.creator?.toString() || capsule.creator,
         creator_display_name: capsule.creator_display_name || null,
         is_public: true,

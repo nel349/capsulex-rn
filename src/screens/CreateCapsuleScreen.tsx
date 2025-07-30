@@ -1,8 +1,10 @@
 import * as anchor from '@coral-xyz/anchor';
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Address } from '@solana/kit';
 import * as Crypto from 'expo-crypto';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
@@ -30,6 +32,14 @@ import { useCapsuleService } from '../services/capsuleService';
 import { useSolanaService } from '../services/solana';
 import { twitterService } from '../services/twitterService';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import {
+  colors,
+  typography,
+  spacing,
+  layout,
+  shadows,
+  components,
+} from '../theme';
 import { VaultKeyManager } from '../utils/vaultKey';
 
 interface SOLBalance {
@@ -72,8 +82,8 @@ export function CreateCapsuleScreen() {
   const { getBalance } = useSolanaService();
 
   const platforms = [
-    { key: 'twitter', label: 'Twitter', icon: '🐦' },
-    { key: 'instagram', label: 'Instagram', icon: '📷' },
+    { key: 'twitter', label: 'Twitter', icon: 'twitter' },
+    { key: 'instagram', label: 'Instagram', icon: 'instagram' },
   ];
 
   useEffect(() => {
@@ -442,12 +452,79 @@ export function CreateCapsuleScreen() {
     showInfo('SOL onramp feature coming soon!');
   };
 
+  // Render hero content with gradient background
+  const renderHeroContent = () => (
+    <>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcon
+          name={
+            createMode === 'time_capsule'
+              ? 'package-variant-closed'
+              : 'calendar-clock'
+          }
+          size={32}
+          color={colors.primary}
+          style={styles.titleIcon}
+        />
+        <Text style={styles.heroTitle}>
+          {createMode === 'time_capsule' ? 'Create Capsule' : 'Schedule Post'}
+        </Text>
+      </View>
+      <View style={styles.subtitleContainer}>
+        <Text style={styles.heroSubtitle}>
+          <Text style={styles.subtitleText}>
+            {createMode === 'time_capsule'
+              ? 'Encrypt your content for future reveal'
+              : 'Schedule content for automatic posting'}
+          </Text>
+        </Text>
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="wallet"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>{solBalance.balance.toFixed(4)}</Text>
+          <Text style={styles.statLabel}>SOL Balance</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name={solBalance.sufficient ? 'check-circle' : 'alert-circle'}
+            size={28}
+            color={solBalance.sufficient ? colors.success : colors.warning}
+          />
+          <Text style={styles.statValue}>{solBalance.required.toFixed(4)}</Text>
+          <Text style={styles.statLabel}>Required</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name={isGamified ? 'gamepad-variant' : 'lock'}
+            size={28}
+            color={colors.premiumOrange}
+          />
+          <Text style={styles.statValue}>{isGamified ? 'Game' : 'Secure'}</Text>
+          <Text style={styles.statLabel}>Mode</Text>
+        </View>
+      </View>
+    </>
+  );
+
   if (!isAuthenticated) {
     return (
       <View style={styles.screenContainer}>
-        <View style={styles.connectPrompt}>
-          <Text style={styles.title}>Connect Your Wallet</Text>
-          <Text style={styles.subtitle}>
+        <View style={styles.centered}>
+          <MaterialCommunityIcon
+            name="wallet-outline"
+            size={64}
+            color={colors.primary}
+            style={styles.connectIcon}
+          />
+          <Text variant="headlineSmall" style={styles.connectTitle}>
+            Connect Your Wallet
+          </Text>
+          <Text variant="bodyMedium" style={styles.connectSubtitle}>
             You need to connect your wallet to create time capsules
           </Text>
         </View>
@@ -458,26 +535,43 @@ export function CreateCapsuleScreen() {
   return (
     <View style={styles.screenContainer}>
       <ScrollView style={styles.scrollView}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {createMode === 'time_capsule'
-              ? 'Create Time Capsule'
-              : 'Schedule Social Post'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {createMode === 'time_capsule'
-              ? 'Schedule your content for future reveal'
-              : 'Schedule a post to be published automatically'}
-          </Text>
+        {/* Modern Hero Section with Gradient Background */}
+        <View style={styles.heroContainer}>
+          <LinearGradient
+            colors={[
+              colors.surfaceVariant,
+              Platform.OS === 'android'
+                ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
+                : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
+              colors.surfaceVariant,
+            ]}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={[
+              styles.gradient,
+              styles.gradientFix, // Force proper dimensions
+              Platform.OS === 'android' && styles.androidGradientEnhancement,
+            ]}
+          >
+            {renderHeroContent()}
+          </LinearGradient>
         </View>
 
         {/* Mode Selection */}
         <Card style={styles.modeSelectionCard}>
           <Card.Content>
-            <Text style={styles.sectionTitle}>
-              📝 What do you want to create?
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcon
+                name="pencil"
+                size={20}
+                color={colors.primary}
+                style={styles.sectionIcon}
+              />
+              <Text style={styles.sectionTitle}>
+                What do you want to create?
+              </Text>
+            </View>
             <View style={styles.modeButtonContainer}>
               <Pressable
                 style={[
@@ -486,6 +580,16 @@ export function CreateCapsuleScreen() {
                 ]}
                 onPress={() => setCreateMode('time_capsule')}
               >
+                <MaterialCommunityIcon
+                  name="package-variant-closed"
+                  size={24}
+                  color={
+                    createMode === 'time_capsule'
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                  style={styles.modeIcon}
+                />
                 <Text
                   style={[
                     styles.modeButtonText,
@@ -493,7 +597,7 @@ export function CreateCapsuleScreen() {
                       styles.modeButtonTextActive,
                   ]}
                 >
-                  🔐 Time Capsule
+                  Time Capsule
                 </Text>
                 <Text style={styles.modeButtonDescription}>
                   Encrypted content stored on blockchain
@@ -507,13 +611,23 @@ export function CreateCapsuleScreen() {
                 ]}
                 onPress={() => setCreateMode('social_post')}
               >
+                <MaterialCommunityIcon
+                  name="calendar-clock"
+                  size={24}
+                  color={
+                    createMode === 'social_post'
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                  style={styles.modeIcon}
+                />
                 <Text
                   style={[
                     styles.modeButtonText,
                     createMode === 'social_post' && styles.modeButtonTextActive,
                   ]}
                 >
-                  📱 Social Post
+                  Social Post
                 </Text>
                 <Text style={styles.modeButtonDescription}>
                   Schedule a post to Twitter
@@ -591,8 +705,19 @@ export function CreateCapsuleScreen() {
                   setSelectedPlatform(platform.key as 'twitter' | 'instagram')
                 }
                 style={styles.platformChip}
+                icon={() => (
+                  <MaterialCommunityIcon
+                    name={platform.icon as any}
+                    size={16}
+                    color={
+                      selectedPlatform === platform.key
+                        ? colors.primary
+                        : colors.textSecondary
+                    }
+                  />
+                )}
               >
-                {platform.icon} {platform.label}
+                {platform.label}
               </Chip>
             ))}
           </View>
@@ -649,10 +774,18 @@ export function CreateCapsuleScreen() {
             {content.length}/280 characters
           </Text>
           {createMode === 'social_post' && (
-            <Text style={styles.socialPostHint}>
-              💡 This content will be posted directly to Twitter at your
-              scheduled time. Service fee required.
-            </Text>
+            <View style={styles.hintContainer}>
+              <MaterialCommunityIcon
+                name="lightbulb-outline"
+                size={14}
+                color={colors.textSecondary}
+                style={styles.hintIcon}
+              />
+              <Text style={styles.socialPostHint}>
+                This content will be posted directly to Twitter at your
+                scheduled time. Service fee required.
+              </Text>
+            </View>
           )}
         </View>
 
@@ -822,76 +955,170 @@ export function CreateCapsuleScreen() {
 
 const styles = StyleSheet.create({
   screenContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+    ...layout.screenContainer,
   },
   scrollView: {
     flex: 1,
   },
-  header: {
-    padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  centered: {
+    ...layout.centered,
+    padding: spacing.sectionPadding,
   },
-  title: {
-    fontWeight: 'bold',
-    marginBottom: 4,
+  connectIcon: {
+    marginBottom: spacing.lg,
   },
-  subtitle: {
-    color: '#666',
+  connectTitle: {
+    ...typography.headlineSmall,
+    color: colors.text,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
-  connectPrompt: {
-    flex: 1,
-    justifyContent: 'center',
+  connectSubtitle: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+
+  // Modern Hero Section (from HubScreen pattern)
+  heroContainer: {
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.medium,
+    overflow: 'hidden',
+  },
+  gradient: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  titleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 32,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  titleIcon: {
+    marginRight: spacing.sm,
+  },
+  heroTitle: {
+    ...typography.displayMedium,
+    color: colors.text,
+    fontWeight: 'bold',
+    textShadowColor: colors.primary + '20',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  subtitleContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  subtitleText: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    ...typography.headlineMedium,
+    color: colors.text,
+  },
+  statLabel: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+  },
+  // Fix for LinearGradient rendering issues
+  gradientFix: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200,
+  },
+  // Android gradient enhancement
+  androidGradientEnhancement: {
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    backgroundColor: 'rgba(29, 161, 242, 0.02)',
   },
   balanceCard: {
-    margin: 16,
-    marginBottom: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   insufficientBalance: {
-    borderColor: '#FF5722',
-    borderWidth: 1,
+    borderColor: colors.error,
+    borderWidth: 2,
+    backgroundColor: colors.surfaceVariant,
   },
   balanceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   balanceAmount: {
+    ...typography.titleMedium,
+    color: colors.primary,
     fontWeight: 'bold',
-    color: '#2196F3',
   },
   balanceInfo: {
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
   },
   section: {
-    padding: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  sectionIcon: {
+    marginRight: spacing.sm,
   },
   sectionTitle: {
-    marginBottom: 12,
+    ...typography.titleMedium,
+    color: colors.text,
     fontWeight: 'bold',
   },
   platformContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   platformChip: {
-    marginRight: 8,
+    marginRight: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.border,
   },
   contentInput: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surface,
   },
   characterCount: {
+    ...typography.bodySmall,
     textAlign: 'right',
-    color: '#666',
+    color: colors.textSecondary,
   },
   dateTimeContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
   dateInput: {
     flex: 2,
@@ -900,41 +1127,93 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   createButton: {
-    margin: 16,
-    marginTop: 8,
+    ...components.primaryButton,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.lg,
   },
   modalContainer: {
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 8,
-    padding: 20,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.lg,
+    borderRadius: 16,
+    padding: spacing.lg,
+    ...shadows.medium,
   },
   modalContent: {
     alignItems: 'center',
   },
   modalTitle: {
-    marginBottom: 16,
+    ...typography.headlineSmall,
+    color: colors.text,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   modalDescription: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
+    marginBottom: spacing.xl,
+    lineHeight: 22,
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
+    width: '100%',
   },
   modalButton: {
     flex: 1,
   },
-  // Vault Key Education Card Styles
+  // Card Styles with Modern Theming
+  modeSelectionCard: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  modeButtonContainer: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  modeButton: {
+    flex: 1,
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: 12,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  modeButtonActive: {
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.primary,
+  },
+  modeIcon: {
+    marginBottom: spacing.sm,
+  },
+  modeButtonText: {
+    ...typography.titleSmall,
+    color: colors.text,
+    marginBottom: spacing.xs,
+    fontWeight: '600',
+  },
+  modeButtonTextActive: {
+    color: colors.primary,
+  },
+  modeButtonDescription: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+
+  // Info Card Styles
   vaultKeyInfoCard: {
-    margin: 16,
-    marginBottom: 8,
-    backgroundColor: '#E3F2FD', // Light blue background
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
     borderLeftWidth: 4,
-    borderLeftColor: '#2196F3', // Blue accent
+    borderLeftColor: colors.primary,
   },
   vaultKeyHeader: {
     flexDirection: 'row',
@@ -942,140 +1221,126 @@ const styles = StyleSheet.create({
   },
   vaultKeyIcon: {
     fontSize: 24,
-    marginRight: 12,
+    marginRight: spacing.md,
     marginTop: 2,
   },
   vaultKeyTextContainer: {
     flex: 1,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   vaultKeyTitle: {
-    fontSize: 16,
+    ...typography.titleMedium,
+    color: colors.primary,
+    marginBottom: spacing.xs,
     fontWeight: 'bold',
-    color: '#1565C0',
-    marginBottom: 4,
   },
   vaultKeyDescription: {
-    fontSize: 14,
-    color: '#424242',
-    lineHeight: 20,
-    marginBottom: 8,
+    ...typography.bodyMedium,
+    color: colors.text,
+    lineHeight: 22,
+    marginBottom: spacing.sm,
   },
   vaultKeyManagement: {
-    fontSize: 13,
-    color: '#666',
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     fontStyle: 'italic',
   },
   dismissButton: {
     alignSelf: 'flex-start',
   },
-  // Twitter Notification Styles
+  // Notification and Info Styles
   notificationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   notificationTitleContainer: {
     flex: 1,
-    marginRight: 16,
+    marginRight: spacing.md,
   },
   twitterWarning: {
-    fontSize: 12,
-    color: '#FF5722',
-    marginTop: 4,
+    ...typography.bodySmall,
+    color: colors.error,
+    marginTop: spacing.xs,
     fontStyle: 'italic',
   },
   notificationInfoCard: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: colors.surfaceVariant,
     borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: colors.success,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
   },
   notificationInfoText: {
-    fontSize: 14,
-    color: '#2E7D32',
-    lineHeight: 20,
+    ...typography.bodyMedium,
+    color: colors.success,
+    lineHeight: 22,
   },
+
   // Gamification Styles
   gamificationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   gamificationTitleContainer: {
     flex: 1,
-    marginRight: 16,
+    marginRight: spacing.md,
   },
   gamificationDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-    lineHeight: 20,
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    lineHeight: 22,
   },
   gamificationInfoCard: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: colors.surfaceVariant,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    borderLeftColor: colors.premiumOrange,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
   },
   gamificationInfoText: {
-    fontSize: 14,
-    color: '#E65100',
-    lineHeight: 20,
+    ...typography.bodyMedium,
+    color: colors.premiumOrange,
+    lineHeight: 22,
   },
   automaticRevealInfoCard: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.surfaceVariant,
     borderLeftWidth: 4,
-    borderLeftColor: '#2196F3',
-    margin: 16,
-    marginTop: 8,
+    borderLeftColor: colors.primary,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
   },
   automaticRevealInfoText: {
-    fontSize: 14,
-    color: '#1565C0',
-    lineHeight: 20,
+    ...typography.bodyMedium,
+    color: colors.primary,
+    lineHeight: 22,
   },
-  modeSelectionCard: {
-    margin: 16,
-    marginBottom: 8,
-  },
-  modeButtonContainer: {
+
+  // New Icon and Text Container Styles
+  infoTextContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
+    alignItems: 'flex-start',
   },
-  modeButton: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    padding: 16,
+  infoIcon: {
+    marginRight: spacing.sm,
+    marginTop: 2,
+  },
+  hintContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    marginTop: spacing.sm,
   },
-  modeButtonActive: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#2196F3',
-  },
-  modeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  modeButtonTextActive: {
-    color: '#1565C0',
-  },
-  modeButtonDescription: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 16,
+  hintIcon: {
+    marginRight: spacing.sm,
   },
   socialPostHint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     fontStyle: 'italic',
+    flex: 1,
   },
 });

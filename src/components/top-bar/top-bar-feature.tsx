@@ -2,8 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { Appbar } from 'react-native-paper';
 
-import { ProfileAvatar } from './ProfileAvatar';
 import { colors } from '../../theme/colors';
+
+import { ProfileAvatar } from './ProfileAvatar';
 
 export function TopBar() {
   return (

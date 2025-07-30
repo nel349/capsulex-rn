@@ -3,6 +3,7 @@ import { View, StyleSheet, Image } from 'react-native';
 import { Appbar } from 'react-native-paper';
 
 import { ProfileAvatar } from './ProfileAvatar';
+import { colors } from '../../theme/colors';
 
 export function TopBar() {
   return (
@@ -28,6 +29,7 @@ const styles = StyleSheet.create({
   topBar: {
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: colors.surfaceVariant,
   },
   avatarContainer: {
     marginLeft: 8,

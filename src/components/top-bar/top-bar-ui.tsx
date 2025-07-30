@@ -1,10 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Linking, Alert, View } from 'react-native';
+import { Linking, View } from 'react-native';
 import { IconButton, Menu } from 'react-native-paper';
 
-import { dynamicClient } from '../../../App';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { useCluster } from '../cluster/cluster-data-access';
 
@@ -14,26 +13,6 @@ export function TopBarWalletButton() {
     <View>
       {/* add a button here that says "Connect" and when pressed, it will connect the wallet */}
     </View>
-  );
-}
-
-export function TopBarPrivyButton() {
-  const handlePrivyConnect = async () => {
-    try {
-      await dynamicClient.ui.auth.show();
-      // Alert.alert('Success', 'Successfully connected with Privy!');
-    } catch (error) {
-      Alert.alert('Login Error', 'Failed to connect with Privy');
-    }
-  };
-
-  return (
-    <IconButton
-      icon="account-plus"
-      mode="contained-tonal"
-      disabled={false}
-      onPress={handlePrivyConnect}
-    />
   );
 }
 

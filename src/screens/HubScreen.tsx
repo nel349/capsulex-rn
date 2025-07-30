@@ -12,10 +12,17 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
-  Animated,
   Vibration,
   AppState,
+  Platform,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+} from 'react-native-reanimated';
 import { Text, Card, Button, ActivityIndicator } from 'react-native-paper';
 
 import { HorizontalCapsuleList } from '../components/capsules';
@@ -72,9 +79,9 @@ export function HubScreen() {
   const queryClient = useQueryClient();
   const { getMyCapsules } = useCapsuleService();
 
-  // Animation values
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0.3)).current;
+  // Animation values using react-native-reanimated
+  const pulseAnim = useSharedValue(1);
+  const glowAnim = useSharedValue(0.3);
 
   // lets hide the dynamic client from the screen
   useEffect(() => {
@@ -126,44 +133,28 @@ export function HubScreen() {
 
   // Pulsing animation for ready-to-reveal capsules
   useEffect(() => {
-    const pulseAnimation = () => {
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]).start(pulseAnimation);
-    };
-
     if (capsuleData && capsuleData.summary.ready_to_reveal > 0) {
-      pulseAnimation();
+      pulseAnim.value = withRepeat(
+        withSequence(
+          withTiming(1.1, { duration: 800 }),
+          withTiming(1, { duration: 800 })
+        ),
+        -1, // Infinite repeat
+        false
+      );
     }
-
-    return () => pulseAnim.stopAnimation();
   }, [capsuleData?.summary.ready_to_reveal]);
 
   // Glow animation for ready cards
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0.3,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-      ])
-    ).start();
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1500 }),
+        withTiming(0.3, { duration: 1500 })
+      ),
+      -1, // Infinite repeat
+      false
+    );
   }, []);
 
   // Fetch SOL balance
@@ -415,6 +406,48 @@ export function HubScreen() {
     );
   };
 
+  // Render hero content (shared between iOS gradient and Android fallback)
+  const renderHeroContent = () => (
+    <>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcon name="timer-sand" size={32} color={colors.primary} style={styles.titleIcon} />
+        <Text style={styles.heroTitle}>Time Capsules</Text>
+      </View>
+      <View style={styles.subtitleContainer}>
+        {stats.ready_to_reveal > 0 ? (
+          <Text style={styles.heroSubtitle}>
+            <Text style={styles.highlightText}>{stats.ready_to_reveal}</Text>
+            <Text style={styles.subtitleText}> capsules ready to reveal </Text>
+            <Text style={styles.accentText}>🔥</Text>
+          </Text>
+        ) : (
+          <Text style={styles.heroSubtitle}>
+            <Text style={styles.highlightText}>{stats.pending}</Text>
+            <Text style={styles.subtitleText}> pending • </Text>
+            <Text style={styles.highlightText}>{capsuleData?.total_capsules || 0}</Text>
+            <Text style={styles.subtitleText}> total capsules</Text>
+          </Text>
+        )}
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon name="wallet" size={28} color={colors.primary} />
+          <Text style={styles.statValue}>{balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}</Text>
+          <Text style={styles.statLabel}>SOL Balance</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon name="fire" size={28} color={colors.premiumOrange} />
+          <Text style={styles.statValue}>{stats.ready_to_reveal}</Text>
+          <Text style={styles.statLabel}>Ready Now</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon name="clock-outline" size={28} color={colors.primary} />
+          <Text style={styles.statValue}>{stats.pending}</Text>
+          <Text style={styles.statLabel}>Pending</Text>
+        </View>
+      </View>
+    </>
+  );
 
   // Render loading state
   if (loading) {
@@ -468,55 +501,26 @@ export function HubScreen() {
       >
         {/* Unified Hero Section with Gradient Background */}
         <View style={styles.heroContainer}>
-          <LinearGradient
-            colors={[
-              colors.surfaceVariant,
-              colors.primary + '15',
-              colors.surfaceVariant,
-            ]}
-            locations={[0, 0.5, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.gradient}
-          >
-            <View style={styles.titleContainer}>
-              <MaterialCommunityIcon name="timer-sand" size={32} color={colors.primary} style={styles.titleIcon} />
-              <Text style={styles.heroTitle}>Time Capsules</Text>
+          {Platform.OS === 'ios' ? (
+            <LinearGradient
+              colors={[
+                colors.surfaceVariant,
+                `rgba(29, 161, 242, 0.08)`,
+                colors.surfaceVariant,
+              ]}
+              locations={[0, 0.5, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.gradient}
+            >
+              {renderHeroContent()}
+            </LinearGradient>
+          ) : (
+            // Android: Use a simple background with subtle overlay
+            <View style={[styles.gradient, styles.androidGradientFallback]}>
+              {renderHeroContent()}
             </View>
-            <View style={styles.subtitleContainer}>
-              {stats.ready_to_reveal > 0 ? (
-                <Text style={styles.heroSubtitle}>
-                  <Text style={styles.highlightText}>{stats.ready_to_reveal}</Text>
-                  <Text style={styles.subtitleText}> capsules ready to reveal </Text>
-                  <Text style={styles.accentText}>🔥</Text>
-                </Text>
-              ) : (
-                <Text style={styles.heroSubtitle}>
-                  <Text style={styles.highlightText}>{stats.pending}</Text>
-                  <Text style={styles.subtitleText}> pending • </Text>
-                  <Text style={styles.highlightText}>{capsuleData?.total_capsules || 0}</Text>
-                  <Text style={styles.subtitleText}> total capsules</Text>
-                </Text>
-              )}
-            </View>
-            <View style={styles.heroStats}>
-              <View style={styles.statItem}>
-                <MaterialCommunityIcon name="wallet" size={28} color={colors.primary} />
-                <Text style={styles.statValue}>{balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}</Text>
-                <Text style={styles.statLabel}>SOL Balance</Text>
-              </View>
-              <View style={styles.statItem}>
-                <MaterialCommunityIcon name="fire" size={28} color={colors.premiumOrange} />
-                <Text style={styles.statValue}>{stats.ready_to_reveal}</Text>
-                <Text style={styles.statLabel}>Ready Now</Text>
-              </View>
-              <View style={styles.statItem}>
-                <MaterialCommunityIcon name="clock-outline" size={28} color={colors.primary} />
-                <Text style={styles.statValue}>{stats.pending}</Text>
-                <Text style={styles.statLabel}>Pending</Text>
-              </View>
-            </View>
-          </LinearGradient>
+          )}
         </View>
 
         {/* Ready to Reveal Section */}
@@ -693,5 +697,12 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 100,
+  },
+  // Android gradient fallback
+  androidGradientFallback: {
+    backgroundColor: colors.surfaceVariant,
+    // Create a subtle blue tint for Android
+    borderWidth: 1,
+    borderColor: `${colors.primary}20`, // 20% opacity primary color
   },
 });

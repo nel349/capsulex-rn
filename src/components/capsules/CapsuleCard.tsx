@@ -1,8 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
-import { TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Card } from 'react-native-paper';
+import Animated, { useAnimatedStyle, interpolateColor, interpolate } from 'react-native-reanimated';
 
 import type { CapsuleWithStatus } from '../../services/capsuleApi';
 import { colors, spacing, components } from '../../theme';
@@ -23,7 +24,7 @@ interface CapsuleCardProps {
   type: 'ready' | 'pending' | 'revealed';
   isRevealing: boolean;
   onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
-  glowAnim?: Animated.Value;
+  glowAnim?: Animated.SharedValue<number>;
   width: number;
 }
 
@@ -50,20 +51,47 @@ export function CapsuleCard({
     }
   };
 
+  // Animated styles for platform-specific glow
+  const animatedStyle = useAnimatedStyle(() => {
+    if (type !== 'ready' || !glowAnim) return {};
+
+    if (Platform.OS === 'ios') {
+      // iOS: Animate shadow opacity
+      return {
+        shadowOpacity: glowAnim.value,
+      };
+    } else {
+      // Android: Animate background color and elevation to create a diffused glow effect.
+      // Elevation creates a shadow, and we're animating its size and the wrapper's background color.
+      // shadowColor is for Android API 28+ to color the shadow itself.
+      const backgroundColor = interpolateColor(
+        glowAnim.value,
+        [0.3, 1],
+        ['rgba(255, 107, 53, 0.1)', 'rgba(255, 107, 53, 0.4)']
+      );
+      const elevation = interpolate(glowAnim.value, [0.3, 1], [8, 20]);
+
+      return {
+        backgroundColor,
+        elevation,
+        shadowColor: colors.premiumOrange,
+      };
+    }
+  });
+
   return (
     <Animated.View
       style={[
         { width },
         styles.cardContainer,
-        { margin: spacing.sm }, // Add margin here to give space for shadow
-        type === 'ready' && {
-          backgroundColor: colors.surface,
-          borderRadius: 16,
-          shadowColor: colors.premiumOrange,
-          shadowOpacity: glowAnim || 0.5,
-          shadowRadius: 24, // Increased from 16
-          elevation: 20, // Increased from 12
-        },
+        { margin: spacing.sm }, // Add margin here to give space for shadow/border
+        // Base styles for ready cards
+        type === 'ready' && Platform.OS === 'ios' && styles.iosGlowWrapper,
+        type === 'ready' &&
+          Platform.OS === 'android' &&
+          styles.androidGlowWrapper,
+        // Animated styles on top
+        type === 'ready' && animatedStyle,
         isRevealing && styles.revealingCard,
       ]}
     >
@@ -73,7 +101,15 @@ export function CapsuleCard({
         }
         activeOpacity={0.9}
       >
-        <Card style={[styles.card, getCardStyle()]}>
+        <Card
+          style={[
+            styles.card,
+            getCardStyle(),
+            // On Android, add a margin to the card to reveal the animated glow from the wrapper
+            Platform.OS === 'android' &&
+              type === 'ready' && { margin: 12, borderRadius: 6 },
+          ]}
+        >
           <Card.Content style={styles.cardContent}>
             <CapsuleCardHeader type={type} />
             <CapsuleCardContent capsule={capsule} type={type} />
@@ -117,6 +153,20 @@ const styles = StyleSheet.create({
   },
   defaultCard: {
     backgroundColor: colors.surface,
+  },
+
+  // Platform-specific glow wrappers
+  iosGlowWrapper: {
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    shadowColor: colors.premiumOrange,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 0 },
+    // shadowOpacity will be animated
+  },
+  androidGlowWrapper: {
+    borderRadius: 16,
+    // The backgroundColor will be animated to create the glow
   },
 
   // States

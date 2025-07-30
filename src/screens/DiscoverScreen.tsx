@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,12 +17,11 @@ import {
 } from 'react-native-paper';
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQuery } from '@tanstack/react-query';
 
 import {
   discoverService,
-  type RevealedCapsule,
   type ActiveGame,
-  type LeaderboardEntry,
 } from '../services/discoverService';
 import {
   colors,
@@ -36,59 +35,76 @@ type TabType = 'feed' | 'games' | 'leaderboard';
 
 export function DiscoverScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('feed');
-  const [revealedCapsules, setRevealedCapsules] = useState<RevealedCapsule[]>(
-    []
-  );
-  const [activeGames, setActiveGames] = useState<ActiveGame[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'revealed'>('all');
 
-  // Load initial data
-  useEffect(() => {
-    loadInitialData();
-  }, []);
+  // React Query hooks with optimized caching and minimal requests
+  const {
+    data: revealedCapsules = [],
+    isLoading: revealedLoading,
+    refetch: refetchRevealed,
+    isFetching: revealedFetching,
+  } = useQuery({
+    queryKey: ['discover', 'revealedCapsules'],
+    queryFn: () => discoverService.getRevealedCapsules(50),
+    staleTime: 60 * 1000, // 1 minute - data is fresh for 1 minute
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    refetchOnWindowFocus: false, // Don't refetch when app comes back to foreground
+    refetchOnMount: 'always', // Always fetch on first mount
+    refetchOnReconnect: false, // Don't refetch on network reconnection
+    refetchInterval: false, // No automatic interval refetching
+    retry: 1, // Only retry once on failure
+  });
 
-  const loadInitialData = async () => {
-    setLoading(true);
-    await Promise.all([
-      loadRevealedCapsules(),
-      loadActiveGames(),
-      loadLeaderboard(),
-    ]);
-    setLoading(false);
-  };
+  const {
+    data: activeGames = [],
+    isLoading: gamesLoading,
+    refetch: refetchGames,
+    isFetching: gamesFetching,
+  } = useQuery({
+    queryKey: ['discover', 'activeGames'],
+    queryFn: () => discoverService.getActiveGames(20),
+    staleTime: 60 * 1000, // 1 minute - data is fresh for 1 minute
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always', // Always fetch on first mount
+    refetchOnReconnect: false,
+    refetchInterval: false, // No automatic interval refetching
+    retry: 1, // Only retry once on failure
+  });
 
-  const loadRevealedCapsules = async () => {
-    const capsules = await discoverService.getRevealedCapsules(50);
-    setRevealedCapsules(capsules);
-  };
+  const {
+    data: leaderboard = [],
+    isLoading: leaderboardLoading,
+    refetch: refetchLeaderboard,
+    isFetching: leaderboardFetching,
+  } = useQuery({
+    queryKey: ['discover', 'globalLeaderboard'],
+    queryFn: () => discoverService.getGlobalLeaderboard('all_time', 10),
+    staleTime: 60 * 1000, // 1 minute - data is fresh for 1 minute
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always', // Always fetch on first mount
+    refetchOnReconnect: false,
+    refetchInterval: false, // No automatic interval refetching
+    retry: 1, // Only retry once on failure
+  });
 
-  const loadActiveGames = async () => {
-    const games = await discoverService.getActiveGames(20);
-    setActiveGames(games);
-  };
+  // Combined loading state
+  const loading = revealedLoading || gamesLoading || leaderboardLoading;
+  
+  // Combined refreshing state (only when manually triggered)
+  const refreshing = revealedFetching || gamesFetching || leaderboardFetching;
 
-  const loadLeaderboard = async () => {
-    const leaders = await discoverService.getGlobalLeaderboard(
-      'all_time',
-      10
-    );
-    setLeaderboard(leaders);
-  };
-
+  // Manual refresh function - only refetch active tab data
   const onRefresh = async () => {
-    setRefreshing(true);
     if (activeTab === 'feed') {
-      await loadRevealedCapsules();
+      await refetchRevealed();
     } else if (activeTab === 'games') {
-      await loadActiveGames();
+      await refetchGames();
     } else if (activeTab === 'leaderboard') {
-      await loadLeaderboard();
+      await refetchLeaderboard();
     }
-    setRefreshing(false);
   };
 
   const filteredCapsules = revealedCapsules.filter(capsule => {

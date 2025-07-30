@@ -524,7 +524,7 @@ export function HubScreen() {
           <LinearGradient
             colors={[
               colors.surfaceVariant,
-              Platform.OS === 'android' 
+              Platform.OS === 'android'
                 ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
                 : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
               colors.surfaceVariant,
@@ -535,7 +535,7 @@ export function HubScreen() {
             style={[
               styles.gradient,
               styles.gradientFix, // Force proper dimensions
-              Platform.OS === 'android' && styles.androidGradientEnhancement
+              Platform.OS === 'android' && styles.androidGradientEnhancement,
             ]}
           >
             {renderHeroContent()}

@@ -1,7 +1,7 @@
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { useTheme } from 'react-native-paper';
+import { View } from 'react-native';
 
 import { TopBar } from '../components/top-bar/top-bar-feature';
 import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
@@ -9,6 +9,7 @@ import { DiscoverScreen } from '../screens/DiscoverScreen';
 import { HubScreen } from '../screens/HubScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,7 +20,6 @@ const Tab = createBottomTabNavigator();
  * More info: https://reactnavigation.org/docs/bottom-tab-navigator/
  */
 export function HomeNavigator() {
-  const theme = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -36,11 +36,23 @@ export function HomeNavigator() {
               );
             case 'Create':
               return (
-                <MaterialCommunityIcon
-                  name={focused ? 'plus-circle' : 'plus-circle-outline'}
-                  size={size}
-                  color={color}
-                />
+                <View
+                  style={{
+                    backgroundColor: focused
+                      ? 'transparent'
+                      : colors.primary + '20',
+                    borderRadius: 20,
+                    padding: 2,
+                    borderWidth: focused ? 0 : 2,
+                    borderColor: colors.primary + '40',
+                  }}
+                >
+                  <MaterialCommunityIcon
+                    name={focused ? 'plus-circle' : 'plus-circle-outline'}
+                    size={size + 1} // Slightly larger
+                    color={focused ? color : colors.primary}
+                  />
+                </View>
               );
             case 'Discover':
               return (
@@ -68,11 +80,11 @@ export function HomeNavigator() {
               );
           }
         },
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.outline,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
         },
       })}
     >
@@ -82,14 +94,14 @@ export function HomeNavigator() {
         options={{ tabBarLabel: 'Hub' }}
       />
       <Tab.Screen
-        name="Create"
-        component={CreateCapsuleScreen}
-        options={{ tabBarLabel: 'Create' }}
-      />
-      <Tab.Screen
         name="Discover"
         component={DiscoverScreen}
         options={{ tabBarLabel: 'Discover' }}
+      />
+      <Tab.Screen
+        name="Create"
+        component={CreateCapsuleScreen}
+        options={{ tabBarLabel: 'Create' }}
       />
       <Tab.Screen
         name="Leaderboards"

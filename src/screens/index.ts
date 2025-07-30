@@ -1,4 +1,4 @@
-export * from './SettingsScreen';
+export * from './NetworkSettingsScreen';
 export * from './HubScreen';
 export * from './CreateCapsuleScreen';
 export * from './CapsuleDetailsScreen';

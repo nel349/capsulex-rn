@@ -1,41 +1,48 @@
 import * as anchor from '@coral-xyz/anchor';
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Address } from '@solana/kit';
 import { useQueryClient } from '@tanstack/react-query';
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   RefreshControl,
   Alert,
-  Animated,
   Vibration,
   AppState,
+  Platform,
 } from 'react-native';
+import { Text, Button, ActivityIndicator } from 'react-native-paper';
 import {
-  Text,
-  Card,
-  FAB,
-  IconButton,
-  Chip,
-  ProgressBar,
-  Button,
-  ActivityIndicator,
-  Avatar,
-} from 'react-native-paper';
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  withSequence,
+} from 'react-native-reanimated';
 
+import { HorizontalCapsuleList } from '../components/capsules';
 import { useDualAuth } from '../providers';
 import type {
   CapsuleWithStatus,
   WalletCapsulesResponse,
 } from '../services/capsuleApi';
-import { capsuleApi, CapsuleApiService } from '../services/capsuleApi';
+import { capsuleApi } from '../services/capsuleApi';
 import { useCapsuleService } from '../services/capsuleService';
 import { dynamicClientService } from '../services/dynamicClientService';
 import { useBalance } from '../services/solana';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import {
+  colors,
+  typography,
+  spacing,
+  layout,
+  shadows,
+  components,
+} from '../theme';
 import type { Capsule } from '../types/api';
 
 // Enhanced capsule type that merges blockchain and database data
@@ -71,9 +78,9 @@ export function HubScreen() {
   const queryClient = useQueryClient();
   const { getMyCapsules } = useCapsuleService();
 
-  // Animation values
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0.3)).current;
+  // Animation values using react-native-reanimated
+  const pulseAnim = useSharedValue(1);
+  const glowAnim = useSharedValue(0.3);
 
   // lets hide the dynamic client from the screen
   useEffect(() => {
@@ -87,12 +94,15 @@ export function HubScreen() {
     hideDynamicClient();
   }, []);
 
-  // if the user is not authenticated, we should navigate to the onboarding screen
+  // Authentication guard - navigate to onboarding if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
+      console.log(
+        '🔍 HubScreen - User not authenticated, navigating to onboarding screen'
+      );
       navigation.navigate('Onboarding' as never);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigation]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -122,44 +132,28 @@ export function HubScreen() {
 
   // Pulsing animation for ready-to-reveal capsules
   useEffect(() => {
-    const pulseAnimation = () => {
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]).start(pulseAnimation);
-    };
-
     if (capsuleData && capsuleData.summary.ready_to_reveal > 0) {
-      pulseAnimation();
+      pulseAnim.value = withRepeat(
+        withSequence(
+          withTiming(1.1, { duration: 800 }),
+          withTiming(1, { duration: 800 })
+        ),
+        -1, // Infinite repeat
+        false
+      );
     }
-
-    return () => pulseAnim.stopAnimation();
   }, [capsuleData?.summary.ready_to_reveal]);
 
   // Glow animation for ready cards
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0.3,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-      ])
-    ).start();
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1500 }),
+        withTiming(0.3, { duration: 1500 })
+      ),
+      -1, // Infinite repeat
+      false
+    );
   }, []);
 
   // Fetch SOL balance
@@ -180,14 +174,42 @@ export function HubScreen() {
         return;
       }
 
+      // Debug: Log first few blockchain capsules to understand structure
+      // console.log(`🔍 HubScreen - Found ${blockchainResponse.data.total_capsules} blockchain capsules`);
+      // blockchainResponse.data.all_capsules.slice(0, 3).forEach((bcCapsule, index) => {
+      //   console.log(`🔍 Blockchain capsule ${index}:`, {
+      //     publicKey: bcCapsule.publicKey,
+      //     createdAt: bcCapsule.account.createdAt,
+      //     encryptedContent: bcCapsule.account.encryptedContent?.substring(0, 50) + '...',
+      //     creator: bcCapsule.account.creator
+      //   });
+      // });
+
       // Fetch database data
       const databaseCapsules = await getMyCapsules();
+      // console.log(`🔍 HubScreen - Found ${databaseCapsules.length} database capsules`);
 
-      // Create a map of database capsules by transaction signature for quick lookup
+      // Debug: Log first few database capsules to understand structure
+      // databaseCapsules.slice(0, 3).forEach((dbCapsule, index) => {
+      //   console.log(`🔍 Database capsule ${index}:`, {
+      //     capsule_id: dbCapsule.capsule_id,
+      //     on_chain_tx: dbCapsule.on_chain_tx,
+      //     created_at: dbCapsule.created_at,
+      //     has_content: !!dbCapsule.content_encrypted,
+      //     content_preview: dbCapsule.content_encrypted?.substring(0, 50) + '...'
+      //   });
+      // });
+
+      // Create a simple map for matching - let's keep it simple like it was before
       const databaseMap = new Map<string, Capsule>();
       databaseCapsules.forEach(dbCapsule => {
+        // Try multiple keys for matching
         if (dbCapsule.on_chain_tx) {
           databaseMap.set(dbCapsule.on_chain_tx, dbCapsule);
+        }
+        // Also try capsule_id as a key
+        if (dbCapsule.capsule_id) {
+          databaseMap.set(dbCapsule.capsule_id, dbCapsule);
         }
       });
 
@@ -195,30 +217,54 @@ export function HubScreen() {
       const enhanceCapsulesArray = (
         capsules: CapsuleWithStatus[]
       ): EnhancedCapsule[] => {
-        return capsules.map(blockchainCapsule => {
-          // Try to find matching database capsule
-          // Note: We need to implement a way to link blockchain publicKey to database on_chain_tx
-          // For now, we'll use a placeholder approach
+        return capsules.map((blockchainCapsule, index) => {
           const enhancedCapsule: EnhancedCapsule = {
             ...blockchainCapsule,
-            databaseData: undefined, // Will be populated when we can match them
+            databaseData: undefined,
           };
 
-          // Try to find database match by searching for recent transactions
-          // This is a temporary solution - ideally the blockchain data should include tx signature
-          for (const [, dbCapsule] of databaseMap.entries()) {
-            // Simple heuristic: match by creation time proximity and content hash
-            const blockchainTime = blockchainCapsule.account.createdAt;
+          // Try direct matching by various keys first
+          const matchedCapsule = databaseMap.get(blockchainCapsule.publicKey);
+
+          if (matchedCapsule) {
+            console.log(
+              `✅ HubScreen - Matched by publicKey: ${blockchainCapsule.publicKey}`
+            );
+            enhancedCapsule.databaseData = matchedCapsule;
+            return enhancedCapsule;
+          }
+
+          // Match by comparing creation times (more reliable than exact matching)
+          const blockchainTime = blockchainCapsule.account.createdAt;
+          let bestMatch: Capsule | null = null;
+          let smallestTimeDiff = Infinity;
+
+          for (const dbCapsule of databaseCapsules) {
             const dbTime = new Date(dbCapsule.created_at).getTime() / 1000;
             const timeDiff = Math.abs(blockchainTime - dbTime);
 
-            // If created within 5 minutes and creator matches
-            if (timeDiff < 300 && dbCapsule.user_id) {
-              enhancedCapsule.databaseData = dbCapsule;
-              break;
+            if (timeDiff < smallestTimeDiff) {
+              smallestTimeDiff = timeDiff;
+              bestMatch = dbCapsule;
             }
           }
 
+          // Use the best time match if it's within a reasonable window (30 minutes)
+          if (bestMatch && smallestTimeDiff < 1800) {
+            enhancedCapsule.databaseData = bestMatch;
+            // console.log(`✅ HubScreen - Matched by time (${smallestTimeDiff}s diff): ${blockchainCapsule.publicKey} -> ${bestMatch.capsule_id}`);
+            return enhancedCapsule;
+          }
+
+          // Fallback: assign in order if time matching fails
+          if (databaseCapsules[index]) {
+            enhancedCapsule.databaseData = databaseCapsules[index];
+            // console.log(`✅ HubScreen - Fallback assignment: database capsule ${index} to blockchain capsule ${blockchainCapsule.publicKey}`);
+            return enhancedCapsule;
+          }
+
+          // If no match found
+          // console.log(`⚠️ HubScreen - No database match for capsule: ${blockchainCapsule.publicKey}`);
           return enhancedCapsule;
         });
       };
@@ -359,10 +405,69 @@ export function HubScreen() {
     );
   };
 
-  // Handle create capsule
-  const handleCreateCapsule = () => {
-    Alert.alert('Create Capsule', 'Navigate to capsule creation screen');
-  };
+  // Render hero content (shared between iOS gradient and Android fallback)
+  const renderHeroContent = () => (
+    <>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcon
+          name="timer-sand"
+          size={32}
+          color={colors.primary}
+          style={styles.titleIcon}
+        />
+        <Text style={styles.heroTitle}>Time Capsules</Text>
+      </View>
+      <View style={styles.subtitleContainer}>
+        {stats.ready_to_reveal > 0 ? (
+          <Text style={styles.heroSubtitle}>
+            <Text style={styles.highlightText}>{stats.ready_to_reveal}</Text>
+            <Text style={styles.subtitleText}> capsules ready to reveal </Text>
+            <Text style={styles.accentText}>🔥</Text>
+          </Text>
+        ) : (
+          <Text style={styles.heroSubtitle}>
+            <Text style={styles.highlightText}>{stats.pending}</Text>
+            <Text style={styles.subtitleText}> pending • </Text>
+            <Text style={styles.highlightText}>
+              {capsuleData?.total_capsules || 0}
+            </Text>
+            <Text style={styles.subtitleText}> total capsules</Text>
+          </Text>
+        )}
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="wallet"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>
+            {balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}
+          </Text>
+          <Text style={styles.statLabel}>SOL Balance</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="fire"
+            size={28}
+            color={colors.premiumOrange}
+          />
+          <Text style={styles.statValue}>{stats.ready_to_reveal}</Text>
+          <Text style={styles.statLabel}>Ready Now</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="clock-outline"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>{stats.pending}</Text>
+          <Text style={styles.statLabel}>Pending</Text>
+        </View>
+      </View>
+    </>
+  );
 
   // Render loading state
   if (loading) {
@@ -374,22 +479,7 @@ export function HubScreen() {
     );
   }
 
-  // Render not connected state
-  if (!isAuthenticated) {
-    // if the user is not authenticated, we should navigate to the welcome screen
-    // navigation.navigate('Welcome' as never);
-    return (
-      <View style={[styles.screenContainer, styles.centered]}>
-        <Avatar.Icon size={80} icon="wallet" style={styles.walletIcon} />
-        <Text variant="headlineMedium" style={styles.title}>
-          Welcome to CapsuleX
-        </Text>
-        <Text variant="bodyLarge" style={styles.subtitle}>
-          Connect your wallet to start creating time capsules
-        </Text>
-      </View>
-    );
-  }
+  // Authentication handled by useEffect above - no need to render
 
   // Render error state
   if (error) {
@@ -429,408 +519,220 @@ export function HubScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text variant="headlineMedium" style={styles.title}>
-            Your Capsules 🗂️
-          </Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
-            {stats.ready_to_reveal > 0
-              ? `🔥 ${stats.ready_to_reveal} ready to reveal!`
-              : `${stats.pending} pending • ${capsuleData?.total_capsules || 0} total`}
-          </Text>
-        </View>
-
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <Text variant="labelLarge" style={styles.statLabel}>
-                SOL Balance
-              </Text>
-              <Text variant="headlineSmall" style={styles.statValue}>
-                {balance !== undefined ? `${balance?.toFixed(4)}` : 'N/A'}
-              </Text>
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <Text variant="labelLarge" style={styles.statLabel}>
-                Ready Now
-              </Text>
-              <Text
-                variant="headlineSmall"
-                style={[styles.statValue, { color: '#FF6B35' }]}
-              >
-                {stats.ready_to_reveal}
-              </Text>
-            </Card.Content>
-          </Card>
+        {/* Unified Hero Section with Gradient Background */}
+        <View style={styles.heroContainer}>
+          <LinearGradient
+            colors={[
+              colors.surfaceVariant,
+              Platform.OS === 'android'
+                ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
+                : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
+              colors.surfaceVariant,
+            ]}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={[
+              styles.gradient,
+              styles.gradientFix, // Force proper dimensions
+              Platform.OS === 'android' && styles.androidGradientEnhancement,
+            ]}
+          >
+            {renderHeroContent()}
+          </LinearGradient>
         </View>
 
         {/* Ready to Reveal Section */}
         {readyCapsules.length > 0 && (
-          <View style={styles.section}>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <Text variant="titleLarge" style={styles.sectionTitleReady}>
-                🔥 Ready to Reveal ({readyCapsules.length})
-              </Text>
-            </Animated.View>
-
-            {readyCapsules.map(capsule => (
-              <Animated.View
-                key={capsule.publicKey}
-                style={[
-                  styles.readyCard,
-                  {
-                    shadowColor: '#FF6B35',
-                    shadowOpacity: glowAnim,
-                    elevation: 8,
-                  },
-                  revealingCapsules.has(capsule.publicKey) &&
-                    styles.revealingCard,
-                ]}
-              >
-                <Card
-                  style={[styles.capsuleCard, styles.readyCardInner]}
-                  onPress={() =>
-                    navigation.navigate('CapsuleDetails', { capsule: capsule })
-                  }
-                >
-                  <Card.Content>
-                    <View style={styles.capsuleHeader}>
-                      <Chip
-                        mode="flat"
-                        style={styles.readyChip}
-                        textStyle={styles.readyChipText}
-                      >
-                        🔥 READY NOW
-                      </Chip>
-                      <Text variant="bodySmall" style={styles.timeText}>
-                        {new Date(
-                          capsule.account.revealDate * 1000
-                        ).toLocaleDateString()}
-                      </Text>
-                    </View>
-
-                    <Text variant="bodyMedium" style={styles.capsuleContent}>
-                      Content:{' '}
-                      {capsule.account.encryptedContent.substring(0, 50)}...
-                    </Text>
-
-                    <Button
-                      mode="contained"
-                      onPress={() => handleRevealCapsule(capsule)}
-                      style={styles.revealButton}
-                      contentStyle={styles.revealButtonContent}
-                      loading={revealingCapsules.has(capsule.publicKey)}
-                      disabled={revealingCapsules.has(capsule.publicKey)}
-                    >
-                      {revealingCapsules.has(capsule.publicKey)
-                        ? '⏳ Revealing...'
-                        : '🚀 REVEAL NOW!'}
-                    </Button>
-                  </Card.Content>
-                </Card>
-              </Animated.View>
-            ))}
-          </View>
+          <HorizontalCapsuleList
+            title="Ready to Reveal"
+            capsules={readyCapsules}
+            type="ready"
+            onRevealCapsule={handleRevealCapsule}
+            revealingCapsules={revealingCapsules}
+            glowAnim={glowAnim}
+          />
         )}
 
         {/* Pending Capsules Section */}
         {pendingCapsules.length > 0 && (
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              ⏳ Pending ({pendingCapsules.length})
-            </Text>
-
-            {pendingCapsules.map(capsule => {
-              const timeLeft = capsule.timeToReveal || 0;
-              const progress = CapsuleApiService.getCountdownProgress(
-                capsule.account.createdAt,
-                capsule.account.revealDate
-              );
-
-              return (
-                <Card
-                  key={capsule.publicKey}
-                  style={styles.capsuleCard}
-                  onPress={() =>
-                    navigation.navigate('CapsuleDetails', { capsule: capsule })
-                  }
-                >
-                  <Card.Content>
-                    <View style={styles.capsuleHeader}>
-                      <Chip mode="outlined" style={styles.pendingChip}>
-                        ⏳ Pending
-                      </Chip>
-                      <Text variant="bodySmall" style={styles.timeText}>
-                        {new Date(
-                          capsule.account.revealDate * 1000
-                        ).toLocaleDateString()}
-                      </Text>
-                    </View>
-
-                    <Text variant="bodyMedium" style={styles.capsuleContent}>
-                      Content:{' '}
-                      {capsule.account.encryptedContent.substring(0, 50)}...
-                    </Text>
-
-                    <View style={styles.countdownContainer}>
-                      <Text variant="bodySmall" style={styles.countdownLabel}>
-                        Reveals in:{' '}
-                        {CapsuleApiService.formatTimeUntil(timeLeft)}
-                      </Text>
-                      <ProgressBar
-                        progress={progress}
-                        style={styles.progressBar}
-                        color="#2196F3"
-                      />
-                    </View>
-                  </Card.Content>
-                </Card>
-              );
-            })}
-          </View>
+          <HorizontalCapsuleList
+            title="Pending"
+            capsules={pendingCapsules}
+            type="pending"
+          />
         )}
 
         {/* Revealed Capsules Section */}
         {revealedCapsules.length > 0 && (
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              ✅ Revealed ({revealedCapsules.length})
-            </Text>
-
-            {revealedCapsules.map(capsule => (
-              <Card
-                key={capsule.publicKey}
-                style={styles.capsuleCard}
-                onPress={() =>
-                  navigation.navigate('CapsuleDetails', { capsule: capsule })
-                }
-              >
-                <Card.Content>
-                  <View style={styles.capsuleHeader}>
-                    <Chip mode="flat" style={styles.revealedChip}>
-                      ✅ Revealed
-                    </Chip>
-                    <IconButton
-                      icon="share"
-                      size={20}
-                      onPress={() => Alert.alert('Share', 'Open Twitter post')}
-                    />
-                  </View>
-
-                  <Text variant="bodyMedium" style={styles.capsuleContent}>
-                    Content: {capsule.account.encryptedContent.substring(0, 50)}
-                    ...
-                  </Text>
-
-                  <Text variant="bodySmall" style={styles.revealedText}>
-                    Revealed on{' '}
-                    {new Date(
-                      capsule.account.revealDate * 1000
-                    ).toLocaleDateString()}
-                  </Text>
-                </Card.Content>
-              </Card>
-            ))}
-          </View>
+          <HorizontalCapsuleList
+            title="Revealed"
+            capsules={revealedCapsules}
+            type="revealed"
+          />
         )}
 
         {/* Empty State */}
         {(!capsuleData || capsuleData.total_capsules === 0) && (
           <View style={styles.emptyState}>
             <Text variant="headlineSmall" style={styles.emptyTitle}>
-              No capsules yet 📭
+              No capsules yet
             </Text>
             <Text variant="bodyMedium" style={styles.emptySubtitle}>
               Create your first time capsule to get started
+            </Text>
+            <Text variant="bodySmall" style={styles.emptyHint}>
+              💡 Tap the "Create" tab below to begin
             </Text>
           </View>
         )}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-
-      {/* Create FAB */}
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={handleCreateCapsule}
-        label="Create Capsule"
-      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screenContainer: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
+    ...layout.screenContainer,
   },
   centered: {
-    justifyContent: 'center',
+    ...layout.centered,
+    padding: spacing.sectionPadding,
+  },
+  // Modern Hero Section
+  heroContainer: {
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.medium,
+    overflow: 'hidden', // Ensures gradient respects border radius
+  },
+  gradient: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  titleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 24,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
-  header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  titleIcon: {
+    marginRight: spacing.sm,
   },
-  title: {
+  heroTitle: {
+    ...typography.displayMedium,
+    color: colors.text,
     fontWeight: 'bold',
-    marginBottom: 4,
-    color: '#1a1a1a',
+    textShadowColor: colors.primary + '20',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  subtitle: {
-    color: '#666',
+  subtitleContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  highlightText: {
+    ...typography.titleLarge,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  subtitleText: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
+  },
+  accentText: {
+    fontSize: 18,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    ...typography.headlineMedium,
+    color: colors.text,
+  },
+  statLabel: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
   },
   loadingText: {
-    marginTop: 16,
-    color: '#666',
+    ...typography.bodyMedium,
+    marginTop: spacing.md,
+    color: colors.textSecondary,
   },
   walletIcon: {
-    backgroundColor: '#2196F3',
-    marginBottom: 16,
+    backgroundColor: colors.primary,
+    marginBottom: spacing.md,
   },
   errorTitle: {
-    color: '#d32f2f',
-    marginBottom: 8,
+    ...typography.headlineSmall,
+    color: colors.error,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   errorSubtitle: {
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   retryButton: {
-    backgroundColor: '#2196F3',
+    ...components.primaryButton,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  statLabel: {
-    color: '#666',
-    marginBottom: 4,
-  },
-  statValue: {
-    fontWeight: 'bold',
-    color: '#2196F3',
-  },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    marginBottom: 12,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  sectionTitleReady: {
-    marginBottom: 12,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    fontSize: 20,
-  },
-  capsuleCard: {
-    marginBottom: 12,
-    backgroundColor: 'white',
-  },
-  readyCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#FFF8F6', // Add solid background for efficient shadow rendering
-  },
-  readyCardInner: {
-    backgroundColor: '#FFF8F6',
-    borderColor: '#FF6B35',
-    borderWidth: 2,
-  },
-  capsuleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  readyChip: {
-    backgroundColor: '#FF6B35',
-  },
-  readyChipText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  pendingChip: {
-    backgroundColor: '#FFF3E0',
-    borderColor: '#FF9800',
-  },
-  revealedChip: {
-    backgroundColor: '#E8F5E8',
-    color: '#4CAF50',
-  },
-  timeText: {
-    color: '#666',
-  },
-  capsuleContent: {
-    marginBottom: 12,
-    lineHeight: 20,
-    color: '#333',
-  },
-  countdownContainer: {
-    marginTop: 8,
-  },
-  countdownLabel: {
-    color: '#666',
-    marginBottom: 4,
-  },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-  },
-  revealButton: {
-    backgroundColor: '#FF6B35',
-    marginTop: 8,
-  },
-  revealButtonContent: {
-    paddingVertical: 4,
-  },
-  revealedText: {
-    color: '#4CAF50',
-    marginTop: 4,
-  },
+
+  // Premium empty state
   emptyState: {
     alignItems: 'center',
-    padding: 48,
+    ...layout.premiumSpacing,
   },
   emptyTitle: {
-    marginBottom: 8,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    ...typography.headlineSmall,
+    marginBottom: spacing.sm,
+    color: colors.text,
   },
   emptySubtitle: {
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     textAlign: 'center',
+  },
+  emptyHint: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    fontStyle: 'italic',
   },
   bottomSpacing: {
     height: 100,
   },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#2196F3',
+  // Fix for LinearGradient rendering issues
+  gradientFix: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200, // Ensure minimum height for gradient to render
   },
-  revealingCard: {
-    opacity: 0.7, // Make the card slightly transparent
-    backgroundColor: '#f0f0f0', // Slightly gray out the card
+  // Android gradient enhancement - match iOS visual impact
+  androidGradientEnhancement: {
+    borderWidth: 1,
+    borderColor: colors.primary + '30', // More visible border
+    elevation: 6, // Higher elevation for more shadow
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15, // More visible shadow
+    shadowRadius: 10,
+    // Add a subtle overlay effect
+    backgroundColor: 'rgba(29, 161, 242, 0.02)', // Very subtle base tint
   },
 });

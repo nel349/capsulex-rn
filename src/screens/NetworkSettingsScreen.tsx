@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import ClusterPickerFeature from '../components/cluster/cluster-picker-feature';
 
-export function SettingsScreen() {
+export function NetworkSettingsScreen() {
   return (
     <>
       <View style={styles.screenContainer}>

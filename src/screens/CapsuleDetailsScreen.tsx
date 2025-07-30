@@ -2,7 +2,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Platform, RefreshControl } from 'react-native';
 import {
   Text,
   Card,
@@ -10,7 +10,10 @@ import {
   Button,
   Chip,
   Divider,
+  ActivityIndicator,
 } from 'react-native-paper';
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
@@ -18,6 +21,14 @@ import { useDualAuth } from '../providers';
 import type { CapsuleWithStatus } from '../services/capsuleApi';
 import type { Capsule } from '../types/api';
 import { VaultKeyManager } from '../utils/vaultKey';
+import {
+  colors,
+  typography,
+  spacing,
+  layout,
+  shadows,
+  components,
+} from '../theme';
 
 // Type definitions
 
@@ -46,6 +57,7 @@ export function CapsuleDetailsScreen() {
   const [showContent, setShowContent] = useState(false);
   const [fullCapsuleData, setFullCapsuleData] = useState<Capsule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { isAuthenticated, walletAddress } = useDualAuth();
   const { snackbar, showError, showSuccess, hideSnackbar } = useSnackbar();
@@ -197,11 +209,22 @@ export function CapsuleDetailsScreen() {
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'revealed':
-        return '#4CAF50';
+        return colors.success;
       case 'ready_to_reveal':
-        return '#FF9800';
+        return colors.warning;
       default:
-        return '#2196F3';
+        return colors.primary;
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'revealed':
+        return 'lock-open';
+      case 'ready_to_reveal':
+        return 'clock-alert';
+      default:
+        return 'lock';
     }
   };
 
@@ -222,45 +245,182 @@ export function CapsuleDetailsScreen() {
       ? new Date(capsule.account.revealDate * 1000) <= new Date()
       : false;
 
+  // Helper function to extract process capsule data
+  const processCapsuleData = async () => {
+    try {
+      setIsLoading(true);
+
+      console.log('🔍 Debug - received enhanced capsule param:', capsule);
+
+      // Check if we have database data with encrypted content
+      if (capsule.databaseData?.content_encrypted) {
+        console.log(
+          '✅ Enhanced capsule has database data with encrypted content'
+        );
+        setFullCapsuleData(capsule.databaseData);
+      } else {
+        // No database data - this is expected for capsules that haven't been matched yet
+        // Just set fullCapsuleData to null and display with blockchain data
+        console.log(
+          '⚠️ Enhanced capsule missing database data. Will display with blockchain data only.'
+        );
+        setFullCapsuleData(null); // UI will use blockchain data as fallback
+      }
+    } catch (error) {
+      console.error('❌ Failed to process capsule data:', error);
+      setFullCapsuleData(null); // Fallback to blockchain data display
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Re-process capsule data
+      await processCapsuleData();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Render hero content
+  const renderHeroContent = () => (
+    <>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcon
+          name="package-variant-closed"
+          size={32}
+          color={colors.primary}
+          style={styles.titleIcon}
+        />
+        <Text style={styles.heroTitle}>Capsule Details</Text>
+      </View>
+      <View style={styles.subtitleContainer}>
+        <Text style={styles.heroSubtitle}>
+          <Text style={styles.highlightText}>{getStatusText(fullCapsuleData?.status)}</Text>
+          <Text style={styles.subtitleText}> status • </Text>
+          <Text style={styles.highlightText}>{fullCapsuleData?.content_encrypted ? 'Encrypted' : 'Plain'}</Text>
+          <Text style={styles.subtitleText}> content</Text>
+        </Text>
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name={getStatusIcon(fullCapsuleData?.status)}
+            size={28}
+            color={getStatusColor(fullCapsuleData?.status)}
+          />
+          <Text style={styles.statValue}>{getStatusText(fullCapsuleData?.status)}</Text>
+          <Text style={styles.statLabel}>Status</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name={fullCapsuleData?.content_encrypted ? "lock" : "lock-open"}
+            size={28}
+            color={fullCapsuleData?.content_encrypted ? colors.warning : colors.success}
+          />
+          <Text style={styles.statValue}>{fullCapsuleData?.content_encrypted ? 'Encrypted' : 'Plain'}</Text>
+          <Text style={styles.statLabel}>Content</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name={isRevealed ? "calendar-check" : "calendar-clock"}
+            size={28}
+            color={isRevealed ? colors.success : colors.primary}
+          />
+          <Text style={styles.statValue}>{isRevealed ? 'Revealed' : 'Pending'}</Text>
+          <Text style={styles.statLabel}>Timeline</Text>
+        </View>
+      </View>
+    </>
+  );
+
   // Show loading state while processing data
   if (isLoading) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: 'center', alignItems: 'center' },
-        ]}
-      >
-        <Text>Loading capsule details...</Text>
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading capsule details...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Modern Hero Section with Gradient Background */}
+        <View style={styles.heroContainer}>
+          <LinearGradient
+            colors={[
+              colors.surfaceVariant,
+              Platform.OS === 'android'
+                ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
+                : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
+              colors.surfaceVariant,
+            ]}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={[
+              styles.gradient,
+              styles.gradientFix, // Force proper dimensions
+              Platform.OS === 'android' && styles.androidGradientEnhancement,
+            ]}
+          >
+            {renderHeroContent()}
+          </LinearGradient>
+        </View>
         {/* Header Card */}
         <Card style={styles.headerCard}>
           <Card.Content>
             <View style={styles.headerRow}>
-              <Text variant="headlineSmall" style={styles.title}>
-                Time Capsule Details
-              </Text>
+              <View style={styles.headerTitleContainer}>
+                <MaterialCommunityIcon
+                  name="information-outline"
+                  size={24}
+                  color={colors.primary}
+                  style={styles.headerIcon}
+                />
+                <Text variant="headlineSmall" style={styles.title}>
+                  Capsule Overview
+                </Text>
+              </View>
               <Chip
                 style={[
                   styles.statusChip,
-                  { backgroundColor: getStatusColor(fullCapsuleData?.status) },
+                  { backgroundColor: getStatusColor(fullCapsuleData?.status) + '20' },
                 ]}
-                textStyle={{ color: 'white' }}
+                textStyle={{ color: getStatusColor(fullCapsuleData?.status) }}
+                icon={() => (
+                  <MaterialCommunityIcon
+                    name={getStatusIcon(fullCapsuleData?.status)}
+                    size={16}
+                    color={getStatusColor(fullCapsuleData?.status)}
+                  />
+                )}
               >
                 {getStatusText(fullCapsuleData?.status)}
               </Chip>
             </View>
-            <Text variant="bodyMedium" style={styles.capsuleId}>
-              ID:{' '}
-              {fullCapsuleData?.capsule_id ||
-                capsule.publicKey.slice(0, 8) + '...'}
-            </Text>
+            <View style={styles.capsuleIdContainer}>
+              <MaterialCommunityIcon
+                name="identifier"
+                size={16}
+                color={colors.textSecondary}
+                style={styles.capsuleIdIcon}
+              />
+              <Text variant="bodyMedium" style={styles.capsuleId}>
+                {fullCapsuleData?.capsule_id ||
+                  capsule.publicKey.slice(0, 8) + '...'}
+              </Text>
+            </View>
           </Card.Content>
         </Card>
 
@@ -268,12 +428,25 @@ export function CapsuleDetailsScreen() {
         <Card style={styles.contentCard}>
           <Card.Content>
             <View style={styles.contentHeader}>
-              <Text variant="titleMedium" style={styles.sectionTitle}>
-                Encrypted Content
-              </Text>
+              <View style={styles.sectionTitleContainer}>
+                <MaterialCommunityIcon
+                  name={fullCapsuleData?.content_encrypted ? "lock" : "lock-open"}
+                  size={20}
+                  color={colors.primary}
+                  style={styles.sectionTitleIcon}
+                />
+                <Text variant="titleMedium" style={styles.sectionTitle}>
+                  {fullCapsuleData?.content_encrypted ? 'Encrypted Content' : 'Content'}
+                </Text>
+              </View>
               <IconButton
-                icon={showContent ? 'eye-off' : 'eye'}
-                size={24}
+                icon={() => (
+                  <MaterialCommunityIcon
+                    name={showContent ? "eye-off" : "eye"}
+                    size={24}
+                    color={isDecrypting || !fullCapsuleData?.content_encrypted ? colors.textSecondary : colors.primary}
+                  />
+                )}
                 onPress={handleDecryptContent}
                 disabled={isDecrypting || !fullCapsuleData?.content_encrypted}
                 style={styles.eyeButton}
@@ -282,25 +455,48 @@ export function CapsuleDetailsScreen() {
 
             <View style={styles.contentArea}>
               {showContent && decryptedContent ? (
-                <Text variant="bodyLarge" style={styles.decryptedText}>
-                  {decryptedContent}
-                </Text>
+                <View style={styles.decryptedContentContainer}>
+                  <MaterialCommunityIcon
+                    name="check-circle"
+                    size={20}
+                    color={colors.success}
+                    style={styles.contentStatusIcon}
+                  />
+                  <Text variant="bodyLarge" style={styles.decryptedText}>
+                    {decryptedContent}
+                  </Text>
+                </View>
               ) : (
-                <Text variant="bodyMedium" style={styles.encryptedText}>
-                  {isDecrypting
-                    ? 'Decrypting...'
-                    : fullCapsuleData?.content_encrypted
-                      ? '🔒 Content is encrypted with your device vault key. Click the eye icon to decrypt and view.'
-                      : '⚠️ Encrypted content not available. This capsule may have been created with an older system.'}
-                </Text>
+                <View style={styles.encryptedContentContainer}>
+                  <MaterialCommunityIcon
+                    name={isDecrypting ? "loading" : fullCapsuleData?.content_encrypted ? "lock" : "alert-circle"}
+                    size={20}
+                    color={isDecrypting ? colors.primary : fullCapsuleData?.content_encrypted ? colors.warning : colors.textSecondary}
+                    style={styles.contentStatusIcon}
+                  />
+                  <Text variant="bodyMedium" style={styles.encryptedText}>
+                    {isDecrypting
+                      ? 'Decrypting...'
+                      : fullCapsuleData?.content_encrypted
+                        ? 'Content is encrypted with your device vault key. Click the eye icon to decrypt and view.'
+                        : 'Encrypted content not available. This capsule may have been created with an older system.'}
+                  </Text>
+                </View>
               )}
             </View>
 
             {walletAddress && (
-              <Text variant="bodySmall" style={styles.walletInfo}>
-                Wallet: {walletAddress?.slice(0, 8)}...
-                {walletAddress?.slice(-8)}
-              </Text>
+              <View style={styles.walletInfoContainer}>
+                <MaterialCommunityIcon
+                  name="wallet"
+                  size={16}
+                  color={colors.textSecondary}
+                  style={styles.walletIcon}
+                />
+                <Text variant="bodySmall" style={styles.walletInfo}>
+                  {walletAddress?.slice(0, 8)}...{walletAddress?.slice(-8)}
+                </Text>
+              </View>
             )}
           </Card.Content>
         </Card>
@@ -308,15 +504,31 @@ export function CapsuleDetailsScreen() {
         {/* Timeline Card */}
         <Card style={styles.timelineCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Timeline
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcon
+                name="timeline-clock"
+                size={20}
+                color={colors.primary}
+                style={styles.sectionTitleIcon}
+              />
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Timeline
+              </Text>
+            </View>
 
             <View style={styles.timelineItem}>
-              <Text variant="bodyMedium" style={styles.timelineLabel}>
-                Created:
-              </Text>
-              <Text variant="bodyMedium">
+              <View style={styles.timelineItemLeft}>
+                <MaterialCommunityIcon
+                  name="calendar-plus"
+                  size={16}
+                  color={colors.textSecondary}
+                  style={styles.timelineIcon}
+                />
+                <Text variant="bodyMedium" style={styles.timelineLabel}>
+                  Created:
+                </Text>
+              </View>
+              <Text variant="bodyMedium" style={styles.timelineValue}>
                 {fullCapsuleData
                   ? new Date(fullCapsuleData.created_at).toLocaleString()
                   : new Date(capsule.account.createdAt * 1000).toLocaleString()}
@@ -324,31 +536,54 @@ export function CapsuleDetailsScreen() {
             </View>
 
             <View style={styles.timelineItem}>
-              <Text variant="bodyMedium" style={styles.timelineLabel}>
-                Reveal Date:
-              </Text>
-              <Text
-                variant="bodyMedium"
-                style={[
-                  styles.revealDate,
-                  { color: isRevealed ? '#4CAF50' : '#FF9800' },
-                ]}
-              >
-                {fullCapsuleData
-                  ? new Date(fullCapsuleData.reveal_date).toLocaleString()
-                  : new Date(
-                      capsule.account.revealDate * 1000
-                    ).toLocaleString()}
-                {isRevealed ? ' ✅' : ' ⏳'}
-              </Text>
+              <View style={styles.timelineItemLeft}>
+                <MaterialCommunityIcon
+                  name={isRevealed ? "calendar-check" : "calendar-clock"}
+                  size={16}
+                  color={isRevealed ? colors.success : colors.warning}
+                  style={styles.timelineIcon}
+                />
+                <Text variant="bodyMedium" style={styles.timelineLabel}>
+                  Reveal Date:
+                </Text>
+              </View>
+              <View style={styles.revealDateContainer}>
+                <Text
+                  variant="bodyMedium"
+                  style={[
+                    styles.revealDate,
+                    { color: isRevealed ? colors.success : colors.warning },
+                  ]}
+                >
+                  {fullCapsuleData
+                    ? new Date(fullCapsuleData.reveal_date).toLocaleString()
+                    : new Date(
+                        capsule.account.revealDate * 1000
+                      ).toLocaleString()}
+                </Text>
+                <MaterialCommunityIcon
+                  name={isRevealed ? "check-circle" : "clock-outline"}
+                  size={16}
+                  color={isRevealed ? colors.success : colors.warning}
+                  style={styles.revealStatusIcon}
+                />
+              </View>
             </View>
 
             {fullCapsuleData?.revealed_at && (
               <View style={styles.timelineItem}>
-                <Text variant="bodyMedium" style={styles.timelineLabel}>
-                  Revealed:
-                </Text>
-                <Text variant="bodyMedium">
+                <View style={styles.timelineItemLeft}>
+                  <MaterialCommunityIcon
+                    name="lock-open"
+                    size={16}
+                    color={colors.success}
+                    style={styles.timelineIcon}
+                  />
+                  <Text variant="bodyMedium" style={styles.timelineLabel}>
+                    Revealed:
+                  </Text>
+                </View>
+                <Text variant="bodyMedium" style={styles.timelineValue}>
                   {new Date(fullCapsuleData?.revealed_at!).toLocaleString()}
                 </Text>
               </View>
@@ -359,9 +594,17 @@ export function CapsuleDetailsScreen() {
         {/* Technical Details Card */}
         <Card style={styles.technicalCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Technical Details
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcon
+                name="cog"
+                size={20}
+                color={colors.primary}
+                style={styles.sectionTitleIcon}
+              />
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Technical Details
+              </Text>
+            </View>
 
             <View style={styles.techItem}>
               <Text variant="bodyMedium" style={styles.techLabel}>
@@ -415,12 +658,26 @@ export function CapsuleDetailsScreen() {
         {fullCapsuleData?.posted_to_social && (
           <Card style={styles.socialCard}>
             <Card.Content>
-              <Text variant="titleMedium" style={styles.sectionTitle}>
-                Social Sharing
-              </Text>
+              <View style={styles.sectionTitleContainer}>
+                <MaterialCommunityIcon
+                  name="share-variant"
+                  size={20}
+                  color={colors.primary}
+                  style={styles.sectionTitleIcon}
+                />
+                <Text variant="titleMedium" style={styles.sectionTitle}>
+                  Social Sharing
+                </Text>
+              </View>
 
               <View style={styles.socialItem}>
-                <Text variant="bodyMedium">Posted to Social: ✅</Text>
+                <MaterialCommunityIcon
+                  name="check-circle"
+                  size={16}
+                  color={colors.success}
+                  style={styles.socialIcon}
+                />
+                <Text variant="bodyMedium" style={styles.socialText}>Posted to Social</Text>
               </View>
 
               {fullCapsuleData?.social_post_id && (
@@ -477,120 +734,326 @@ export function CapsuleDetailsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+    ...layout.screenContainer,
+  },
+  centerContainer: {
+    ...layout.centered,
+    ...layout.premiumSpacing,
   },
   scrollView: {
     flex: 1,
   },
+  loadingText: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+
+  // Modern Hero Section (from established pattern)
+  heroContainer: {
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.medium,
+    overflow: 'hidden',
+  },
+  gradient: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  titleIcon: {
+    marginRight: spacing.sm,
+  },
+  heroTitle: {
+    ...typography.displayMedium,
+    color: colors.text,
+    fontWeight: 'bold',
+    textShadowColor: colors.primary + '20',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  subtitleContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  highlightText: {
+    ...typography.titleLarge,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  subtitleText: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    ...typography.headlineMedium,
+    color: colors.text,
+  },
+  statLabel: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+  },
+  // Fix for LinearGradient rendering issues
+  gradientFix: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200,
+  },
+  // Android gradient enhancement
+  androidGradientEnhancement: {
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    backgroundColor: 'rgba(29, 161, 242, 0.02)',
+  },
+
+  // Header Card
   headerCard: {
-    margin: 16,
-    marginBottom: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
-  title: {
-    fontWeight: 'bold',
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
+  headerIcon: {
+    marginRight: spacing.sm,
+  },
+  title: {
+    ...typography.headlineSmall,
+    color: colors.text,
+    fontWeight: 'bold',
+  },
   statusChip: {
-    marginLeft: 8,
+    borderRadius: 12,
+  },
+  capsuleIdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  capsuleIdIcon: {
+    marginRight: spacing.sm,
   },
   capsuleId: {
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     fontFamily: 'monospace',
   },
+
+  // Content Card
   contentCard: {
-    margin: 16,
-    marginVertical: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
   },
   contentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.sm,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionTitleIcon: {
+    marginRight: spacing.sm,
   },
   sectionTitle: {
+    ...typography.titleMedium,
+    color: colors.primary,
     fontWeight: 'bold',
   },
   eyeButton: {
     margin: 0,
   },
-  disabledButton: {
-    opacity: 0.3,
-  },
   contentArea: {
     minHeight: 80,
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: spacing.sm,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  decryptedContentContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  encryptedContentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contentStatusIcon: {
+    marginRight: spacing.sm,
+    marginTop: 2,
   },
   decryptedText: {
+    ...typography.bodyLarge,
+    color: colors.text,
     lineHeight: 24,
+    flex: 1,
   },
   encryptedText: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     fontStyle: 'italic',
-    color: '#666',
     textAlign: 'center',
+    flex: 1,
+  },
+  walletInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  walletIcon: {
+    marginRight: spacing.sm,
   },
   walletInfo: {
-    color: '#666',
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     fontFamily: 'monospace',
   },
+
+  // Timeline Card
   timelineCard: {
-    margin: 16,
-    marginVertical: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   timelineItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
   },
-  timelineLabel: {
-    fontWeight: '500',
+  timelineItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  revealDate: {
-    flex: 2,
-    textAlign: 'right',
+  timelineIcon: {
+    marginRight: spacing.sm,
+  },
+  timelineLabel: {
+    ...typography.bodyMedium,
+    color: colors.text,
     fontWeight: '500',
   },
+  timelineValue: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    textAlign: 'right',
+    flex: 1,
+  },
+  revealDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  revealDate: {
+    ...typography.bodyMedium,
+    fontWeight: '500',
+  },
+  revealStatusIcon: {
+    marginLeft: spacing.sm,
+  },
+
+  // Technical Card
   technicalCard: {
-    margin: 16,
-    marginVertical: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   techItem: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   techLabel: {
+    ...typography.bodyMedium,
+    color: colors.text,
     fontWeight: '500',
-    marginBottom: 2,
+    marginBottom: spacing.xs,
   },
   techValue: {
+    ...typography.bodySmall,
     fontFamily: 'monospace',
-    color: '#666',
+    color: colors.textSecondary,
   },
+
+  // Social Card
   socialCard: {
-    margin: 16,
-    marginVertical: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success,
   },
   socialItem: {
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
   },
+  socialIcon: {
+    marginRight: spacing.sm,
+  },
+  socialText: {
+    ...typography.bodyMedium,
+    color: colors.text,
+  },
+
+  // Action Buttons
   divider: {
-    margin: 16,
-    marginVertical: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.border,
   },
   actionButtons: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
   },
   actionButton: {
-    marginVertical: 4,
+    ...components.primaryButton,
   },
 });

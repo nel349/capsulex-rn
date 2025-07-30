@@ -5,12 +5,18 @@ import { Text } from 'react-native-paper';
 
 import { useSnackbar } from '../../hooks/useSnackbar';
 import { useDualAuth } from '../../providers/DualAuthProvider';
+import { dynamicClientService } from '../../services/dynamicClientService';
 import { AppSnackbar } from '../ui/AppSnackbar';
 
 import { SignUpScreen } from './SignUpScreen';
 import { WelcomeScreen } from './WelcomeScreen';
 
-type OnboardingStep = 'welcome' | 'signup' | 'connecting' | 'social';
+type OnboardingStep =
+  | 'welcome'
+  | 'signup'
+  | 'connecting'
+  | 'social'
+  | 'complete';
 
 export function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
@@ -34,10 +40,22 @@ export function OnboardingFlow() {
       return;
     }
 
+    // for iOS we need to check if the user is authenticated by this we mean isAuthenticated is true and the dynamic client is not null and the userProfile is not null
+    if (Platform.OS === 'ios') {
+      if (dynamicClientService.getDynamicClient()?.ui.userProfile) {
+        setCurrentStep('complete');
+        navigation.navigate('HomeStack' as never);
+      }
+    }
+
     // Handle successful authentication only when not actively connecting
     if (isAuthenticated && walletAddress && currentStep === 'welcome') {
       navigation.navigate('HomeStack' as never);
     }
+
+    console.log('🔍 OnboardingFlow - isAuthenticated:', isAuthenticated);
+    console.log('🔍 OnboardingFlow - walletAddress:', walletAddress);
+    console.log('🔍 OnboardingFlow - currentStep:', currentStep);
   }, [isAuthenticated, walletAddress, currentStep, navigation]);
 
   const handleGetStarted = async () => {

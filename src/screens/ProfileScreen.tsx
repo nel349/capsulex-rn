@@ -1,5 +1,17 @@
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Alert, Share } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  Alert,
+  Share,
+  Platform,
+  RefreshControl,
+} from 'react-native';
 import {
   Text,
   Card,
@@ -17,7 +29,17 @@ import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
 import { useAuthService } from '../services/authService';
 import { twitterService } from '../services/twitterService';
+import { colors, typography, spacing, layout, shadows } from '../theme';
 import { VaultKeyManager } from '../utils/vaultKey';
+
+type RootStackParamList = {
+  NetworkSettings: undefined;
+};
+
+type ProfileScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'NetworkSettings'
+>;
 
 interface UserProfile {
   wallet: string;
@@ -37,6 +59,7 @@ interface UserProfile {
 }
 
 export function ProfileScreen() {
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { snackbar, showSuccess, showError, showInfo, hideSnackbar } =
     useSnackbar();
 
@@ -59,6 +82,7 @@ export function ProfileScreen() {
   const [isTwitterConnecting, setIsTwitterConnecting] = useState(false);
   const [vaultKeyExists, setVaultKeyExists] = useState(false);
   const [vaultKeyLoading, setVaultKeyLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     checkTwitterConnection();
@@ -436,14 +460,100 @@ export function ProfileScreen() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  // Handle refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        checkTwitterConnection(),
+        loadAppSettings(),
+        checkVaultKeyStatus(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Render hero content
+  const renderHeroContent = () => (
+    <>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcon
+          name="account-circle"
+          size={32}
+          color={colors.primary}
+          style={styles.titleIcon}
+        />
+        <Text style={styles.heroTitle}>Profile</Text>
+      </View>
+      <View style={styles.subtitleContainer}>
+        <Text style={styles.heroSubtitle}>
+          <Text style={styles.highlightText}>
+            {vaultKeyExists ? 'Secured' : 'Open'}
+          </Text>
+          <Text style={styles.subtitleText}> vault • </Text>
+          <Text style={styles.highlightText}>
+            {profile.socialAccounts.twitter ? 'Connected' : 'Disconnected'}
+          </Text>
+          <Text style={styles.subtitleText}> social</Text>
+        </Text>
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="wallet"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>
+            {formatWalletAddress(profile.wallet)}
+          </Text>
+          <Text style={styles.statLabel}>Wallet</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name={vaultKeyExists ? 'shield-check' : 'shield-alert'}
+            size={28}
+            color={vaultKeyExists ? colors.success : colors.warning}
+          />
+          <Text style={styles.statValue}>
+            {vaultKeyExists ? 'Secured' : 'Open'}
+          </Text>
+          <Text style={styles.statLabel}>Vault Status</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="twitter"
+            size={28}
+            color={
+              profile.socialAccounts.twitter
+                ? colors.success
+                : colors.textSecondary
+            }
+          />
+          <Text style={styles.statValue}>
+            {profile.socialAccounts.twitter ? 'Active' : 'None'}
+          </Text>
+          <Text style={styles.statLabel}>Social</Text>
+        </View>
+      </View>
+    </>
+  );
+
   if (!isAuthenticated) {
     return (
       <View style={styles.screenContainer}>
         <View style={styles.connectPrompt}>
-          <Text variant="headlineMedium" style={styles.title}>
+          <MaterialCommunityIcon
+            name="wallet-outline"
+            size={64}
+            color={colors.primary}
+            style={styles.connectIcon}
+          />
+          <Text variant="headlineMedium" style={styles.connectTitle}>
             Connect Your Wallet
           </Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>
+          <Text variant="bodyLarge" style={styles.connectSubtitle}>
             Connect your wallet to access your profile and settings
           </Text>
         </View>
@@ -453,7 +563,34 @@ export function ProfileScreen() {
 
   return (
     <View style={styles.screenContainer}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Modern Hero Section with Gradient Background */}
+        <View style={styles.heroContainer}>
+          <LinearGradient
+            colors={[
+              colors.surfaceVariant,
+              Platform.OS === 'android'
+                ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
+                : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
+              colors.surfaceVariant,
+            ]}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={[
+              styles.gradient,
+              styles.gradientFix, // Force proper dimensions
+              Platform.OS === 'android' && styles.androidGradientEnhancement,
+            ]}
+          >
+            {renderHeroContent()}
+          </LinearGradient>
+        </View>
         {/* Profile Header */}
         <Card style={styles.profileCard}>
           <Card.Content>
@@ -481,11 +618,19 @@ export function ProfileScreen() {
         </Card>
 
         {/* Account Connections */}
-        <Card style={styles.section}>
+        <Card style={styles.connectionsCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Account Connections
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcon
+                name="link"
+                size={20}
+                color={colors.primary}
+                style={styles.sectionTitleIcon}
+              />
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Account Connections
+              </Text>
+            </View>
 
             {/* Privy Connection */}
             <List.Item
@@ -574,11 +719,19 @@ export function ProfileScreen() {
         </Card>
 
         {/* Settings */}
-        <Card style={styles.section}>
+        <Card style={styles.settingsCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Settings
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcon
+                name="cog"
+                size={20}
+                color={colors.primary}
+                style={styles.sectionTitleIcon}
+              />
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Settings
+              </Text>
+            </View>
 
             <List.Item
               title="Push Notifications"
@@ -590,6 +743,15 @@ export function ProfileScreen() {
                   onValueChange={value => updateSetting('notifications', value)}
                 />
               )}
+            />
+
+            <Divider />
+
+            <List.Item
+              title="Network Settings"
+              description="Manage blockchain network settings"
+              left={props => <List.Icon {...props} icon="server" />}
+              onPress={() => navigation.navigate('NetworkSettings')}
             />
 
             <Divider />
@@ -639,11 +801,19 @@ export function ProfileScreen() {
         </Card>
 
         {/* Wallet Management */}
-        <Card style={styles.section}>
+        <Card style={styles.walletCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Wallet Management
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcon
+                name="wallet"
+                size={20}
+                color={colors.primary}
+                style={styles.sectionTitleIcon}
+              />
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Wallet Management
+              </Text>
+            </View>
 
             <List.Item
               title="SOL Balance"
@@ -709,7 +879,7 @@ export function ProfileScreen() {
         </Card>
 
         {/* Vault Key Management */}
-        <Card style={styles.section}>
+        <Card style={styles.vaultCard}>
           <Card.Content>
             <View style={styles.sectionHeaderWithStatus}>
               <Text variant="titleMedium" style={styles.sectionTitle}>
@@ -845,11 +1015,19 @@ export function ProfileScreen() {
         </Card>
 
         {/* App Info */}
-        <Card style={styles.section}>
+        <Card style={styles.aboutCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              About
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcon
+                name="information"
+                size={20}
+                color={colors.primary}
+                style={styles.sectionTitleIcon}
+              />
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                About
+              </Text>
+            </View>
 
             <List.Item
               title="Version"
@@ -918,82 +1096,225 @@ export function ProfileScreen() {
 
 const styles = StyleSheet.create({
   screenContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+    ...layout.screenContainer,
   },
   scrollView: {
     flex: 1,
   },
-  connectPrompt: {
-    flex: 1,
-    justifyContent: 'center',
+
+  // Modern Hero Section (from HubScreen pattern)
+  heroContainer: {
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.medium,
+    overflow: 'hidden',
+  },
+  gradient: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  titleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 32,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
-  title: {
+  titleIcon: {
+    marginRight: spacing.sm,
+  },
+  heroTitle: {
+    ...typography.displayMedium,
+    color: colors.text,
     fontWeight: 'bold',
-    marginBottom: 8,
+    textShadowColor: colors.primary + '20',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  subtitleContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  highlightText: {
+    ...typography.titleLarge,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  subtitleText: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    ...typography.headlineMedium,
+    color: colors.text,
+  },
+  statLabel: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+  },
+  // Fix for LinearGradient rendering issues
+  gradientFix: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200,
+  },
+  // Android gradient enhancement
+  androidGradientEnhancement: {
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    backgroundColor: 'rgba(29, 161, 242, 0.02)',
+  },
+
+  // Connect Prompt
+  connectPrompt: {
+    ...layout.centered,
+    ...layout.premiumSpacing,
+  },
+  connectIcon: {
+    marginBottom: spacing.lg,
+  },
+  connectTitle: {
+    ...typography.headlineMedium,
+    color: colors.text,
+    fontWeight: 'bold',
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
-  subtitle: {
-    color: '#666',
+  connectSubtitle: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
+
+  // Profile Card
   profileCard: {
-    margin: 16,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatar: {
-    backgroundColor: '#2196F3',
-    marginRight: 16,
+    backgroundColor: colors.primary,
+    marginRight: spacing.md,
   },
   profileInfo: {
     flex: 1,
   },
   displayName: {
+    ...typography.headlineSmall,
+    color: colors.text,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   walletAddress: {
-    color: '#666',
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
     fontFamily: 'monospace',
-    fontSize: 14,
   },
   email: {
-    color: '#666',
-    marginTop: 4,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
-  section: {
-    marginHorizontal: 16,
-    marginBottom: 16,
+
+  // Section Cards
+  connectionsCard: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  settingsCard: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  walletCard: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning,
+  },
+  vaultCard: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.premiumOrange,
+  },
+  aboutCard: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    marginBottom: spacing.xl,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+
+  // Section Headers
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  sectionTitleIcon: {
+    marginRight: spacing.sm,
   },
   sectionTitle: {
+    ...typography.titleMedium,
+    color: colors.primary,
     fontWeight: 'bold',
-    marginBottom: 8,
   },
   sectionHeaderWithStatus: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   sectionDescription: {
-    color: '#666',
-    marginBottom: 16,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     lineHeight: 18,
   },
+
+  // Status Chips
   statusChip: {
     borderRadius: 12,
   },
   activeChip: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.success,
     borderRadius: 12,
   },
   warningChip: {
-    backgroundColor: '#FF9800',
+    backgroundColor: colors.warning,
     borderRadius: 12,
   },
 });

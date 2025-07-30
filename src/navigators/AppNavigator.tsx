@@ -20,7 +20,7 @@ import {
 
 import { OnboardingFlow } from '../components/onboarding';
 import { SocialSetup } from '../components/onboarding/SocialSetup';
-import { DualAuthProvider, useDualAuth } from '../providers';
+import { DualAuthProvider } from '../providers';
 import * as Screens from '../screens';
 
 import { HomeNavigator } from './HomeNavigator';
@@ -43,7 +43,7 @@ type RootStackParamList = {
   SocialSetup: undefined;
   HomeStack: undefined;
   Home: undefined;
-  Settings: undefined;
+  NetworkSettings: undefined;
   CapsuleDetails: {
     capsule: {
       capsule_id: string;
@@ -78,12 +78,6 @@ declare global {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppStack = () => {
-  const { isAuthenticated } = useDualAuth();
-
-  console.log('🔍 AppStack Debug:', {
-    isAuthenticated,
-  });
-
   // Always start with Onboarding - let individual screens handle navigation based on auth state
   return (
     <Stack.Navigator initialRouteName="Onboarding">
@@ -102,7 +96,10 @@ const AppStack = () => {
         component={HomeNavigator}
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="Settings" component={Screens.SettingsScreen} />
+      <Stack.Screen
+        name="NetworkSettings"
+        component={Screens.NetworkSettingsScreen}
+      />
       <Stack.Screen
         name="CapsuleDetails"
         component={Screens.CapsuleDetailsScreen}
@@ -137,7 +134,7 @@ const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       CapsuleDetails: 'capsule/:capsule_id',
-      Settings: 'settings',
+      NetworkSettings: 'network-settings',
     },
   },
 };

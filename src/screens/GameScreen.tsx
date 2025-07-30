@@ -8,6 +8,7 @@ import {
   ScrollView,
   RefreshControl,
   Share,
+  Platform,
 } from 'react-native';
 import {
   Text,
@@ -19,12 +20,22 @@ import {
   ActivityIndicator,
   IconButton,
 } from 'react-native-paper';
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import {
+  colors,
+  typography,
+  spacing,
+  layout,
+  shadows,
+  components,
+} from '../theme';
 import type { CapsuleGame, Guess, GuessesApiResponse } from '../types/api';
 
 type RootStackParamList = {
@@ -331,10 +342,62 @@ export function GameScreen({ route }: GameScreenProps) {
     }
   };
 
+  // Render hero content
+  const renderHeroContent = () => (
+    <>
+      <View style={styles.titleContainer}>
+        <MaterialCommunityIcon
+          name="gamepad-variant"
+          size={32}
+          color={colors.primary}
+          style={styles.titleIcon}
+        />
+        <Text style={styles.heroTitle}>Game Arena</Text>
+      </View>
+      <View style={styles.subtitleContainer}>
+        <Text style={styles.heroSubtitle}>
+          <Text style={styles.highlightText}>{game?.current_guesses || 0}</Text>
+          <Text style={styles.subtitleText}> guesses • </Text>
+          <Text style={styles.highlightText}>{game?.total_participants || 0}</Text>
+          <Text style={styles.subtitleText}> players</Text>
+        </Text>
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="target"
+            size={28}
+            color={colors.primary}
+          />
+          <Text style={styles.statValue}>{game?.current_guesses || 0}</Text>
+          <Text style={styles.statLabel}>Guesses</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name="account-group"
+            size={28}
+            color={colors.premiumOrange}
+          />
+          <Text style={styles.statValue}>{game?.total_participants || 0}</Text>
+          <Text style={styles.statLabel}>Players</Text>
+        </View>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcon
+            name={game?.is_revealed ? "lock-open" : "lock"}
+            size={28}
+            color={game?.is_revealed ? colors.success : colors.warning}
+          />
+          <Text style={styles.statValue}>{game?.is_revealed ? 'Open' : 'Locked'}</Text>
+          <Text style={styles.statLabel}>Status</Text>
+        </View>
+      </View>
+    </>
+  );
+
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading game...</Text>
       </View>
     );
@@ -343,9 +406,15 @@ export function GameScreen({ route }: GameScreenProps) {
   if (!game) {
     return (
       <View style={styles.centerContainer}>
+        <MaterialCommunityIcon
+          name="gamepad-variant-outline"
+          size={64}
+          color={colors.error}
+          style={styles.errorIcon}
+        />
         <Text style={styles.errorText}>Game not found</Text>
         <Button
-          mode="outlined"
+          mode="contained"
           onPress={loadGameData}
           style={styles.retryButton}
         >
@@ -367,47 +436,132 @@ export function GameScreen({ route }: GameScreenProps) {
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
       >
+        {/* Modern Hero Section with Gradient Background */}
+        <View style={styles.heroContainer}>
+          <LinearGradient
+            colors={[
+              colors.surfaceVariant,
+              Platform.OS === 'android'
+                ? `rgba(29, 161, 242, 0.50)` // Much more visible on Android to match iOS
+                : `rgba(29, 161, 242, 0.08)`, // Subtle on iOS
+              colors.surfaceVariant,
+            ]}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={[
+              styles.gradient,
+              styles.gradientFix, // Force proper dimensions
+              Platform.OS === 'android' && styles.androidGradientEnhancement,
+            ]}
+          >
+            {renderHeroContent()}
+          </LinearGradient>
+        </View>
         {/* Game Header */}
         <Card style={styles.gameCard}>
           <Card.Content>
             <View style={styles.gameHeader}>
-              <Text variant="headlineSmall" style={styles.gameTitle}>
-                🎯 Time Capsule Game
-              </Text>
+              <View style={styles.gameTitleContainer}>
+                <MaterialCommunityIcon
+                  name="trophy"
+                  size={24}
+                  color={colors.primary}
+                  style={styles.gameTitleIcon}
+                />
+                <Text variant="headlineSmall" style={styles.gameTitle}>
+                  Time Capsule Game
+                </Text>
+              </View>
               <Chip
                 mode={isGameRevealed ? 'flat' : 'outlined'}
-                textStyle={styles.statusChipText}
+                style={[
+                  styles.statusChip,
+                  isGameRevealed ? styles.revealedChip : styles.activeChip,
+                ]}
+                icon={() => (
+                  <MaterialCommunityIcon
+                    name={isGameRevealed ? "lock-open" : "lock"}
+                    size={16}
+                    color={isGameRevealed ? colors.success : colors.warning}
+                  />
+                )}
               >
-                {isGameRevealed ? '🔓 Revealed' : '🔒 Active'}
+                {isGameRevealed ? 'Revealed' : 'Active'}
               </Chip>
             </View>
 
-            <Text style={styles.gameId}>
-              Game ID: {capsule_id.slice(0, 8)}...
-            </Text>
+            <View style={styles.gameInfoContainer}>
+              <View style={styles.gameInfoItem}>
+                <MaterialCommunityIcon
+                  name="identifier"
+                  size={16}
+                  color={colors.textSecondary}
+                  style={styles.gameInfoIcon}
+                />
+                <Text style={styles.gameId}>
+                  Game ID: {capsule_id.slice(0, 8)}...
+                </Text>
+              </View>
 
-            <Text style={styles.revealDate}>
-              Reveal Date:{' '}
-              {new Date(game.reveal_date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
+              <View style={styles.gameInfoItem}>
+                <MaterialCommunityIcon
+                  name="calendar-clock"
+                  size={16}
+                  color={colors.textSecondary}
+                  style={styles.gameInfoIcon}
+                />
+                <Text style={styles.revealDate}>
+                  {new Date(game.reveal_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </View>
 
-            <Text style={styles.participantCount}>
-              👥 {game.total_participants} participant
-              {game.total_participants !== 1 ? 's' : ''}
-            </Text>
-
-            <Text style={styles.guessesCount}>
-              🎯 {game.current_guesses}/{game.max_guesses} guesses
-            </Text>
+              <View style={styles.gameStatsContainer}>
+                <Chip 
+                  mode="outlined" 
+                  style={styles.statChip}
+                  icon={() => (
+                    <MaterialCommunityIcon
+                      name="account-group"
+                      size={16}
+                      color={colors.textSecondary}
+                    />
+                  )}
+                >
+                  {game.total_participants} player{game.total_participants !== 1 ? 's' : ''}
+                </Chip>
+                <Chip 
+                  mode="outlined" 
+                  style={styles.statChip}
+                  icon={() => (
+                    <MaterialCommunityIcon
+                      name="target"
+                      size={16}
+                      color={colors.textSecondary}
+                    />
+                  )}
+                >
+                  {game.current_guesses}/{game.max_guesses} guesses
+                </Chip>
+              </View>
+            </View>
 
             <View style={styles.hintContainer}>
-              <Text style={styles.hintLabel}>💡 Content Hint:</Text>
+              <View style={styles.hintLabelContainer}>
+                <MaterialCommunityIcon
+                  name="lightbulb-outline"
+                  size={16}
+                  color={colors.primary}
+                  style={styles.hintIcon}
+                />
+                <Text style={styles.hintLabel}>Content Hint:</Text>
+              </View>
               <Text style={styles.hintText}>{game.content_hint}</Text>
             </View>
           </Card.Content>
@@ -417,9 +571,17 @@ export function GameScreen({ route }: GameScreenProps) {
         {!isAuthenticated && (
           <Card style={styles.authCard}>
             <Card.Content>
-              <Text style={styles.authText}>
-                🔐 Connect your wallet to participate in this game
-              </Text>
+              <View style={styles.authContainer}>
+                <MaterialCommunityIcon
+                  name="wallet-outline"
+                  size={20}
+                  color={colors.warning}
+                  style={styles.authIcon}
+                />
+                <Text style={styles.authText}>
+                  Connect your wallet to participate in this game
+                </Text>
+              </View>
             </Card.Content>
           </Card>
         )}
@@ -429,25 +591,53 @@ export function GameScreen({ route }: GameScreenProps) {
           <Card style={styles.existingGuessCard}>
             <Card.Content>
               <View style={styles.existingGuessHeader}>
-                <Text style={styles.existingGuessTitle}>Your Guess</Text>
+                <View style={styles.existingGuessTitleContainer}>
+                  <MaterialCommunityIcon
+                    name="check-circle"
+                    size={20}
+                    color={colors.success}
+                    style={styles.existingGuessIcon}
+                  />
+                  <Text style={styles.existingGuessTitle}>Your Guess</Text>
+                </View>
                 <IconButton
-                  icon="share-variant"
-                  size={20}
+                  icon={() => (
+                    <MaterialCommunityIcon
+                      name="share-variant"
+                      size={20}
+                      color={colors.success}
+                    />
+                  )}
                   onPress={() => handleShareGuess(myExistingGuess)}
                   style={styles.shareButton}
-                  iconColor="#2E7D32"
                 />
               </View>
               <Text style={styles.existingGuessContent}>
                 "{myExistingGuess.guess_content}"
               </Text>
               <View style={styles.guesseMeta}>
-                <Chip mode="outlined">
+                <Chip 
+                  mode="outlined"
+                  style={[
+                    styles.guessStatusChip,
+                    myExistingGuess.is_correct ? styles.correctChip : 
+                    myExistingGuess.is_paid ? styles.paidChip : styles.submittedChip
+                  ]}
+                  icon={() => (
+                    <MaterialCommunityIcon
+                      name={myExistingGuess.is_correct ? "check-circle" : 
+                            myExistingGuess.is_paid ? "currency-usd" : "pencil"}
+                      size={16}
+                      color={myExistingGuess.is_correct ? colors.success : 
+                             myExistingGuess.is_paid ? colors.premiumOrange : colors.primary}
+                    />
+                  )}
+                >
                   {myExistingGuess.is_correct
-                    ? '✅ Correct'
+                    ? 'Correct'
                     : myExistingGuess.is_paid
-                      ? '💰 Paid'
-                      : '📝 Submitted'}
+                      ? 'Paid'
+                      : 'Submitted'}
                 </Chip>
                 <Text style={styles.guessDate}>
                   {new Date(myExistingGuess.submitted_at).toLocaleDateString()}
@@ -461,9 +651,17 @@ export function GameScreen({ route }: GameScreenProps) {
         {canSubmitGuess && !myExistingGuess && (
           <Card style={styles.guessCard}>
             <Card.Content>
-              <Text variant="titleMedium" style={styles.guessTitle}>
-                Submit Your Guess
-              </Text>
+              <View style={styles.guessTitleContainer}>
+                <MaterialCommunityIcon
+                  name="pencil-outline"
+                  size={20}
+                  color={colors.primary}
+                  style={styles.guessTitleIcon}
+                />
+                <Text variant="titleMedium" style={styles.guessTitle}>
+                  Submit Your Guess
+                </Text>
+              </View>
 
               <TextInput
                 ref={guessInputRef}
@@ -506,9 +704,17 @@ export function GameScreen({ route }: GameScreenProps) {
         {/* Game Instructions */}
         <Card style={styles.instructionsCard}>
           <Card.Content>
-            <Text variant="titleMedium" style={styles.instructionsTitle}>
-              🎮 How to Play
-            </Text>
+            <View style={styles.instructionsTitleContainer}>
+              <MaterialCommunityIcon
+                name="information-outline"
+                size={20}
+                color={colors.primary}
+                style={styles.instructionsTitleIcon}
+              />
+              <Text variant="titleMedium" style={styles.instructionsTitle}>
+                How to Play
+              </Text>
+            </View>
             <Text style={styles.instructionsText}>
               • Submit your guess about what's in this time capsule{'\n'}• Each
               guess requires a small SOL transaction{'\n'}• Winners earn points
@@ -522,9 +728,17 @@ export function GameScreen({ route }: GameScreenProps) {
         {guesses && guesses.length > 0 && (
           <Card style={styles.guessesCard}>
             <Card.Content>
-              <Text variant="titleMedium" style={styles.guessesTitle}>
-                Recent Guesses ({guesses.length})
-              </Text>
+              <View style={styles.guessesTitleContainer}>
+                <MaterialCommunityIcon
+                  name="format-list-bulleted"
+                  size={20}
+                  color={colors.primary}
+                  style={styles.guessesTitleIcon}
+                />
+                <Text variant="titleMedium" style={styles.guessesTitle}>
+                  Recent Guesses ({guesses.length})
+                </Text>
+              </View>
 
               {guesses.slice(0, 5).map(guess => (
                 <View key={guess.guess_id} style={styles.guessItem}>
@@ -567,200 +781,399 @@ export function GameScreen({ route }: GameScreenProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+    ...layout.screenContainer,
   },
   centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
+    ...layout.centered,
+    ...layout.premiumSpacing,
   },
   scrollView: {
     flex: 1,
   },
   loadingText: {
-    marginTop: 16,
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
     textAlign: 'center',
+  },
+  errorIcon: {
+    marginBottom: spacing.lg,
   },
   errorText: {
+    ...typography.headlineSmall,
+    color: colors.error,
     textAlign: 'center',
-    color: '#d32f2f',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   retryButton: {
-    marginTop: 16,
+    ...components.primaryButton,
+    marginTop: spacing.md,
+  },
+
+  // Modern Hero Section (from established pattern)
+  heroContainer: {
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.medium,
+    overflow: 'hidden',
+  },
+  gradient: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.screenPadding,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  titleIcon: {
+    marginRight: spacing.sm,
+  },
+  heroTitle: {
+    ...typography.displayMedium,
+    color: colors.text,
+    fontWeight: 'bold',
+    textShadowColor: colors.primary + '20',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  subtitleContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  highlightText: {
+    ...typography.titleLarge,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  subtitleText: {
+    ...typography.bodyLarge,
+    color: colors.textSecondary,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    ...typography.headlineMedium,
+    color: colors.text,
+  },
+  statLabel: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+  },
+  // Fix for LinearGradient rendering issues
+  gradientFix: {
+    flex: 1,
+    width: '100%',
+    minHeight: 200,
+  },
+  // Android gradient enhancement
+  androidGradientEnhancement: {
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    backgroundColor: 'rgba(29, 161, 242, 0.02)',
   },
 
   // Game Header Styles
   gameCard: {
-    margin: 16,
-    marginBottom: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   gameHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
+  },
+  gameTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  gameTitleIcon: {
+    marginRight: spacing.sm,
   },
   gameTitle: {
-    flex: 1,
+    ...typography.headlineSmall,
+    color: colors.text,
     fontWeight: 'bold',
   },
-  statusChipText: {
-    fontSize: 12,
+  statusChip: {
+    borderRadius: 12,
+  },
+  revealedChip: {
+    backgroundColor: colors.success + '20',
+    borderColor: colors.success,
+  },
+  activeChip: {
+    backgroundColor: colors.warning + '20',
+    borderColor: colors.warning,
+  },
+  gameInfoContainer: {
+    gap: spacing.sm,
+  },
+  gameInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  gameInfoIcon: {
+    marginRight: spacing.sm,
   },
   gameId: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginBottom: 4,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
   revealDate: {
+    ...typography.bodyMedium,
+    color: colors.text,
     fontWeight: '500',
-    marginBottom: 8,
   },
-  participantCount: {
-    fontSize: 14,
-    opacity: 0.8,
-    marginBottom: 8,
+  gameStatsContainer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  guessesCount: {
-    fontSize: 14,
-    opacity: 0.8,
-    marginBottom: 8,
-    fontWeight: '500',
+  statChip: {
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.border,
   },
   hintContainer: {
-    backgroundColor: '#E3F2FD',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
+    backgroundColor: colors.primary + '10',
+    padding: spacing.sm,
+    borderRadius: spacing.sm,
+    marginTop: spacing.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  hintLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  hintIcon: {
+    marginRight: spacing.sm,
   },
   hintLabel: {
+    ...typography.bodyMedium,
+    color: colors.primary,
     fontWeight: 'bold',
-    marginBottom: 4,
-    color: '#1565C0',
   },
   hintText: {
-    color: '#424242',
+    ...typography.bodyMedium,
+    color: colors.text,
     fontStyle: 'italic',
+    lineHeight: 22,
   },
 
   // Auth Card
   authCard: {
-    margin: 16,
-    marginTop: 8,
-    backgroundColor: '#FFF3E0',
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    borderLeftColor: colors.warning,
+  },
+  authContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authIcon: {
+    marginRight: spacing.sm,
   },
   authText: {
-    color: '#E65100',
+    ...typography.bodyMedium,
+    color: colors.warning,
     textAlign: 'center',
   },
 
   // Existing Guess
   existingGuessCard: {
-    margin: 16,
-    marginTop: 8,
-    backgroundColor: '#E8F5E8',
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.success + '15',
     borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: colors.success,
   },
   existingGuessHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+  },
+  existingGuessTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  existingGuessIcon: {
+    marginRight: spacing.sm,
   },
   existingGuessTitle: {
+    ...typography.titleMedium,
+    color: colors.success,
     fontWeight: 'bold',
-    color: '#2E7D32',
-    flex: 1,
   },
   shareButton: {
     margin: 0,
     backgroundColor: 'transparent',
   },
   existingGuessContent: {
-    fontSize: 16,
-    marginBottom: 12,
+    ...typography.bodyLarge,
+    color: colors.text,
+    marginBottom: spacing.sm,
     fontStyle: 'italic',
+    lineHeight: 24,
   },
   guesseMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  guessStatusChip: {
+    borderRadius: 12,
+  },
+  correctChip: {
+    backgroundColor: colors.success + '20',
+    borderColor: colors.success,
+  },
+  paidChip: {
+    backgroundColor: colors.premiumOrange + '20',
+    borderColor: colors.premiumOrange,
+  },
+  submittedChip: {
+    backgroundColor: colors.primary + '20',
+    borderColor: colors.primary,
+  },
   guessDate: {
-    fontSize: 12,
-    opacity: 0.7,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
 
   // Guess Form
   guessCard: {
-    margin: 16,
-    marginTop: 8,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  guessTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  guessTitleIcon: {
+    marginRight: spacing.sm,
   },
   guessTitle: {
-    marginBottom: 16,
+    ...typography.titleMedium,
+    color: colors.primary,
     fontWeight: 'bold',
   },
   guessInput: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surface,
   },
   characterCount: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     textAlign: 'right',
-    fontSize: 12,
-    opacity: 0.7,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   anonymousToggle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   submitButton: {
-    marginTop: 8,
+    ...components.primaryButton,
+    marginTop: spacing.sm,
   },
 
   // Instructions
   instructionsCard: {
-    margin: 16,
-    marginTop: 8,
-    backgroundColor: '#F3E5F5',
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.surfaceVariant,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  instructionsTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  instructionsTitleIcon: {
+    marginRight: spacing.sm,
   },
   instructionsTitle: {
-    marginBottom: 12,
+    ...typography.titleMedium,
+    color: colors.primary,
     fontWeight: 'bold',
-    color: '#7B1FA2',
   },
   instructionsText: {
-    lineHeight: 20,
-    color: '#4A148C',
+    ...typography.bodyMedium,
+    color: colors.text,
+    lineHeight: 22,
   },
 
   // Guesses List
   guessesCard: {
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 32,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    marginBottom: spacing.xl,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  guessesTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  guessesTitleIcon: {
+    marginRight: spacing.sm,
   },
   guessesTitle: {
-    marginBottom: 16,
+    ...typography.titleMedium,
+    color: colors.primary,
     fontWeight: 'bold',
   },
   guessItem: {
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 12,
-    marginBottom: 12,
+    borderBottomColor: colors.border,
+    paddingBottom: spacing.sm,
+    marginBottom: spacing.sm,
   },
   guessItemContent: {
-    fontSize: 14,
-    marginBottom: 6,
+    ...typography.bodyMedium,
+    color: colors.text,
+    marginBottom: spacing.xs,
     fontStyle: 'italic',
+    lineHeight: 20,
   },
   guessItemMeta: {
     flexDirection: 'row',
@@ -768,18 +1181,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   guessItemWallet: {
-    fontSize: 12,
-    opacity: 0.7,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     fontFamily: 'monospace',
   },
   guessItemDate: {
-    fontSize: 12,
-    opacity: 0.7,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
   moreGuessesText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     textAlign: 'center',
     fontStyle: 'italic',
-    opacity: 0.7,
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });

@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Address } from '@solana/kit';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -16,10 +16,9 @@ import {
   AppState,
   Platform,
 } from 'react-native';
-import { Text, Card, Button, ActivityIndicator } from 'react-native-paper';
-import Animated, {
+import { Text, Button, ActivityIndicator } from 'react-native-paper';
+import {
   useSharedValue,
-  useAnimatedStyle,
   withRepeat,
   withTiming,
   withSequence,

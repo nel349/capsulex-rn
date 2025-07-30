@@ -12,6 +12,7 @@ interface HorizontalCapsuleListProps {
   title: string;
   capsules: EnhancedCapsule[];
   type: 'ready' | 'pending' | 'revealed';
+  // eslint-disable-next-line no-unused-vars
   onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
   revealingCapsules?: Set<string>;
   glowAnim?: any; // Animated.Value

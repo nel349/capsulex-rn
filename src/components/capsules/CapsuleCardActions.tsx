@@ -9,6 +9,7 @@ import type { CapsuleCardBaseProps } from './types';
 
 interface CapsuleCardActionsProps extends CapsuleCardBaseProps {
   isRevealing: boolean;
+  // eslint-disable-next-line no-unused-vars
   onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
 }
 

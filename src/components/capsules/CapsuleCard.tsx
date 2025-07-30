@@ -27,6 +27,7 @@ interface CapsuleCardProps {
   capsule: EnhancedCapsule;
   type: 'ready' | 'pending' | 'revealed';
   isRevealing: boolean;
+  // eslint-disable-next-line no-unused-vars
   onRevealCapsule?: (capsule: CapsuleWithStatus) => void;
   glowAnim?: Animated.SharedValue<number>;
   width: number;

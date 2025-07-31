@@ -1,3 +1,5 @@
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { PublicKey } from '@solana/web3.js';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -13,30 +15,24 @@ import {
   Chip,
   Divider,
   ActivityIndicator,
-  List,
   Switch,
   Portal,
   Modal,
   TextInput,
 } from 'react-native-paper';
-import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { PublicKey } from '@solana/web3.js';
-import * as anchor from '@coral-xyz/anchor';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
-import { VaultKeyManager } from '../utils/vaultKey';
+import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import {
   colors,
-  typography,
   spacing,
-  layout,
   shadows,
-  components,
 } from '../theme';
+import { getCapsulePda, isValidBase58 } from '../utils/solanaUtils';
+import { VaultKeyManager } from '../utils/vaultKey';
 
 interface PendingGuess {
   guess_pda: string;
@@ -51,6 +47,7 @@ interface PendingValidation {
   reveal_date: string;
   content_encrypted: string;
   estimated_validation_cost: number;
+  creator_wallet?: string; // Add creator wallet to derive PDA
 }
 
 interface GameGuesses {
@@ -65,23 +62,30 @@ interface ValidationSummary {
   total_capsules: number;
   total_guesses: number;
   estimated_total_cost: number;
+  message?: string;
 }
 
 export function CreatorValidationScreen() {
   const { walletAddress } = useDualAuth();
-  const { snackbar, showError, showSuccess, showInfo, hideSnackbar } = useSnackbar();
+  const { snackbar, showError, showSuccess, showInfo, hideSnackbar } =
+    useSnackbar();
+  const { verifyGuessesSemanticBatch } = useCapsulexProgram();
 
-  const [validationSummary, setValidationSummary] = useState<ValidationSummary | null>(null);
+  const [validationSummary, setValidationSummary] =
+    useState<ValidationSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCapsule, setSelectedCapsule] = useState<PendingValidation | null>(null);
+  const [selectedCapsule, setSelectedCapsule] =
+    useState<PendingValidation | null>(null);
   const [gameGuesses, setGameGuesses] = useState<GameGuesses | null>(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [decryptedContent, setDecryptedContent] = useState('');
   const [isDecryptingContent, setIsDecryptingContent] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isLoadingGuesses, setIsLoadingGuesses] = useState(false);
-  const [validationSelections, setValidationSelections] = useState<{ [key: string]: boolean }>({});
+  const [validationSelections, setValidationSelections] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   useEffect(() => {
     if (walletAddress) {
@@ -94,7 +98,7 @@ export function CreatorValidationScreen() {
 
     try {
       setIsLoading(true);
-      
+
       const response = await apiService.get<ValidationSummary>(
         `/games/creator/${walletAddress}/pending-validations`
       );
@@ -102,6 +106,11 @@ export function CreatorValidationScreen() {
       if (response.success && response.data) {
         console.log('📱 Mobile received validation summary:', response.data);
         setValidationSummary(response.data);
+
+        // Show helpful message if no validations are ready
+        if (response.data.total_capsules === 0 && response.data.message) {
+          showInfo(response.data.message);
+        }
       } else {
         console.error('📱 Mobile failed to load validations:', response.error);
         showError(response.error || 'Failed to load pending validations');
@@ -130,7 +139,7 @@ export function CreatorValidationScreen() {
     setDecryptedContent('');
     setValidationSelections({});
     setGameGuesses(null);
-    
+
     setShowValidationModal(true);
 
     // First decrypt content, then load guesses
@@ -144,7 +153,7 @@ export function CreatorValidationScreen() {
     try {
       setIsLoadingGuesses(true);
       showInfo('Loading guesses for validation...');
-      
+
       // Use the backend endpoint that derives game PDA and fetches guesses
       const response = await apiService.get<GameGuesses>(
         `/games/capsule/${capsuleId}/pending-guesses`
@@ -152,14 +161,14 @@ export function CreatorValidationScreen() {
 
       if (response.success && response.data) {
         setGameGuesses(response.data);
-        
+
         // Pre-select all guesses for validation
         const initialSelections: { [key: string]: boolean } = {};
         response.data.pending_guesses.forEach(guess => {
           initialSelections[guess.guess_pda] = true;
         });
         setValidationSelections(initialSelections);
-        
+
         showSuccess(`Loaded ${response.data.total_guesses} pending guesses`);
       } else {
         showError(response.error || 'Failed to load guesses');
@@ -170,7 +179,6 @@ export function CreatorValidationScreen() {
           estimated_validation_cost: 0,
         });
       }
-      
     } catch (error) {
       console.error('Error loading game guesses:', error);
       showError('Failed to load guesses for validation');
@@ -190,7 +198,7 @@ export function CreatorValidationScreen() {
 
     try {
       setIsDecryptingContent(true);
-      
+
       // Get vault key for decryption
       const hasKey = await VaultKeyManager.hasVaultKey(walletAddress);
       if (!hasKey) {
@@ -200,7 +208,8 @@ export function CreatorValidationScreen() {
 
       // Parse the encrypted content from JSON and decrypt
       const encryptedContentObj = JSON.parse(capsule.content_encrypted);
-      const decrypted = await VaultKeyManager.decryptContent(encryptedContentObj);
+      const decrypted =
+        await VaultKeyManager.decryptContent(encryptedContentObj);
 
       setDecryptedContent(decrypted);
       showSuccess('Content decrypted successfully');
@@ -229,7 +238,7 @@ export function CreatorValidationScreen() {
     }
 
     const estimatedCost = selectedGuesses.length * 0.003;
-    
+
     Alert.alert(
       'Confirm Validation',
       `This will validate ${selectedGuesses.length} guesses.\n\nEstimated cost: $${estimatedCost.toFixed(3)}\n\nYou will be charged for semantic validation services.`,
@@ -269,26 +278,76 @@ export function CreatorValidationScreen() {
       );
 
       if (response.success && response.data) {
-        const { summary } = response.data;
-        
+        const { results, summary, next_steps } = response.data;
+
+        // Step 1: Semantic validation completed
         showSuccess(
-          `Validation completed! ${summary.successful} guesses processed successfully. Cost: $${summary.validation_cost_usd.toFixed(3)}`
+          `Semantic validation completed! ${summary.successful} successful validations.`
         );
 
-        // Close modal and refresh data
-        setShowValidationModal(false);
-        await loadPendingValidations();
-
-        // Show detailed results
-        setTimeout(() => {
-          Alert.alert(
-            'Validation Results',
-            `Total processed: ${summary.total_processed}\nSuccessful: ${summary.successful}\nFailed: ${summary.failed}\n\nTotal cost: $${summary.validation_cost_usd.toFixed(3)}`,
-            [{ text: 'OK' }]
+        // Step 2: Perform on-chain batch verification (single wallet approval!)
+        try {
+          showInfo(
+            'Now performing on-chain verification with single wallet approval...'
           );
-        }, 1000);
+
+          // Derive capsule PDA from creator wallet and reveal date
+          const creator = new PublicKey(walletAddress);
+          const revealDate = Math.floor(
+            new Date(selectedCapsule.reveal_date).getTime() / 1000
+          );
+          const capsulePDA = getCapsulePda(creator, revealDate);
+
+          console.log('Derived capsule PDA:', capsulePDA.toBase58());
+
+          // Validate game PDA format
+          const gamePda = gameGuesses?.game_pda || '';
+          if (!isValidBase58(gamePda)) {
+            throw new Error(`Invalid game PDA format: ${gamePda}`);
+          }
+
+          await verifyGuessesSemanticBatch.mutateAsync({
+            capsulePDA,
+            gamePDA: new PublicKey(gamePda),
+            decryptedContent: next_steps.decrypted_content,
+            validationResults: results, // Use semantic validation results
+          });
+
+          // Success! Both semantic validation and on-chain verification completed
+          showSuccess(
+            '🎉 Complete! All guesses validated semantically and verified on-chain!'
+          );
+
+          // Close modal and refresh data
+          setShowValidationModal(false);
+          await loadPendingValidations();
+        } catch (onChainError) {
+          console.error('On-chain verification failed:', onChainError);
+
+          // Check for specific error cases
+          const errorMessage = (onChainError as any).message || '';
+
+          if (
+            errorMessage.includes('CapsuleNotReady') ||
+            errorMessage.includes('0x1772')
+          ) {
+            showError(
+              'Capsule must be revealed before guess verification can begin. ' +
+                'Please wait until the reveal date has passed, then try again.'
+            );
+          } else if (errorMessage.includes('AccountNotInitialized')) {
+            showError(
+              'Leaderboard account not initialized. This should be handled automatically. ' +
+                'Please try again.'
+            );
+          } else {
+            showError(
+              'Semantic validation succeeded, but on-chain verification failed. Please try again.'
+            );
+          }
+        }
       } else {
-        showError(response.error || 'Validation failed');
+        showError(response.error || 'Semantic validation failed');
       }
     } catch (error) {
       console.error('Error processing validation:', error);
@@ -334,9 +393,14 @@ export function CreatorValidationScreen() {
           No Pending Validations
         </Text>
         <Text variant="bodyMedium" style={styles.emptySubtitle}>
-          All your gamified capsules have been validated or don't have any guesses yet.
+          All your gamified capsules have been validated or don't have any
+          guesses yet.
         </Text>
-        <Button mode="outlined" onPress={onRefresh} style={styles.refreshButton}>
+        <Button
+          mode="outlined"
+          onPress={onRefresh}
+          style={styles.refreshButton}
+        >
           Refresh
         </Button>
       </View>
@@ -401,7 +465,8 @@ export function CreatorValidationScreen() {
                     Capsule {validation.capsule_id.slice(0, 8)}...
                   </Text>
                   <Text variant="bodySmall" style={styles.revealDate}>
-                    Revealed: {new Date(validation.reveal_date).toLocaleDateString()}
+                    Revealed:{' '}
+                    {new Date(validation.reveal_date).toLocaleDateString()}
                   </Text>
                 </View>
                 <Chip
@@ -448,7 +513,7 @@ export function CreatorValidationScreen() {
             <Text variant="titleLarge" style={styles.modalTitle}>
               Validate Guesses
             </Text>
-            
+
             {selectedCapsule && (
               <>
                 <Text variant="bodyMedium" style={styles.modalSubtitle}>
@@ -488,7 +553,9 @@ export function CreatorValidationScreen() {
                 {isLoadingGuesses ? (
                   <View style={styles.decryptingContainer}>
                     <ActivityIndicator size="small" />
-                    <Text style={styles.decryptingText}>Loading guesses...</Text>
+                    <Text style={styles.decryptingText}>
+                      Loading guesses...
+                    </Text>
                   </View>
                 ) : gameGuesses ? (
                   gameGuesses.pending_guesses.map((guess, index) => (
@@ -496,17 +563,28 @@ export function CreatorValidationScreen() {
                       <Card.Content>
                         <View style={styles.guessHeader}>
                           <View style={styles.guessInfo}>
-                            <Text variant="bodyMedium" style={styles.guessContent}>
+                            <Text
+                              variant="bodyMedium"
+                              style={styles.guessContent}
+                            >
                               "{guess.guess_content}"
                             </Text>
-                            <Text variant="bodySmall" style={styles.guessMetadata}>
-                              By: {formatWalletAddress(guess.guesser)} • {formatTimestamp(guess.timestamp)}
+                            <Text
+                              variant="bodySmall"
+                              style={styles.guessMetadata}
+                            >
+                              By: {formatWalletAddress(guess.guesser)} •{' '}
+                              {formatTimestamp(guess.timestamp)}
                               {guess.is_anonymous && ' • Anonymous'}
                             </Text>
                           </View>
                           <Switch
-                            value={validationSelections[guess.guess_pda] || false}
-                            onValueChange={() => toggleGuessSelection(guess.guess_pda)}
+                            value={
+                              validationSelections[guess.guess_pda] || false
+                            }
+                            onValueChange={() =>
+                              toggleGuessSelection(guess.guess_pda)
+                            }
                           />
                         </View>
                       </Card.Content>

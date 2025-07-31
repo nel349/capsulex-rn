@@ -1,7 +1,14 @@
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import * as anchor from '@coral-xyz/anchor';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
+import type { TransactionInstruction } from '@solana/web3.js';
+import {
+  PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+  VersionedTransaction,
+  TransactionMessage,
+} from '@solana/web3.js';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
@@ -9,11 +16,17 @@ import { Platform } from 'react-native';
 import type { Capsulex as CapsulexProgramType } from '../../assets/capsulex'; // Renamed to avoid conflict
 import idl from '../../assets/capsulex.json'; // Assuming this is the correct path
 import { dynamicClientService } from '../services/dynamicClientService';
-import { alertAndLog } from '../utils/alertAndLog';
 import { useConnection } from '../utils/ConnectionProvider';
+import {
+  getCapsulePda,
+  getGamePda,
+  getGuessPda,
+  getNftMintPda,
+  getVaultPda,
+  getLeaderboardPda,
+  CAPSULEX_PROGRAM_ID,
+} from '../utils/solanaUtils';
 import { useAnchorWallet } from '../utils/useAnchorWallet';
-
-const CAPSULEX_PROGRAM_ID = 'J1r7tHjxEuCcSYVrikUKxzyeeccuC3QbyHjUbY8Pw7uH';
 
 export function useCapsulexProgram() {
   const { connection } = useConnection();
@@ -69,31 +82,11 @@ export function useCapsulexProgram() {
 
       const creator = anchorWallet.publicKey;
 
-      // Derive PDAs
-      const [capsulePDA] = PublicKey.findProgramAddressSync(
-        [
-          anchor.utils.bytes.utf8.encode('capsule'),
-          creator.toBuffer(),
-          revealDate.toArrayLike(Buffer, 'le', 8), // i64 is 8 bytes, little-endian
-        ],
-        capsulexProgramId
-      );
-
-      const [nftMintPDA] = PublicKey.findProgramAddressSync(
-        [anchor.utils.bytes.utf8.encode('capsule_mint'), capsulePDA.toBuffer()],
-        capsulexProgramId
-      );
-
-      const [vaultPDA] = PublicKey.findProgramAddressSync(
-        [anchor.utils.bytes.utf8.encode('vault')],
-        capsulexProgramId
-      );
-
-      // Always derive the game PDA (required by program)
-      const [gamePDA] = PublicKey.findProgramAddressSync(
-        [anchor.utils.bytes.utf8.encode('game'), capsulePDA.toBuffer()],
-        capsulexProgramId
-      );
+      // Derive PDAs using utility functions
+      const capsulePDA = getCapsulePda(creator, revealDate, capsulexProgramId);
+      const nftMintPDA = getNftMintPda(capsulePDA, capsulexProgramId);
+      const vaultPDA = getVaultPda(capsulexProgramId);
+      const gamePDA = getGamePda(capsulePDA, capsulexProgramId);
 
       // Prepare accounts (game account is always required by the program)
       const accounts: any = {
@@ -134,7 +127,7 @@ export function useCapsulexProgram() {
       if (error.error?.errorMessage) {
         console.error('Program error message:', error.error.errorMessage);
       }
-      alertAndLog(error.name, error.message);
+      console.error(error.name, error.message);
     },
   });
 
@@ -148,15 +141,8 @@ export function useCapsulexProgram() {
 
     const creator = anchorWallet.publicKey;
 
-    // Derive PDAs
-    const [capsulePDA] = PublicKey.findProgramAddressSync(
-      [
-        anchor.utils.bytes.utf8.encode('capsule'),
-        creator.toBuffer(),
-        revealDate.toArrayLike(Buffer, 'le', 8), // i64 is 8 bytes, little-endian
-      ],
-      capsulexProgramId
-    );
+    // Derive capsule PDA using utility function
+    const capsulePDA = getCapsulePda(creator, revealDate, capsulexProgramId);
 
     const capsule = await capsulexProgram.account.capsule.fetch(capsulePDA);
 
@@ -184,13 +170,10 @@ export function useCapsulexProgram() {
       const revealer = anchorWallet.publicKey;
       const capsuleCreator = creator || revealer; // Default to current wallet if not specified
 
-      // Derive capsule PDA
-      const [capsulePDA] = PublicKey.findProgramAddressSync(
-        [
-          anchor.utils.bytes.utf8.encode('capsule'),
-          capsuleCreator.toBuffer(),
-          revealDate.toArrayLike(Buffer, 'le', 8), // i64 is 8 bytes, little-endian
-        ],
+      // Derive capsule PDA using utility function
+      const capsulePDA = getCapsulePda(
+        capsuleCreator,
+        revealDate,
         capsulexProgramId
       );
 
@@ -206,10 +189,6 @@ export function useCapsulexProgram() {
     },
     onSuccess: (signature: string) => {
       console.log('Capsule Revealed!', `Transaction: ${signature}`);
-      alertAndLog(
-        '🎉 Capsule Revealed!',
-        `Transaction confirmed: ${signature.slice(0, 8)}...`
-      );
     },
     onError: (error: any) => {
       console.error('Reveal transaction failed:', error);
@@ -219,7 +198,7 @@ export function useCapsulexProgram() {
       if (error.error?.errorMessage) {
         console.error('Program error message:', error.error.errorMessage);
       }
-      alertAndLog('❌ Reveal Failed', error.message || 'Transaction failed');
+      console.error('❌ Reveal Failed', error.message || 'Transaction failed');
     },
   });
 
@@ -288,25 +267,14 @@ export function useCapsulexProgram() {
       // Fetch the game account to get current_guesses count
       const gameAccount = await capsulexProgram.account.game.fetch(gamePDA);
 
-      // Derive guess PDA (using the same pattern as tests)
-      const currentGuessesBuffer = Buffer.from(
-        new Uint32Array([gameAccount.currentGuesses]).buffer
-      );
-      const [guessPDA] = PublicKey.findProgramAddressSync(
-        [
-          anchor.utils.bytes.utf8.encode('guess'),
-          gamePDA.toBuffer(),
-          guesser.toBuffer(),
-          currentGuessesBuffer,
-        ],
+      // Derive PDAs using utility functions
+      const guessPDA = getGuessPda(
+        gamePDA,
+        guesser,
+        gameAccount.currentGuesses,
         capsulexProgramId
       );
-
-      // Derive vault PDA
-      const [vaultPDA] = PublicKey.findProgramAddressSync(
-        [anchor.utils.bytes.utf8.encode('vault')],
-        capsulexProgramId
-      );
+      const vaultPDA = getVaultPda(capsulexProgramId);
 
       return await capsulexProgram.methods
         .submitGuess(guessContent, isAnonymous)
@@ -323,10 +291,6 @@ export function useCapsulexProgram() {
     },
     onSuccess: (signature: string) => {
       console.log('Guess Submitted!', `Transaction: ${signature}`);
-      alertAndLog(
-        '🎯 Guess Submitted!',
-        `Your guess has been submitted. Transaction: ${signature.slice(0, 8)}...`
-      );
     },
     onError: (error: any) => {
       console.error('Submit guess transaction failed:', error);
@@ -336,10 +300,203 @@ export function useCapsulexProgram() {
       if (error.error?.errorMessage) {
         console.error('Program error message:', error.error.errorMessage);
       }
-      alertAndLog(
-        '❌ Guess Submission Failed',
-        error.message || 'Transaction failed'
+    },
+  });
+
+  // Batch verify guesses with semantic validation results (single wallet approval)
+  const verifyGuessesSemanticBatch = useMutation({
+    mutationKey: ['guesses', 'verify', 'batch'],
+    mutationFn: async ({
+      capsulePDA,
+      gamePDA,
+      decryptedContent,
+      validationResults,
+    }: {
+      capsulePDA: PublicKey;
+      gamePDA: PublicKey;
+      decryptedContent: string;
+      validationResults: Array<{
+        guess_pda: string;
+        guesser?: string; // Add guesser field for leaderboard PDA derivation
+        is_correct: boolean;
+        oracle_timestamp?: number;
+        oracle_nonce?: string;
+        oracle_signature?: string;
+        success: boolean;
+      }>;
+    }) => {
+      if (!capsulexProgram || !anchorWallet?.publicKey || !provider) {
+        throw new Error(
+          'Your wallet connection has expired. Please reconnect your wallet to continue.'
+        );
+      }
+
+      const authority = anchorWallet.publicKey;
+      const successfulResults = validationResults.filter(r => r.success);
+
+      if (successfulResults.length === 0) {
+        throw new Error('No successful validation results to process');
+      }
+
+      // Warn user about multiple approvals if we can't batch
+      console.log(
+        `📝 Preparing to verify ${successfulResults.length} guesses in a single transaction`
       );
+
+      // Build instructions for each successful validation
+      const instructions: TransactionInstruction[] = [];
+      const initializeInstructions: TransactionInstruction[] = [];
+      const results = [];
+      const processedGuessers = new Set<string>();
+
+      for (const result of successfulResults) {
+        try {
+          const guessPDA = new PublicKey(result.guess_pda);
+
+          // Fetch the guess account to get the guesser's address
+          let guesser: PublicKey;
+          if (result.guesser) {
+            guesser = new PublicKey(result.guesser);
+          } else {
+            // Fallback: fetch guess account to get guesser
+            const guessAccount =
+              await capsulexProgram.account.guess.fetch(guessPDA);
+            guesser = guessAccount.guesser;
+          }
+
+          // Derive leaderboard PDA for this guesser (not the authority)
+          const leaderboardPDA = getLeaderboardPda(guesser, capsulexProgramId);
+
+          // Check if we need to initialize the leaderboard for this guesser
+          if (!processedGuessers.has(guesser.toBase58())) {
+            processedGuessers.add(guesser.toBase58());
+
+            try {
+              // Check if leaderboard account exists
+              const accountInfo =
+                await connection.getAccountInfo(leaderboardPDA);
+              if (accountInfo === null) {
+                // Account doesn't exist, create initialization instruction
+                console.log(
+                  `Creating leaderboard for guesser: ${guesser.toBase58()}`
+                );
+
+                const initInstruction = await capsulexProgram.methods
+                  .initializeLeaderboard(guesser)
+                  .accounts({
+                    authority: authority,
+                    user: guesser,
+                    leaderboard: leaderboardPDA,
+                    systemProgram: SystemProgram.programId,
+                  } as any)
+                  .instruction();
+
+                initializeInstructions.push(initInstruction);
+              } else {
+                console.log(
+                  `Leaderboard exists for guesser: ${guesser.toBase58()}`
+                );
+              }
+            } catch (accountError) {
+              console.error(
+                `Error checking leaderboard for ${guesser.toBase58()}:`,
+                accountError
+              );
+              // Continue processing other guesses even if one fails
+            }
+          }
+
+          // Create verifyGuess instruction (following semantic-integration-tests.ts pattern)
+          const instruction = await capsulexProgram.methods
+            .verifyGuess(
+              decryptedContent.trim(),
+              null, // verification_window_hours
+              result.is_correct,
+              new anchor.BN(
+                result.oracle_timestamp || Math.floor(Date.now() / 1000)
+              ),
+              result.oracle_nonce || 'fallback_nonce',
+              result.oracle_signature || ''
+            )
+            .accounts({
+              authority: authority,
+              guess: guessPDA,
+              game: gamePDA,
+              capsule: capsulePDA,
+              leaderboard: leaderboardPDA, // Use guesser's leaderboard, not authority's
+            } as any)
+            .instruction();
+
+          instructions.push(instruction);
+
+          results.push({
+            guess_pda: result.guess_pda,
+            is_correct: result.is_correct,
+            guesser: guesser.toBase58(),
+          });
+        } catch (error) {
+          console.error(
+            `Failed to create instruction for guess ${result.guess_pda}:`,
+            error
+          );
+          // Skip this instruction but continue with others
+        }
+      }
+
+      if (instructions.length === 0) {
+        throw new Error('Failed to create any verification instructions');
+      }
+
+      // Combine initialization instructions with verification instructions
+      const allInstructions = [...initializeInstructions, ...instructions];
+
+      if (initializeInstructions.length > 0) {
+        console.log(
+          `📋 Added ${initializeInstructions.length} leaderboard initialization instructions`
+        );
+      }
+
+      // Create versioned transaction with all instructions
+      const { blockhash } = await connection.getLatestBlockhash();
+
+      const messageV0 = new TransactionMessage({
+        payerKey: authority,
+        recentBlockhash: blockhash,
+        instructions: allInstructions,
+      }).compileToV0Message();
+
+      const versionedTransaction = new VersionedTransaction(messageV0);
+
+      // Sign and send the batched transaction (single wallet approval!)
+      const signature = await provider.sendAndConfirm(
+        versionedTransaction,
+        [],
+        {
+          skipPreflight: false,
+          commitment: 'confirmed',
+        }
+      );
+
+      console.log(
+        `✅ Batch verification completed with signature: ${signature}`
+      );
+
+      return {
+        results,
+        transaction_signature: signature,
+        summary: {
+          total_processed: successfulResults.length,
+          successful: instructions.length,
+          failed: successfulResults.length - instructions.length,
+        },
+      };
+    },
+    onSuccess: data => {
+      const { summary } = data;
+      console.log('\ud83c\udf89 Batch verification completed:', summary);
+    },
+    onError: (error: any) => {
+      console.error('Batch verification failed:', error);
     },
   });
 
@@ -350,6 +507,7 @@ export function useCapsulexProgram() {
     revealCapsule,
     submitGuess,
     fetchCapsule,
+    verifyGuessesSemanticBatch, // New batch verification function (single approval!)
     // Add other mutations/queries as needed for other instructions
   };
 }

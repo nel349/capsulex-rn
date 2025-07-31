@@ -1,8 +1,19 @@
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Alert, Platform, RefreshControl } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  Alert,
+  Platform,
+  RefreshControl,
+  Share,
+} from 'react-native';
 import {
   Text,
   Card,
@@ -12,8 +23,6 @@ import {
   Divider,
   ActivityIndicator,
 } from 'react-native-paper';
-import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
@@ -21,6 +30,26 @@ import { useDualAuth } from '../providers';
 import type { CapsuleWithStatus } from '../services/capsuleApi';
 import type { Capsule } from '../types/api';
 import { VaultKeyManager } from '../utils/vaultKey';
+
+// Base URL for Blink service (contains deep link handler)
+const BASE_BLINK_URL = 'https://capsulex-blink-production.up.railway.app';
+
+// Helper function to shorten a URL using is.gd API
+const shortenUrl = async (url: string): Promise<string> => {
+  try {
+    const response = await axios.get(
+      `https://is.gd/create.php?format=json&url=${encodeURIComponent(url)}`
+    );
+    if (response.data.shorturl) {
+      return response.data.shorturl;
+    }
+    console.error('Failed to shorten URL, response:', response.data);
+    return url; // Fallback to original URL if shortening fails
+  } catch (error) {
+    console.error('Error shortening URL:', error);
+    return url; // Fallback to original URL if shortening fails
+  }
+};
 import {
   colors,
   typography,
@@ -39,6 +68,10 @@ interface EnhancedCapsule extends CapsuleWithStatus {
 
 type RootStackParamList = {
   CapsuleDetails: { capsule: EnhancedCapsule };
+  Game: {
+    capsule_id: string;
+    action?: 'view' | 'guess';
+  };
 };
 
 type CapsuleDetailsRouteProp = RouteProp<RootStackParamList, 'CapsuleDetails'>;
@@ -50,7 +83,7 @@ type CapsuleDetailsNavigationProp = NativeStackNavigationProp<
 export function CapsuleDetailsScreen() {
   const route = useRoute<CapsuleDetailsRouteProp>();
   const navigation = useNavigation<CapsuleDetailsNavigationProp>();
-  const { capsule } = route.params;
+  const { capsule }: { capsule: EnhancedCapsule } = route.params; // this is the enhanced capsule
 
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
@@ -285,6 +318,24 @@ export function CapsuleDetailsScreen() {
     }
   };
 
+  // Handle sharing gamified capsule
+  const handleShareCapsule = async () => {
+    try {
+      const link = `${BASE_BLINK_URL}/game/${capsule.databaseData?.capsule_id}`;
+      const shortLink = await shortenUrl(link);
+
+      const shareText = `🎮 Check out this CapsuleX Game!\n\n📦 ${capsule.account.isGamified ? 'Interactive Game Capsule' : 'Time Capsule'}\n🔓 ${isRevealed ? 'Revealed!' : 'Pending reveal'}\n⏰ Reveal: ${fullCapsuleData ? new Date(fullCapsuleData.reveal_date).toLocaleDateString() : new Date(capsule.account.revealDate * 1000).toLocaleDateString()}\n${shortLink}\nJoin CapsuleX and create your own time capsules!`;
+
+      await Share.share({
+        message: shareText,
+        title: 'CapsuleX Game',
+      });
+    } catch (error) {
+      console.error('Error sharing capsule:', error);
+      showError('Failed to share capsule. Please try again.');
+    }
+  };
+
   // Render hero content
   const renderHeroContent = () => (
     <>
@@ -299,10 +350,14 @@ export function CapsuleDetailsScreen() {
       </View>
       <View style={styles.subtitleContainer}>
         <Text style={styles.heroSubtitle}>
-          <Text style={styles.highlightText}>{getStatusText(fullCapsuleData?.status)}</Text>
+          <Text style={styles.highlightText}>
+            {getStatusText(fullCapsuleData?.status)}
+          </Text>
           <Text style={styles.subtitleText}> status • </Text>
-          <Text style={styles.highlightText}>{fullCapsuleData?.content_encrypted ? 'Encrypted' : 'Plain'}</Text>
-          <Text style={styles.subtitleText}> content</Text>
+          <Text style={styles.highlightText}>
+            {capsule.account.isGamified ? 'Gamified' : 'Standard'}
+          </Text>
+          <Text style={styles.subtitleText}> capsule</Text>
         </Text>
       </View>
       <View style={styles.heroStats}>
@@ -312,25 +367,35 @@ export function CapsuleDetailsScreen() {
             size={28}
             color={getStatusColor(fullCapsuleData?.status)}
           />
-          <Text style={styles.statValue}>{getStatusText(fullCapsuleData?.status)}</Text>
+          <Text style={styles.statValue}>
+            {getStatusText(fullCapsuleData?.status)}
+          </Text>
           <Text style={styles.statLabel}>Status</Text>
         </View>
         <View style={styles.statItem}>
           <MaterialCommunityIcon
-            name={fullCapsuleData?.content_encrypted ? "lock" : "lock-open"}
+            name={
+              capsule.account.isGamified ? 'gamepad-variant' : 'package-variant'
+            }
             size={28}
-            color={fullCapsuleData?.content_encrypted ? colors.warning : colors.success}
+            color={
+              capsule.account.isGamified ? colors.premiumOrange : colors.primary
+            }
           />
-          <Text style={styles.statValue}>{fullCapsuleData?.content_encrypted ? 'Encrypted' : 'Plain'}</Text>
-          <Text style={styles.statLabel}>Content</Text>
+          <Text style={styles.statValue}>
+            {capsule.account.isGamified ? 'Game' : 'Standard'}
+          </Text>
+          <Text style={styles.statLabel}>Type</Text>
         </View>
         <View style={styles.statItem}>
           <MaterialCommunityIcon
-            name={isRevealed ? "calendar-check" : "calendar-clock"}
+            name={isRevealed ? 'calendar-check' : 'calendar-clock'}
             size={28}
             color={isRevealed ? colors.success : colors.primary}
           />
-          <Text style={styles.statValue}>{isRevealed ? 'Revealed' : 'Pending'}</Text>
+          <Text style={styles.statValue}>
+            {isRevealed ? 'Revealed' : 'Pending'}
+          </Text>
           <Text style={styles.statLabel}>Timeline</Text>
         </View>
       </View>
@@ -349,7 +414,7 @@ export function CapsuleDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -377,6 +442,28 @@ export function CapsuleDetailsScreen() {
             {renderHeroContent()}
           </LinearGradient>
         </View>
+
+        {/* Share Button for Gamified Capsules */}
+        {capsule.account.isGamified && (
+          <View style={styles.shareButtonContainer}>
+            <Button
+              mode="outlined"
+              onPress={handleShareCapsule}
+              icon={() => (
+                <MaterialCommunityIcon
+                  name="share-variant"
+                  size={20}
+                  color={colors.primary}
+                />
+              )}
+              style={styles.shareButton}
+              contentStyle={styles.shareButtonContent}
+            >
+              Share Game
+            </Button>
+          </View>
+        )}
+
         {/* Header Card */}
         <Card style={styles.headerCard}>
           <Card.Content>
@@ -395,7 +482,10 @@ export function CapsuleDetailsScreen() {
               <Chip
                 style={[
                   styles.statusChip,
-                  { backgroundColor: getStatusColor(fullCapsuleData?.status) + '20' },
+                  {
+                    backgroundColor:
+                      getStatusColor(fullCapsuleData?.status) + '20',
+                  },
                 ]}
                 textStyle={{ color: getStatusColor(fullCapsuleData?.status) }}
                 icon={() => (
@@ -430,21 +520,29 @@ export function CapsuleDetailsScreen() {
             <View style={styles.contentHeader}>
               <View style={styles.sectionTitleContainer}>
                 <MaterialCommunityIcon
-                  name={fullCapsuleData?.content_encrypted ? "lock" : "lock-open"}
+                  name={
+                    fullCapsuleData?.content_encrypted ? 'lock' : 'lock-open'
+                  }
                   size={20}
                   color={colors.primary}
                   style={styles.sectionTitleIcon}
                 />
                 <Text variant="titleMedium" style={styles.sectionTitle}>
-                  {fullCapsuleData?.content_encrypted ? 'Encrypted Content' : 'Content'}
+                  {fullCapsuleData?.content_encrypted
+                    ? 'Encrypted Content'
+                    : 'Content'}
                 </Text>
               </View>
               <IconButton
                 icon={() => (
                   <MaterialCommunityIcon
-                    name={showContent ? "eye-off" : "eye"}
+                    name={showContent ? 'eye-off' : 'eye'}
                     size={24}
-                    color={isDecrypting || !fullCapsuleData?.content_encrypted ? colors.textSecondary : colors.primary}
+                    color={
+                      isDecrypting || !fullCapsuleData?.content_encrypted
+                        ? colors.textSecondary
+                        : colors.primary
+                    }
                   />
                 )}
                 onPress={handleDecryptContent}
@@ -469,9 +567,21 @@ export function CapsuleDetailsScreen() {
               ) : (
                 <View style={styles.encryptedContentContainer}>
                   <MaterialCommunityIcon
-                    name={isDecrypting ? "loading" : fullCapsuleData?.content_encrypted ? "lock" : "alert-circle"}
+                    name={
+                      isDecrypting
+                        ? 'loading'
+                        : fullCapsuleData?.content_encrypted
+                          ? 'lock'
+                          : 'alert-circle'
+                    }
                     size={20}
-                    color={isDecrypting ? colors.primary : fullCapsuleData?.content_encrypted ? colors.warning : colors.textSecondary}
+                    color={
+                      isDecrypting
+                        ? colors.primary
+                        : fullCapsuleData?.content_encrypted
+                          ? colors.warning
+                          : colors.textSecondary
+                    }
                     style={styles.contentStatusIcon}
                   />
                   <Text variant="bodyMedium" style={styles.encryptedText}>
@@ -538,7 +648,7 @@ export function CapsuleDetailsScreen() {
             <View style={styles.timelineItem}>
               <View style={styles.timelineItemLeft}>
                 <MaterialCommunityIcon
-                  name={isRevealed ? "calendar-check" : "calendar-clock"}
+                  name={isRevealed ? 'calendar-check' : 'calendar-clock'}
                   size={16}
                   color={isRevealed ? colors.success : colors.warning}
                   style={styles.timelineIcon}
@@ -562,7 +672,7 @@ export function CapsuleDetailsScreen() {
                       ).toLocaleString()}
                 </Text>
                 <MaterialCommunityIcon
-                  name={isRevealed ? "check-circle" : "clock-outline"}
+                  name={isRevealed ? 'check-circle' : 'clock-outline'}
                   size={16}
                   color={isRevealed ? colors.success : colors.warning}
                   style={styles.revealStatusIcon}
@@ -641,6 +751,24 @@ export function CapsuleDetailsScreen() {
               </Text>
             </View>
 
+            <View style={styles.techItem}>
+              <Text variant="bodyMedium" style={styles.techLabel}>
+                Gamified:
+              </Text>
+              <Text
+                variant="bodyMedium"
+                style={{
+                  color: capsule.account.isGamified
+                    ? colors.premiumOrange
+                    : colors.textSecondary,
+                }}
+              >
+                {capsule.account.isGamified
+                  ? 'Yes - Interactive Game'
+                  : 'No - Standard Capsule'}
+              </Text>
+            </View>
+
             {fullCapsuleData?.has_media && (
               <View style={styles.techItem}>
                 <Text variant="bodyMedium" style={styles.techLabel}>
@@ -677,7 +805,9 @@ export function CapsuleDetailsScreen() {
                   color={colors.success}
                   style={styles.socialIcon}
                 />
-                <Text variant="bodyMedium" style={styles.socialText}>Posted to Social</Text>
+                <Text variant="bodyMedium" style={styles.socialText}>
+                  Posted to Social
+                </Text>
               </View>
 
               {fullCapsuleData?.social_post_id && (
@@ -698,9 +828,31 @@ export function CapsuleDetailsScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          {isRevealed && (
+          {capsule.account.isGamified && (
             <Button
               mode="contained"
+              onPress={() => {
+                navigation.navigate('Game', {
+                  capsule_id: fullCapsuleData?.capsule_id || capsule.publicKey,
+                  action: 'view',
+                });
+              }}
+              style={styles.actionButton}
+              icon={() => (
+                <MaterialCommunityIcon
+                  name="gamepad-variant"
+                  size={20}
+                  color={colors.text}
+                />
+              )}
+            >
+              Play Game
+            </Button>
+          )}
+
+          {isRevealed && (
+            <Button
+              mode="outlined"
               onPress={() => {
                 // TODO: Implement reveal functionality
                 showSuccess('Reveal functionality coming soon!');
@@ -1055,5 +1207,19 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     ...components.primaryButton,
+  },
+
+  // Share Button
+  shareButtonContainer: {
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  shareButton: {
+    borderColor: colors.primary,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  shareButtonContent: {
+    paddingVertical: spacing.xs,
   },
 });

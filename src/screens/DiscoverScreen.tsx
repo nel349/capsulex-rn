@@ -1,4 +1,6 @@
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
@@ -8,6 +10,7 @@ import {
   ScrollView,
   RefreshControl,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import {
   Text,
@@ -22,9 +25,38 @@ import {
 import { discoverService } from '../services/discoverService';
 import { colors, typography, spacing, layout, shadows } from '../theme';
 
+// Navigation types
+type RootStackParamList = {
+  CapsuleDetails: {
+    capsule: {
+      capsule_id: string;
+      content_encrypted: string;
+      content_hash: string;
+      has_media: boolean;
+      media_urls: string[];
+      reveal_date: string;
+      created_at: string;
+      on_chain_tx: string;
+      sol_fee_amount: number;
+      status?: string;
+      revealed_at?: string;
+      social_post_id?: string;
+      posted_to_social?: boolean;
+    };
+  };
+  Game: {
+    capsule_id: string;
+    action?: 'view' | 'guess';
+  };
+};
+
+type DiscoverScreenNavigationProp =
+  NativeStackNavigationProp<RootStackParamList>;
+
 type TabType = 'feed' | 'games' | 'leaderboard';
 
 export function DiscoverScreen() {
+  const navigation = useNavigation<DiscoverScreenNavigationProp>();
   const [activeTab, setActiveTab] = useState<TabType>('feed');
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'revealed'>('all');
@@ -336,122 +368,222 @@ export function DiscoverScreen() {
           {activeTab === 'feed' && (
             <>
               {filteredCapsules.map(capsule => (
-                <Card key={capsule.id} style={styles.capsuleCard}>
-                  <Card.Content>
-                    {/* Author Header */}
-                    <View style={styles.authorHeader}>
-                      <Avatar.Text
-                        size={40}
-                        label={
-                          capsule.creator_display_name?.charAt(0) ||
-                          capsule.creator.slice(0, 1).toUpperCase()
-                        }
-                        style={styles.avatar}
-                      />
-                      <View style={styles.authorInfo}>
-                        <Text variant="bodyMedium" style={styles.authorName}>
-                          {capsule.creator_display_name || 'Anonymous'}
-                        </Text>
-                        <Text variant="bodySmall" style={styles.authorWallet}>
-                          {formatWalletAddress(capsule.creator)}
-                        </Text>
-                      </View>
-                      <View style={styles.headerRight}>
-                        {capsule.twitter_username && (
-                          <View style={styles.platformContainer}>
-                            <MaterialCommunityIcon
-                              name="twitter"
-                              size={14}
-                              color={colors.primary}
-                              style={styles.platformIcon}
-                            />
-                            <Text variant="bodySmall" style={styles.platform}>
-                              @{capsule.twitter_username}
-                            </Text>
-                          </View>
-                        )}
-                        <IconButton
-                          icon="dots-vertical"
-                          size={16}
-                          onPress={() => {
-                            // TODO: Show options menu
-                          }}
+                <TouchableOpacity
+                  key={capsule.id}
+                  onPress={() => {
+                    // Navigate to CapsuleDetails with enhanced data structure
+                    navigation.navigate('CapsuleDetails', {
+                      capsule: {
+                        capsule_id: capsule.id,
+                        content_encrypted: '',
+                        content_hash: capsule.content_hash,
+                        has_media: false,
+                        media_urls: [],
+                        reveal_date: new Date(
+                          capsule.reveal_date_timestamp * 1000
+                        ).toISOString(),
+                        created_at: new Date(
+                          capsule.reveal_date_timestamp * 1000
+                        ).toISOString(),
+                        on_chain_tx: capsule.on_chain_id || '',
+                        sol_fee_amount: 0,
+                        status: capsule.revealed ? 'revealed' : 'pending',
+                        revealed_at: capsule.revealed_at_timestamp
+                          ? new Date(
+                              capsule.revealed_at_timestamp * 1000
+                            ).toISOString()
+                          : undefined,
+                        social_post_id: undefined,
+                        posted_to_social: capsule.is_public,
+                      },
+                    });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Card style={styles.capsuleCard}>
+                    <Card.Content>
+                      {/* Author Header */}
+                      <View style={styles.authorHeader}>
+                        <Avatar.Text
+                          size={40}
+                          label={
+                            capsule.creator_display_name?.charAt(0) ||
+                            capsule.creator.slice(0, 1).toUpperCase()
+                          }
+                          style={styles.avatar}
                         />
-                      </View>
-                    </View>
-
-                    {/* Status Badge */}
-                    <View style={styles.statusContainer}>
-                      <Chip
-                        mode="outlined"
-                        style={[
-                          styles.statusChip,
-                          capsule.revealed
-                            ? styles.revealedChip
-                            : styles.pendingChip,
-                        ]}
-                        icon={() => (
-                          <MaterialCommunityIcon
-                            name={
-                              capsule.revealed
-                                ? 'check-circle'
-                                : 'clock-outline'
-                            }
+                        <View style={styles.authorInfo}>
+                          <Text variant="bodyMedium" style={styles.authorName}>
+                            {capsule.creator_display_name || 'Anonymous'}
+                          </Text>
+                          <Text variant="bodySmall" style={styles.authorWallet}>
+                            {formatWalletAddress(capsule.creator)}
+                          </Text>
+                        </View>
+                        <View style={styles.headerRight}>
+                          {capsule.twitter_username && (
+                            <View style={styles.platformContainer}>
+                              <MaterialCommunityIcon
+                                name="twitter"
+                                size={14}
+                                color={colors.primary}
+                                style={styles.platformIcon}
+                              />
+                              <Text variant="bodySmall" style={styles.platform}>
+                                @{capsule.twitter_username}
+                              </Text>
+                            </View>
+                          )}
+                          <IconButton
+                            icon="arrow-right"
                             size={16}
-                            color={
-                              capsule.revealed ? colors.success : colors.warning
-                            }
+                            onPress={e => {
+                              e.stopPropagation();
+                              navigation.navigate('CapsuleDetails', {
+                                capsule: {
+                                  capsule_id: capsule.id,
+                                  content_encrypted: '',
+                                  content_hash: capsule.content_hash,
+                                  has_media: false,
+                                  media_urls: [],
+                                  reveal_date: new Date(
+                                    capsule.reveal_date_timestamp * 1000
+                                  ).toISOString(),
+                                  created_at: new Date(
+                                    capsule.reveal_date_timestamp * 1000
+                                  ).toISOString(),
+                                  on_chain_tx: capsule.on_chain_id || '',
+                                  sol_fee_amount: 0,
+                                  status: capsule.revealed
+                                    ? 'revealed'
+                                    : 'pending',
+                                  revealed_at: capsule.revealed_at_timestamp
+                                    ? new Date(
+                                        capsule.revealed_at_timestamp * 1000
+                                      ).toISOString()
+                                    : undefined,
+                                  social_post_id: undefined,
+                                  posted_to_social: capsule.is_public,
+                                },
+                              });
+                            }}
                           />
-                        )}
-                      >
-                        {capsule.revealed
-                          ? `Revealed ${capsule.revealed_at_timestamp ? formatTimestamp(capsule.revealed_at_timestamp) : ''}`
-                          : `Reveals in ${formatCountdown(capsule.reveal_date_timestamp)}`}
-                      </Chip>
-                    </View>
-
-                    {/* Content */}
-                    <Text variant="bodyMedium" style={styles.content}>
-                      {capsule.content}
-                    </Text>
-
-                    {/* Game Badge */}
-                    {capsule.is_game && (
-                      <Chip
-                        icon="gamepad-variant"
-                        mode="outlined"
-                        style={styles.gameChip}
-                      >
-                        Game Capsule
-                      </Chip>
-                    )}
-
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                      <Text variant="bodySmall" style={styles.timestamp}>
-                        {capsule.reveal_date_timestamp
-                          ? formatTimestamp(capsule.reveal_date_timestamp)
-                          : ''}
-                      </Text>
-                      <View style={styles.actions}>
-                        <IconButton
-                          icon="heart-outline"
-                          size={20}
-                          onPress={() => {
-                            // TODO: Implement like functionality
-                          }}
-                        />
-                        <IconButton
-                          icon="share-variant"
-                          size={20}
-                          onPress={() => {
-                            // TODO: Implement share functionality
-                          }}
-                        />
+                        </View>
                       </View>
-                    </View>
-                  </Card.Content>
-                </Card>
+
+                      {/* Status Badge */}
+                      <View style={styles.statusContainer}>
+                        <Chip
+                          mode="outlined"
+                          style={[
+                            styles.statusChip,
+                            capsule.revealed
+                              ? styles.revealedChip
+                              : styles.pendingChip,
+                          ]}
+                          icon={() => (
+                            <MaterialCommunityIcon
+                              name={
+                                capsule.revealed
+                                  ? 'check-circle'
+                                  : 'clock-outline'
+                              }
+                              size={16}
+                              color={
+                                capsule.revealed
+                                  ? colors.success
+                                  : colors.warning
+                              }
+                            />
+                          )}
+                        >
+                          {capsule.revealed
+                            ? `Revealed ${capsule.revealed_at_timestamp ? formatTimestamp(capsule.revealed_at_timestamp) : ''}`
+                            : `Reveals in ${formatCountdown(capsule.reveal_date_timestamp)}`}
+                        </Chip>
+                      </View>
+
+                      {/* Content */}
+                      <Text variant="bodyMedium" style={styles.content}>
+                        {capsule.content}
+                      </Text>
+
+                      {/* Game Badge */}
+                      {capsule.is_game && (
+                        <TouchableOpacity
+                          onPress={e => {
+                            e.stopPropagation();
+                            navigation.navigate('Game', {
+                              capsule_id: capsule.id,
+                              action: 'view',
+                            });
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          <Chip
+                            icon="gamepad-variant"
+                            mode="outlined"
+                            style={styles.gameChip}
+                          >
+                            Game Capsule - Tap to Play
+                          </Chip>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Footer */}
+                      <View style={styles.footer}>
+                        <Text variant="bodySmall" style={styles.timestamp}>
+                          {capsule.reveal_date_timestamp
+                            ? formatTimestamp(capsule.reveal_date_timestamp)
+                            : ''}
+                        </Text>
+                        <View style={styles.actions}>
+                          <IconButton
+                            icon="information-outline"
+                            size={20}
+                            onPress={e => {
+                              e.stopPropagation();
+                              navigation.navigate('CapsuleDetails', {
+                                capsule: {
+                                  capsule_id: capsule.id,
+                                  content_encrypted: '',
+                                  content_hash: capsule.content_hash,
+                                  has_media: false,
+                                  media_urls: [],
+                                  reveal_date: new Date(
+                                    capsule.reveal_date_timestamp * 1000
+                                  ).toISOString(),
+                                  created_at: new Date(
+                                    capsule.reveal_date_timestamp * 1000
+                                  ).toISOString(),
+                                  on_chain_tx: capsule.on_chain_id || '',
+                                  sol_fee_amount: 0,
+                                  status: capsule.revealed
+                                    ? 'revealed'
+                                    : 'pending',
+                                  revealed_at: capsule.revealed_at_timestamp
+                                    ? new Date(
+                                        capsule.revealed_at_timestamp * 1000
+                                      ).toISOString()
+                                    : undefined,
+                                  social_post_id: undefined,
+                                  posted_to_social: capsule.is_public,
+                                },
+                              });
+                            }}
+                          />
+                          <IconButton
+                            icon="share-variant"
+                            size={20}
+                            onPress={() => {
+                              // TODO: Implement share functionality
+                            }}
+                          />
+                        </View>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                </TouchableOpacity>
               ))}
 
               {/* Empty State */}
@@ -473,160 +605,175 @@ export function DiscoverScreen() {
           {activeTab === 'games' && (
             <>
               {filteredGames.map(game => (
-                <Card key={game.game_id} style={styles.capsuleCard}>
-                  <Card.Content>
-                    {/* Game Header */}
-                    <View style={styles.authorHeader}>
-                      <Avatar.Text
-                        size={40}
-                        label={
-                          game.creator_display_name?.charAt(0) ||
-                          game.creator.slice(0, 1).toUpperCase()
-                        }
-                        style={[styles.avatar, styles.gameAvatar]}
-                      />
-                      <View style={styles.authorInfo}>
-                        <Text variant="bodyMedium" style={styles.authorName}>
-                          {game.creator_display_name || 'Anonymous'}
-                        </Text>
-                        <Text variant="bodySmall" style={styles.authorWallet}>
-                          {formatWalletAddress(game.creator)}
-                        </Text>
-                      </View>
-                      <View style={styles.headerRight}>
-                        <View style={styles.gameStatsHeader}>
-                          <MaterialCommunityIcon
-                            name="account-group"
-                            size={14}
-                            color={colors.textSecondary}
-                            style={styles.statsIcon}
-                          />
-                          <Text variant="bodySmall" style={styles.gameStats}>
-                            {game.total_participants} players
+                <TouchableOpacity
+                  key={game.game_id}
+                  onPress={() => {
+                    navigation.navigate('Game', {
+                      capsule_id: game.capsule_id,
+                      action: 'view',
+                    });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Card style={styles.capsuleCard}>
+                    <Card.Content>
+                      {/* Game Header */}
+                      <View style={styles.authorHeader}>
+                        <Avatar.Text
+                          size={40}
+                          label={
+                            game.creator_display_name?.charAt(0) ||
+                            game.creator.slice(0, 1).toUpperCase()
+                          }
+                          style={[styles.avatar, styles.gameAvatar]}
+                        />
+                        <View style={styles.authorInfo}>
+                          <Text variant="bodyMedium" style={styles.authorName}>
+                            {game.creator_display_name || 'Anonymous'}
+                          </Text>
+                          <Text variant="bodySmall" style={styles.authorWallet}>
+                            {formatWalletAddress(game.creator)}
                           </Text>
                         </View>
+                        <View style={styles.headerRight}>
+                          <View style={styles.gameStatsHeader}>
+                            <MaterialCommunityIcon
+                              name="account-group"
+                              size={14}
+                              color={colors.textSecondary}
+                              style={styles.statsIcon}
+                            />
+                            <Text variant="bodySmall" style={styles.gameStats}>
+                              {game.total_participants} players
+                            </Text>
+                          </View>
+                        </View>
                       </View>
-                    </View>
 
-                    {/* Game Content Hint */}
-                    <View style={styles.contentHintContainer}>
-                      <MaterialCommunityIcon
-                        name="lightbulb-outline"
-                        size={16}
-                        color={colors.primary}
-                        style={styles.hintIcon}
-                      />
-                      <Text variant="bodyMedium" style={styles.content}>
-                        {game.content_hint}
-                      </Text>
-                    </View>
-
-                    {/* Game Stats */}
-                    <View style={styles.gameStatsContainer}>
-                      <Chip
-                        mode="outlined"
-                        style={styles.statChip}
-                        icon={() => (
-                          <MaterialCommunityIcon
-                            name="pencil"
-                            size={16}
-                            color={colors.textSecondary}
-                          />
-                        )}
-                      >
-                        {game.current_guesses}/{game.max_guesses} guesses
-                      </Chip>
-                      <Chip
-                        mode="outlined"
-                        style={styles.statChip}
-                        icon={() => (
-                          <MaterialCommunityIcon
-                            name="trophy"
-                            size={16}
-                            color={colors.premiumOrange}
-                          />
-                        )}
-                      >
-                        {game.winners_found}/{game.max_winners} winners
-                      </Chip>
-                      <Chip
-                        mode="outlined"
-                        style={[
-                          styles.statChip,
-                          game.is_active
-                            ? styles.activeChip
-                            : styles.inactiveChip,
-                        ]}
-                        icon={() => (
-                          <MaterialCommunityIcon
-                            name={
-                              game.is_active ? 'check-circle' : 'close-circle'
-                            }
-                            size={16}
-                            color={
-                              game.is_active ? colors.success : colors.error
-                            }
-                          />
-                        )}
-                      >
-                        {game.is_active ? 'Active' : 'Ended'}
-                      </Chip>
-                    </View>
-
-                    {/* Game Timer */}
-                    <View style={styles.statusContainer}>
-                      <Chip
-                        mode="outlined"
-                        style={[styles.statusChip, styles.gameChip]}
-                        icon={() => (
-                          <MaterialCommunityIcon
-                            name={
-                              game.time_until_reveal > 0
-                                ? 'clock-outline'
-                                : 'check-circle'
-                            }
-                            size={16}
-                            color={
-                              game.time_until_reveal > 0
-                                ? colors.warning
-                                : colors.success
-                            }
-                          />
-                        )}
-                      >
-                        {game.time_until_reveal > 0
-                          ? `Reveals in ${Math.floor(game.time_until_reveal / 3600)}h ${Math.floor((game.time_until_reveal % 3600) / 60)}m`
-                          : 'Ready to reveal!'}
-                      </Chip>
-                    </View>
-
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                      <Text variant="bodySmall" style={styles.timestamp}>
-                        Created{' '}
-                        {formatTimestamp(
-                          new Date(game.created_at).getTime() / 1000
-                        )}
-                      </Text>
-                      <View style={styles.actions}>
-                        <IconButton
-                          icon="play"
-                          size={20}
-                          onPress={() => {
-                            // TODO: Navigate to game
-                          }}
+                      {/* Game Content Hint */}
+                      <View style={styles.contentHintContainer}>
+                        <MaterialCommunityIcon
+                          name="lightbulb-outline"
+                          size={16}
+                          color={colors.primary}
+                          style={styles.hintIcon}
                         />
-                        <IconButton
-                          icon="share-variant"
-                          size={20}
-                          onPress={() => {
-                            // TODO: Share game
-                          }}
-                        />
+                        <Text variant="bodyMedium" style={styles.content}>
+                          {game.content_hint}
+                        </Text>
                       </View>
-                    </View>
-                  </Card.Content>
-                </Card>
+
+                      {/* Game Stats */}
+                      <View style={styles.gameStatsContainer}>
+                        <Chip
+                          mode="outlined"
+                          style={styles.statChip}
+                          icon={() => (
+                            <MaterialCommunityIcon
+                              name="pencil"
+                              size={16}
+                              color={colors.textSecondary}
+                            />
+                          )}
+                        >
+                          {game.current_guesses}/{game.max_guesses} guesses
+                        </Chip>
+                        <Chip
+                          mode="outlined"
+                          style={styles.statChip}
+                          icon={() => (
+                            <MaterialCommunityIcon
+                              name="trophy"
+                              size={16}
+                              color={colors.premiumOrange}
+                            />
+                          )}
+                        >
+                          {game.winners_found}/{game.max_winners} winners
+                        </Chip>
+                        <Chip
+                          mode="outlined"
+                          style={[
+                            styles.statChip,
+                            game.is_active
+                              ? styles.activeChip
+                              : styles.inactiveChip,
+                          ]}
+                          icon={() => (
+                            <MaterialCommunityIcon
+                              name={
+                                game.is_active ? 'check-circle' : 'close-circle'
+                              }
+                              size={16}
+                              color={
+                                game.is_active ? colors.success : colors.error
+                              }
+                            />
+                          )}
+                        >
+                          {game.is_active ? 'Active' : 'Ended'}
+                        </Chip>
+                      </View>
+
+                      {/* Game Timer */}
+                      <View style={styles.statusContainer}>
+                        <Chip
+                          mode="outlined"
+                          style={[styles.statusChip, styles.gameChip]}
+                          icon={() => (
+                            <MaterialCommunityIcon
+                              name={
+                                game.time_until_reveal > 0
+                                  ? 'clock-outline'
+                                  : 'check-circle'
+                              }
+                              size={16}
+                              color={
+                                game.time_until_reveal > 0
+                                  ? colors.warning
+                                  : colors.success
+                              }
+                            />
+                          )}
+                        >
+                          {game.time_until_reveal > 0
+                            ? `Reveals in ${Math.floor(game.time_until_reveal / 3600)}h ${Math.floor((game.time_until_reveal % 3600) / 60)}m`
+                            : 'Ready to reveal!'}
+                        </Chip>
+                      </View>
+
+                      {/* Footer */}
+                      <View style={styles.footer}>
+                        <Text variant="bodySmall" style={styles.timestamp}>
+                          Created{' '}
+                          {formatTimestamp(
+                            new Date(game.created_at).getTime() / 1000
+                          )}
+                        </Text>
+                        <View style={styles.actions}>
+                          <IconButton
+                            icon="play"
+                            size={20}
+                            onPress={e => {
+                              e.stopPropagation();
+                              navigation.navigate('Game', {
+                                capsule_id: game.capsule_id,
+                                action: 'guess',
+                              });
+                            }}
+                          />
+                          <IconButton
+                            icon="share-variant"
+                            size={20}
+                            onPress={() => {
+                              // TODO: Share game
+                            }}
+                          />
+                        </View>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                </TouchableOpacity>
               ))}
 
               {/* Empty State */}

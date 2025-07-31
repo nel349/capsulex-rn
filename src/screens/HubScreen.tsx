@@ -11,7 +11,6 @@ import {
   View,
   ScrollView,
   RefreshControl,
-  Alert,
   Vibration,
   AppState,
   Platform,
@@ -25,6 +24,9 @@ import {
 } from 'react-native-reanimated';
 
 import { HorizontalCapsuleList } from '../components/capsules';
+import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import type {
   CapsuleWithStatus,
@@ -72,12 +74,15 @@ export function HubScreen() {
   const [revealingCapsules, setRevealingCapsules] = useState<Set<string>>(
     new Set()
   );
+  const [showRevealModal, setShowRevealModal] = useState(false);
+  const [selectedCapsule, setSelectedCapsule] =
+    useState<CapsuleWithStatus | null>(null);
   // const { getBalance } = useSolanaService();
   const { data: balance } = useBalance(walletAddress as unknown as Address);
   const { revealCapsule } = useCapsulexProgram();
   const queryClient = useQueryClient();
   const { getMyCapsules } = useCapsuleService();
-
+  const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
   // Animation values using react-native-reanimated
   const pulseAnim = useSharedValue(1);
   const glowAnim = useSharedValue(0.3);
@@ -318,91 +323,43 @@ export function HubScreen() {
     setRefreshing(false);
   }, [fetchCapsuleData, queryClient]);
 
-  // Handle reveal capsule
+  // Handle reveal capsule confirmation flow
   const handleRevealCapsule = (capsule: CapsuleWithStatus) => {
-    const isRevealing = revealingCapsules.has(capsule.publicKey);
+    setSelectedCapsule(capsule);
+    setShowRevealModal(true);
+  };
 
-    if (isRevealing) {
-      Alert.alert(
-        '⏳ Transaction in Progress',
-        'Please wait for the current reveal to complete.'
-      );
-      return;
+  // Process the actual reveal
+  const processReveal = async (capsule: CapsuleWithStatus): Promise<string> => {
+    try {
+      setRevealingCapsules(prev => new Set(prev).add(capsule.publicKey));
+      const revealDateBN = new anchor.BN(capsule.account.revealDate);
+      const signature = await revealCapsule.mutateAsync({
+        revealDate: revealDateBN,
+        creator: new anchor.web3.PublicKey(capsule.account.creator),
+      });
+      Vibration.vibrate([100, 50, 100, 50, 100]);
+      return signature;
+    } catch (error: any) {
+      console.error('Reveal failed:', error);
+      let errorMessage = 'Transaction failed. Please try again.';
+      if (error.message?.includes('User rejected')) {
+        errorMessage = 'Transaction was cancelled by the user.';
+      } else if (error.message?.includes('CapsuleNotReady')) {
+        errorMessage = 'Capsule is not ready to be revealed yet.';
+      } else if (error.message?.includes('CapsuleAlreadyRevealed')) {
+        errorMessage = 'This capsule has already been revealed.';
+      } else if (error.message?.includes('UnauthorizedRevealer')) {
+        errorMessage = 'You are not authorized to reveal this capsule.';
+      }
+      throw new Error(errorMessage); // Re-throw the error
+    } finally {
+      setRevealingCapsules(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(capsule.publicKey);
+        return newSet;
+      });
     }
-
-    Alert.alert(
-      '🎉 Reveal Capsule',
-      `Ready to reveal your time capsule?\n\nThis will:\n• Sign blockchain transaction\n• Mark capsule as revealed on-chain\n• You can then share the content`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reveal Now!',
-          style: 'default',
-          onPress: async () => {
-            try {
-              // Add to revealing set to show loading state
-              setRevealingCapsules(prev =>
-                new Set(prev).add(capsule.publicKey)
-              );
-
-              // Convert reveal date to BN
-              const revealDateBN = new anchor.BN(capsule.account.revealDate);
-
-              // Call the reveal transaction
-              const signature = await revealCapsule.mutateAsync({
-                revealDate: revealDateBN,
-                creator: new anchor.web3.PublicKey(capsule.account.creator),
-              });
-
-              // Success! Refresh the data and show success message
-              Vibration.vibrate([100, 50, 100, 50, 100]); // Celebration haptics
-
-              Alert.alert(
-                '🚀 Success!',
-                `Capsule revealed successfully!\n\nTransaction: ${signature.slice(0, 8)}...${signature.slice(-8)}\n\nYour content is now revealed on-chain!`,
-                [
-                  {
-                    text: 'View on Explorer',
-                    onPress: () => {
-                      // TODO: Open Solana explorer
-                      console.log(
-                        `https://explorer.solana.com/tx/${signature}?cluster=devnet`
-                      );
-                    },
-                  },
-                  { text: 'OK', style: 'default' },
-                ]
-              );
-
-              // Refresh capsule data to show updated state
-              await fetchCapsuleData();
-            } catch (error: any) {
-              console.error('Reveal failed:', error);
-
-              let errorMessage = 'Transaction failed. Please try again.';
-              if (error.message?.includes('User rejected')) {
-                errorMessage = 'Transaction was cancelled by user.';
-              } else if (error.message?.includes('CapsuleNotReady')) {
-                errorMessage = 'Capsule is not ready to be revealed yet.';
-              } else if (error.message?.includes('CapsuleAlreadyRevealed')) {
-                errorMessage = 'This capsule has already been revealed.';
-              } else if (error.message?.includes('UnauthorizedRevealer')) {
-                errorMessage = 'You are not authorized to reveal this capsule.';
-              }
-
-              Alert.alert('❌ Reveal Failed', errorMessage);
-            } finally {
-              // Remove from revealing set
-              setRevealingCapsules(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(capsule.publicKey);
-                return newSet;
-              });
-            }
-          },
-        },
-      ]
-    );
   };
 
   // Render hero content (shared between iOS gradient and Android fallback)
@@ -422,7 +379,6 @@ export function HubScreen() {
           <Text style={styles.heroSubtitle}>
             <Text style={styles.highlightText}>{stats.ready_to_reveal}</Text>
             <Text style={styles.subtitleText}> capsules ready to reveal </Text>
-            <Text style={styles.accentText}>🔥</Text>
           </Text>
         ) : (
           <Text style={styles.heroSubtitle}>
@@ -513,6 +469,40 @@ export function HubScreen() {
 
   return (
     <View style={styles.screenContainer}>
+      <ConfirmationModal
+        visible={showRevealModal}
+        onDismiss={() => setShowRevealModal(false)}
+        title="Reveal Capsule"
+        message={`Ready to reveal your time capsule? This action will:\n• Sign a blockchain transaction\n• Mark the capsule as revealed on-chain`}
+        onConfirm={async () => {
+          if (!selectedCapsule) {
+            setShowRevealModal(false);
+            return;
+          }
+          setShowRevealModal(false); // Dismiss the modal immediately
+          try {
+            const signature = await processReveal(selectedCapsule);
+            // Show success message via Snackbar in HubScreen
+            setTimeout(() => {
+              showSuccess(
+                `Success! Capsule revealed successfully. Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}. Your content is now revealed on-chain!`
+              );
+            }, 300);
+            await fetchCapsuleData(); // Fetch updated data after successful reveal
+          } catch (error: any) {
+            console.error('Error during reveal process:', error);
+            // Show error message via Snackbar in HubScreen
+            setTimeout(() => {
+              showError(`Reveal Failed: ${error.message}`);
+            }, 300);
+          }
+        }}
+        loading={
+          selectedCapsule
+            ? revealingCapsules.has(selectedCapsule.publicKey)
+            : false
+        }
+      />
       <ScrollView
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -589,6 +579,14 @@ export function HubScreen() {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+      
+      {/* Snackbar for success/error messages */}
+      <AppSnackbar
+        visible={snackbar.visible}
+        message={snackbar.message}
+        type={snackbar.type}
+        onDismiss={hideSnackbar}
+      />
     </View>
   );
 }

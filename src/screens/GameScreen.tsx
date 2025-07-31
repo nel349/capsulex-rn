@@ -1,6 +1,9 @@
 import * as anchor from '@coral-xyz/anchor';
+import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
@@ -20,8 +23,6 @@ import {
   ActivityIndicator,
   IconButton,
 } from 'react-native-paper';
-import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
@@ -37,6 +38,26 @@ import {
   components,
 } from '../theme';
 import type { CapsuleGame, Guess, GuessesApiResponse } from '../types/api';
+
+// Base URL for Blink service (contains deep link handler)
+const BASE_BLINK_URL = 'https://capsulex-blink-production.up.railway.app';
+
+// Helper function to shorten a URL using is.gd API
+const shortenUrl = async (url: string): Promise<string> => {
+  try {
+    const response = await axios.get(
+      `https://is.gd/create.php?format=json&url=${encodeURIComponent(url)}`
+    );
+    if (response.data.shorturl) {
+      return response.data.shorturl;
+    }
+    console.error('Failed to shorten URL, response:', response.data);
+    return url; // Fallback to original URL if shortening fails
+  } catch (error) {
+    console.error('Error shortening URL:', error);
+    return url; // Fallback to original URL if shortening fails
+  }
+};
 
 type RootStackParamList = {
   Game: {
@@ -316,6 +337,39 @@ export function GameScreen({ route }: GameScreenProps) {
     }
   };
 
+  // Share game function
+  const handleShareGame = async () => {
+    if (!game) return;
+
+    try {
+      const timeUntilReveal = game.reveal_date
+        ? Math.max(0, new Date(game.reveal_date).getTime() - Date.now())
+        : 0;
+      const hoursLeft = Math.floor(timeUntilReveal / (1000 * 60 * 60));
+      const timeText =
+        timeUntilReveal > 0
+          ? `⏰ ${hoursLeft}h left to guess!`
+          : '🎉 Revealed!';
+
+      const link = `${BASE_BLINK_URL}/game/${game.capsule_id}`;
+      const shortLink = await shortenUrl(link);
+
+      const shareText = `🎮 Join this CapsuleX Game!\n\n🎯 ${game.current_guesses}/${game.max_guesses} guesses\n👥 ${game.total_participants} players\n${timeText}\n\n${game.content_hint}\n\nCan you guess what's in this time capsule?\nCheck it out: ${shortLink}\n\n#CapsuleX #TimeCapsulesGame #CryptoGaming`;
+
+      const result = await Share.share({
+        message: shareText,
+        title: 'Join my CapsuleX Game!',
+      });
+
+      if (result.action === Share.sharedAction) {
+        showInfo('Game shared successfully! 🚀');
+      }
+    } catch (error) {
+      console.error('Error sharing game:', error);
+      showError('Failed to share game');
+    }
+  };
+
   // Share guess function
   const handleShareGuess = async (guess: Guess) => {
     try {
@@ -358,7 +412,9 @@ export function GameScreen({ route }: GameScreenProps) {
         <Text style={styles.heroSubtitle}>
           <Text style={styles.highlightText}>{game?.current_guesses || 0}</Text>
           <Text style={styles.subtitleText}> guesses • </Text>
-          <Text style={styles.highlightText}>{game?.total_participants || 0}</Text>
+          <Text style={styles.highlightText}>
+            {game?.total_participants || 0}
+          </Text>
           <Text style={styles.subtitleText}> players</Text>
         </Text>
       </View>
@@ -383,11 +439,13 @@ export function GameScreen({ route }: GameScreenProps) {
         </View>
         <View style={styles.statItem}>
           <MaterialCommunityIcon
-            name={game?.is_revealed ? "lock-open" : "lock"}
+            name={game?.is_revealed ? 'lock-open' : 'lock'}
             size={28}
             color={game?.is_revealed ? colors.success : colors.warning}
           />
-          <Text style={styles.statValue}>{game?.is_revealed ? 'Open' : 'Locked'}</Text>
+          <Text style={styles.statValue}>
+            {game?.is_revealed ? 'Open' : 'Locked'}
+          </Text>
           <Text style={styles.statLabel}>Status</Text>
         </View>
       </View>
@@ -458,6 +516,26 @@ export function GameScreen({ route }: GameScreenProps) {
             {renderHeroContent()}
           </LinearGradient>
         </View>
+
+        {/* Share Game Button */}
+        <View style={styles.shareButtonContainer}>
+          <Button
+            mode="outlined"
+            onPress={handleShareGame}
+            style={styles.shareButton}
+            contentStyle={styles.shareButtonContent}
+            icon={() => (
+              <MaterialCommunityIcon
+                name="share-variant"
+                size={20}
+                color={colors.primary}
+              />
+            )}
+          >
+            Share Game
+          </Button>
+        </View>
+
         {/* Game Header */}
         <Card style={styles.gameCard}>
           <Card.Content>
@@ -481,7 +559,7 @@ export function GameScreen({ route }: GameScreenProps) {
                 ]}
                 icon={() => (
                   <MaterialCommunityIcon
-                    name={isGameRevealed ? "lock-open" : "lock"}
+                    name={isGameRevealed ? 'lock-open' : 'lock'}
                     size={16}
                     color={isGameRevealed ? colors.success : colors.warning}
                   />
@@ -523,8 +601,8 @@ export function GameScreen({ route }: GameScreenProps) {
               </View>
 
               <View style={styles.gameStatsContainer}>
-                <Chip 
-                  mode="outlined" 
+                <Chip
+                  mode="outlined"
                   style={styles.statChip}
                   icon={() => (
                     <MaterialCommunityIcon
@@ -534,10 +612,11 @@ export function GameScreen({ route }: GameScreenProps) {
                     />
                   )}
                 >
-                  {game.total_participants} player{game.total_participants !== 1 ? 's' : ''}
+                  {game.total_participants} player
+                  {game.total_participants !== 1 ? 's' : ''}
                 </Chip>
-                <Chip 
-                  mode="outlined" 
+                <Chip
+                  mode="outlined"
                   style={styles.statChip}
                   icon={() => (
                     <MaterialCommunityIcon
@@ -609,27 +688,40 @@ export function GameScreen({ route }: GameScreenProps) {
                     />
                   )}
                   onPress={() => handleShareGuess(myExistingGuess)}
-                  style={styles.shareButton}
+                  style={styles.guessShareButton}
                 />
               </View>
               <Text style={styles.existingGuessContent}>
                 "{myExistingGuess.guess_content}"
               </Text>
               <View style={styles.guesseMeta}>
-                <Chip 
+                <Chip
                   mode="outlined"
                   style={[
                     styles.guessStatusChip,
-                    myExistingGuess.is_correct ? styles.correctChip : 
-                    myExistingGuess.is_paid ? styles.paidChip : styles.submittedChip
+                    myExistingGuess.is_correct
+                      ? styles.correctChip
+                      : myExistingGuess.is_paid
+                        ? styles.paidChip
+                        : styles.submittedChip,
                   ]}
                   icon={() => (
                     <MaterialCommunityIcon
-                      name={myExistingGuess.is_correct ? "check-circle" : 
-                            myExistingGuess.is_paid ? "currency-usd" : "pencil"}
+                      name={
+                        myExistingGuess.is_correct
+                          ? 'check-circle'
+                          : myExistingGuess.is_paid
+                            ? 'currency-usd'
+                            : 'pencil'
+                      }
                       size={16}
-                      color={myExistingGuess.is_correct ? colors.success : 
-                             myExistingGuess.is_paid ? colors.premiumOrange : colors.primary}
+                      color={
+                        myExistingGuess.is_correct
+                          ? colors.success
+                          : myExistingGuess.is_paid
+                            ? colors.premiumOrange
+                            : colors.primary
+                      }
                     />
                   )}
                 >
@@ -891,6 +983,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(29, 161, 242, 0.02)',
   },
 
+  // Share Button Styles
+  shareButtonContainer: {
+    paddingHorizontal: spacing.md,
+    marginTop: -spacing.sm, // Slight overlap with hero section
+    marginBottom: spacing.md,
+    alignItems: 'center',
+  },
+  shareButton: {
+    borderColor: colors.primary,
+    borderWidth: 1.5,
+    borderRadius: 25,
+    minWidth: 160,
+    backgroundColor: colors.surface + '90', // Semi-transparent background
+  },
+  shareButtonContent: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+
   // Game Header Styles
   gameCard: {
     marginHorizontal: spacing.md,
@@ -1035,7 +1146,7 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontWeight: 'bold',
   },
-  shareButton: {
+  guessShareButton: {
     margin: 0,
     backgroundColor: 'transparent',
   },

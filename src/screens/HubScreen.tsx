@@ -81,7 +81,7 @@ export function HubScreen() {
   const { data: balance } = useBalance(walletAddress as unknown as Address);
   const { revealCapsule } = useCapsulexProgram();
   const queryClient = useQueryClient();
-  const { getMyCapsules } = useCapsuleService();
+  const { getMyCapsules, markCapsuleAsRevealed } = useCapsuleService();
   const { snackbar, showSuccess, showError, hideSnackbar } = useSnackbar();
   // Animation values using react-native-reanimated
   const pulseAnim = useSharedValue(1);
@@ -338,6 +338,21 @@ export function HubScreen() {
         revealDate: revealDateBN,
         creator: new anchor.web3.PublicKey(capsule.account.creator),
       });
+      
+      // Update database status after successful blockchain transaction
+      const enhancedCapsule = capsule as EnhancedCapsule;
+      if (enhancedCapsule.databaseData?.capsule_id) {
+        try {
+          await markCapsuleAsRevealed(enhancedCapsule.databaseData.capsule_id, signature);
+          console.log('✅ Capsule marked as revealed in database:', enhancedCapsule.databaseData.capsule_id);
+        } catch (dbError) {
+          console.error('⚠️ Failed to update capsule status in database:', dbError);
+          // Don't throw here - blockchain transaction was successful
+        }
+      } else {
+        console.warn('⚠️ No database capsule ID found for revealed capsule:', capsule.publicKey);
+      }
+      
       Vibration.vibrate([100, 50, 100, 50, 100]);
       return signature;
     } catch (error: any) {

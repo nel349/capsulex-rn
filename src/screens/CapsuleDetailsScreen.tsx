@@ -13,6 +13,7 @@ import {
   Platform,
   RefreshControl,
   Share,
+  Vibration,
 } from 'react-native';
 import {
   Text,
@@ -38,6 +39,8 @@ import {
 } from '../theme';
 import type { Capsule } from '../types/api';
 import { VaultKeyManager } from '../utils/vaultKey';
+import { useCapsulexProgram } from '../solana/useCapsulexProgram';
+import * as anchor from '@coral-xyz/anchor';
 
 // Base URL for Blink service (contains deep link handler)
 const BASE_BLINK_URL = 'https://capsulex-blink-production.up.railway.app';
@@ -94,6 +97,7 @@ export function CapsuleDetailsScreen() {
 
   const { isAuthenticated, walletAddress } = useDualAuth();
   const { snackbar, showError, showSuccess, hideSnackbar } = useSnackbar();
+  const { revealCapsule } = useCapsulexProgram();
 
   // Process the enhanced capsule data from HubScreen
   useEffect(() => {
@@ -853,9 +857,24 @@ export function CapsuleDetailsScreen() {
           {isRevealed && (
             <Button
               mode="outlined"
-              onPress={() => {
-                // TODO: Implement reveal functionality
-                showSuccess('Reveal functionality coming soon!');
+              onPress={async () => {
+                // lets reveal the capsule as we do in the hub screen
+
+                try {
+                  const revealDateBN = new anchor.BN(
+                    capsule.account.revealDate
+                  );
+                  const signature = await revealCapsule.mutateAsync({
+                    revealDate: revealDateBN,
+                    creator: new anchor.web3.PublicKey(capsule.account.creator),
+                  });
+                  showSuccess(
+                    `Success! Capsule revealed successfully. Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}. Your content is now revealed on-chain!`
+                  );
+                  Vibration.vibrate([100, 100, 100, 100, 100]);
+                } catch (error: any) {
+                  showError(error.message);
+                }
               }}
               style={styles.actionButton}
             >

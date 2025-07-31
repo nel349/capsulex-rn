@@ -637,7 +637,7 @@ export function CapsuleDetailsScreen() {
                 SOL Fee:
               </Text>
               <Text variant="bodyMedium">
-                {fullCapsuleData?.sol_fee_amount || '0.00005'} SOL
+                {fullCapsuleData?.sol_fee_amount || '0.0014'} SOL
               </Text>
             </View>
 

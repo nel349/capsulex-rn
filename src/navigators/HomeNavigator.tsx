@@ -5,6 +5,7 @@ import { View } from 'react-native';
 
 import { TopBar } from '../components/top-bar/top-bar-feature';
 import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
+import { CreatorValidationScreen } from '../screens/CreatorValidationScreen';
 import { DiscoverScreen } from '../screens/DiscoverScreen';
 import { HubScreen } from '../screens/HubScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
@@ -70,6 +71,14 @@ export function HomeNavigator() {
                   color={color}
                 />
               );
+            case 'CreatorValidation':
+              return (
+                <MaterialCommunityIcon
+                  name={focused ? 'check-decagram' : 'check-decagram-outline'}
+                  size={size}
+                  color={color}
+                />
+              );
             case 'Profile':
               return (
                 <MaterialCommunityIcon
@@ -102,6 +111,11 @@ export function HomeNavigator() {
         name="Create"
         component={CreateCapsuleScreen}
         options={{ tabBarLabel: 'Create' }}
+      />
+      <Tab.Screen
+        name="CreatorValidation"
+        component={CreatorValidationScreen}
+        options={{ tabBarLabel: 'Validate' }}
       />
       <Tab.Screen
         name="Leaderboards"

@@ -70,7 +70,7 @@ export function CreateCapsuleScreen() {
   const [solBalance, setSolBalance] = useState<SOLBalance>({
     balance: 0,
     sufficient: true,
-    required: 0.00005,
+    required: 0.0014, // Updated for V1 pricing: ~$0.25 at $180/SOL
   });
   const [showVaultKeyInfo, setShowVaultKeyInfo] = useState(false);
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
@@ -130,19 +130,19 @@ export function CreateCapsuleScreen() {
   const checkSOLBalance = async () => {
     const balance = await getBalance(walletAddress as unknown as Address);
 
-    // Calculate required SOL based on mode and features (pay-per-use pricing)
+    // Calculate required SOL based on V1 pricing structure
     let required: number;
     if (createMode === 'social_post') {
-      // Social posts: Just Twitter scheduling (~$0.25 = ~0.00125 SOL at $200/SOL)
-      required = 0.00125;
+      // Social posts: Just Twitter scheduling (~$0.25 = ~0.0014 SOL at $180/SOL)
+      required = 0.0014;
     } else if (isGamified) {
-      // Gamified time capsules: Everything + AI gaming (~$0.50 = ~0.0025 SOL)
-      // Blockchain + encryption + reveal posting + AI semantic validation + gaming
-      required = 0.0025;
+      // Gamified time capsules: $0.25 capsule creation + creator pays validation costs
+      // Creator bears semantic validation costs (~$0.003 per guess) outside of this fee
+      // Users pay $0.01 per guess to platform (not shown here - handled in guess submission)
+      required = 0.0014; // ~$0.25 capsule creation fee at $180/SOL
     } else {
-      // Regular time capsules: Blockchain + encryption + reveal posting (~$0.35 = ~0.00175 SOL)
-      // Same infrastructure as gamified, just no AI gaming layer
-      required = 0.00175;
+      // Regular time capsules: $0.25 capsule creation fee
+      required = 0.0014; // ~$0.25 capsule creation fee at $180/SOL
     }
 
     setSolBalance({

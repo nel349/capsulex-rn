@@ -26,11 +26,7 @@ import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
-import {
-  colors,
-  spacing,
-  shadows,
-} from '../theme';
+import { colors, spacing, shadows } from '../theme';
 import { getCapsulePda, isValidBase58 } from '../utils/solanaUtils';
 import { VaultKeyManager } from '../utils/vaultKey';
 
@@ -456,7 +452,7 @@ export function CreatorValidationScreen() {
           Pending Validations
         </Text>
 
-        {validationSummary.pending_validations.map((validation, index) => (
+        {validationSummary.pending_validations.map(validation => (
           <Card key={validation.capsule_id} style={styles.validationCard}>
             <Card.Content>
               <View style={styles.cardHeader}>
@@ -558,7 +554,7 @@ export function CreatorValidationScreen() {
                     </Text>
                   </View>
                 ) : gameGuesses ? (
-                  gameGuesses.pending_guesses.map((guess, index) => (
+                  gameGuesses.pending_guesses.map(guess => (
                     <Card key={guess.guess_pda} style={styles.guessCard}>
                       <Card.Content>
                         <View style={styles.guessHeader}>

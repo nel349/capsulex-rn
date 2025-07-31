@@ -28,6 +28,14 @@ import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import type { CapsuleWithStatus } from '../services/capsuleApi';
+import {
+  colors,
+  typography,
+  spacing,
+  layout,
+  shadows,
+  components,
+} from '../theme';
 import type { Capsule } from '../types/api';
 import { VaultKeyManager } from '../utils/vaultKey';
 
@@ -50,14 +58,6 @@ const shortenUrl = async (url: string): Promise<string> => {
     return url; // Fallback to original URL if shortening fails
   }
 };
-import {
-  colors,
-  typography,
-  spacing,
-  layout,
-  shadows,
-  components,
-} from '../theme';
 
 // Type definitions
 

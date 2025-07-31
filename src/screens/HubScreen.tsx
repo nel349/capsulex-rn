@@ -579,7 +579,7 @@ export function HubScreen() {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-      
+
       {/* Snackbar for success/error messages */}
       <AppSnackbar
         visible={snackbar.visible}

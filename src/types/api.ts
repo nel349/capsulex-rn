@@ -55,7 +55,6 @@ export interface Capsule {
   on_chain_tx?: string;
   sol_fee_amount?: number;
   created_at: string;
-  revealed_at?: string;
   social_post_id?: string;
   posted_to_social: boolean;
 }

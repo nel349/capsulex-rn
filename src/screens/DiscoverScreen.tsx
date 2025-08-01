@@ -24,25 +24,12 @@ import {
 
 import { discoverService } from '../services/discoverService';
 import { colors, typography, spacing, layout, shadows } from '../theme';
+import type { EnhancedCapsule } from '../components/capsules/types';
 
 // Navigation types
 type RootStackParamList = {
   CapsuleDetails: {
-    capsule: {
-      capsule_id: string;
-      content_encrypted: string;
-      content_hash: string;
-      has_media: boolean;
-      media_urls: string[];
-      reveal_date: string;
-      created_at: string;
-      on_chain_tx: string;
-      sol_fee_amount: number;
-      status?: string;
-      revealed_at?: string;
-      social_post_id?: string;
-      posted_to_social?: boolean;
-    };
+    capsule: EnhancedCapsule;
   };
   Game: {
     capsule_id: string;
@@ -374,27 +361,39 @@ export function DiscoverScreen() {
                     // Navigate to CapsuleDetails with enhanced data structure
                     navigation.navigate('CapsuleDetails', {
                       capsule: {
-                        capsule_id: capsule.id,
-                        content_encrypted: '',
-                        content_hash: capsule.content_hash,
-                        has_media: false,
-                        media_urls: [],
-                        reveal_date: new Date(
-                          capsule.reveal_date_timestamp * 1000
-                        ).toISOString(),
-                        created_at: new Date(
-                          capsule.reveal_date_timestamp * 1000
-                        ).toISOString(),
-                        on_chain_tx: capsule.on_chain_id || '',
-                        sol_fee_amount: 0,
+                        publicKey: capsule.on_chain_id || '',
+                        account: {
+                          creator: '',
+                          nftMint: '',
+                          revealDate: capsule.reveal_date_timestamp,
+                          createdAt: capsule.reveal_date_timestamp,
+                          encryptedContent: '',
+                          contentStorage: {},
+                          contentIntegrityHash: capsule.content_hash,
+                          isGamified: false,
+                          isRevealed: capsule.revealed,
+                          isActive: true,
+                          bump: 0,
+                        },
                         status: capsule.revealed ? 'revealed' : 'pending',
-                        revealed_at: capsule.revealed_at_timestamp
-                          ? new Date(
-                              capsule.revealed_at_timestamp * 1000
-                            ).toISOString()
-                          : undefined,
-                        social_post_id: undefined,
-                        posted_to_social: capsule.is_public,
+                        databaseData: {
+                          capsule_id: capsule.id,
+                          content_encrypted: '',
+                          content_hash: capsule.content_hash,
+                          has_media: false,
+                          media_urls: [],
+                          reveal_date: capsule.revealed ? new Date(
+                            capsule.reveal_date_timestamp * 1000
+                          ).toISOString() : undefined,
+                          created_at: new Date(
+                            capsule.reveal_date_timestamp * 1000
+                          ).toISOString(),
+                          on_chain_tx: capsule.on_chain_id || '',
+                          sol_fee_amount: 0,
+                          status: capsule.revealed ? 'revealed' : 'pending',
+                          social_post_id: undefined,
+                          posted_to_social: capsule.is_public,
+                        },
                       },
                     });
                   }}
@@ -441,29 +440,41 @@ export function DiscoverScreen() {
                               e.stopPropagation();
                               navigation.navigate('CapsuleDetails', {
                                 capsule: {
-                                  capsule_id: capsule.id,
-                                  content_encrypted: '',
-                                  content_hash: capsule.content_hash,
-                                  has_media: false,
-                                  media_urls: [],
-                                  reveal_date: new Date(
-                                    capsule.reveal_date_timestamp * 1000
-                                  ).toISOString(),
-                                  created_at: new Date(
-                                    capsule.reveal_date_timestamp * 1000
-                                  ).toISOString(),
-                                  on_chain_tx: capsule.on_chain_id || '',
-                                  sol_fee_amount: 0,
-                                  status: capsule.revealed
-                                    ? 'revealed'
-                                    : 'pending',
-                                  revealed_at: capsule.revealed_at_timestamp
-                                    ? new Date(
-                                        capsule.revealed_at_timestamp * 1000
-                                      ).toISOString()
-                                    : undefined,
-                                  social_post_id: undefined,
-                                  posted_to_social: capsule.is_public,
+                                  publicKey: capsule.on_chain_id || '',
+                                  account: {
+                                    creator: '',
+                                    nftMint: '',
+                                    revealDate: capsule.reveal_date_timestamp,
+                                    createdAt: capsule.reveal_date_timestamp,
+                                    encryptedContent: '',
+                                    contentStorage: {},
+                                    contentIntegrityHash: capsule.content_hash,
+                                    isGamified: false,
+                                    isRevealed: capsule.revealed,
+                                    isActive: true,
+                                    bump: 0,
+                                  },
+                                  status: capsule.revealed ? 'revealed' : 'pending',
+                                  databaseData: {
+                                    capsule_id: capsule.id,
+                                    content_encrypted: '',
+                                    content_hash: capsule.content_hash,
+                                    has_media: false,
+                                    media_urls: [],
+                                    reveal_date: capsule.revealed ? new Date(
+                                      capsule.reveal_date_timestamp * 1000
+                                    ).toISOString() : undefined,
+                                    created_at: new Date(
+                                      capsule.reveal_date_timestamp * 1000
+                                    ).toISOString(),
+                                    on_chain_tx: capsule.on_chain_id || '',
+                                    sol_fee_amount: 0,
+                                    status: capsule.revealed
+                                      ? 'revealed'
+                                      : 'pending',
+                                    social_post_id: undefined,
+                                    posted_to_social: capsule.is_public,
+                                  },
                                 },
                               });
                             }}
@@ -498,7 +509,7 @@ export function DiscoverScreen() {
                           )}
                         >
                           {capsule.revealed
-                            ? `Revealed ${capsule.revealed_at_timestamp ? formatTimestamp(capsule.revealed_at_timestamp) : ''}`
+                            ? `Revealed ${formatTimestamp(capsule.reveal_date_timestamp)}`
                             : `Reveals in ${formatCountdown(capsule.reveal_date_timestamp)}`}
                         </Chip>
                       </View>
@@ -545,29 +556,41 @@ export function DiscoverScreen() {
                               e.stopPropagation();
                               navigation.navigate('CapsuleDetails', {
                                 capsule: {
-                                  capsule_id: capsule.id,
-                                  content_encrypted: '',
-                                  content_hash: capsule.content_hash,
-                                  has_media: false,
-                                  media_urls: [],
-                                  reveal_date: new Date(
-                                    capsule.reveal_date_timestamp * 1000
-                                  ).toISOString(),
-                                  created_at: new Date(
-                                    capsule.reveal_date_timestamp * 1000
-                                  ).toISOString(),
-                                  on_chain_tx: capsule.on_chain_id || '',
-                                  sol_fee_amount: 0,
-                                  status: capsule.revealed
-                                    ? 'revealed'
-                                    : 'pending',
-                                  revealed_at: capsule.revealed_at_timestamp
-                                    ? new Date(
-                                        capsule.revealed_at_timestamp * 1000
-                                      ).toISOString()
-                                    : undefined,
-                                  social_post_id: undefined,
-                                  posted_to_social: capsule.is_public,
+                                  publicKey: capsule.on_chain_id || '',
+                                  account: {
+                                    creator: '',
+                                    nftMint: '',
+                                    revealDate: capsule.reveal_date_timestamp,
+                                    createdAt: capsule.reveal_date_timestamp,
+                                    encryptedContent: '',
+                                    contentStorage: {},
+                                    contentIntegrityHash: capsule.content_hash,
+                                    isGamified: false,
+                                    isRevealed: capsule.revealed,
+                                    isActive: true,
+                                    bump: 0,
+                                  },
+                                  status: capsule.revealed ? 'revealed' : 'pending',
+                                  databaseData: {
+                                    capsule_id: capsule.id,
+                                    content_encrypted: '',
+                                    content_hash: capsule.content_hash,
+                                    has_media: false,
+                                    media_urls: [],
+                                    reveal_date: capsule.revealed ? new Date(
+                                      capsule.reveal_date_timestamp * 1000
+                                    ).toISOString() : undefined,
+                                    created_at: new Date(
+                                      capsule.reveal_date_timestamp * 1000
+                                    ).toISOString(),
+                                    on_chain_tx: capsule.on_chain_id || '',
+                                    sol_fee_amount: 0,
+                                    status: capsule.revealed
+                                      ? 'revealed'
+                                      : 'pending',
+                                    social_post_id: undefined,
+                                    posted_to_social: capsule.is_public,
+                                  },
                                 },
                               });
                             }}

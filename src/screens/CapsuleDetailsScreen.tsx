@@ -1,3 +1,4 @@
+import * as anchor from '@coral-xyz/anchor';
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -29,6 +30,7 @@ import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import type { CapsuleWithStatus } from '../services/capsuleApi';
+import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import {
   colors,
   typography,
@@ -39,8 +41,6 @@ import {
 } from '../theme';
 import type { Capsule } from '../types/api';
 import { VaultKeyManager } from '../utils/vaultKey';
-import { useCapsulexProgram } from '../solana/useCapsulexProgram';
-import * as anchor from '@coral-xyz/anchor';
 
 // Base URL for Blink service (contains deep link handler)
 const BASE_BLINK_URL = 'https://capsulex-blink-production.up.railway.app';
@@ -87,6 +87,15 @@ export function CapsuleDetailsScreen() {
   const route = useRoute<CapsuleDetailsRouteProp>();
   const navigation = useNavigation<CapsuleDetailsNavigationProp>();
   const { capsule }: { capsule: EnhancedCapsule } = route.params; // this is the enhanced capsule
+
+  // Early return if capsule data is not available
+  if (!capsule || !capsule.account) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Capsule data not available</Text>
+      </View>
+    );
+  }
 
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
@@ -276,11 +285,7 @@ export function CapsuleDetailsScreen() {
     }
   };
 
-  const isRevealed = fullCapsuleData
-    ? new Date(fullCapsuleData.reveal_date) <= new Date()
-    : capsule
-      ? new Date(capsule.account.revealDate * 1000) <= new Date()
-      : false;
+  const isRevealed = fullCapsuleData?.reveal_date !== null && fullCapsuleData?.reveal_date !== undefined;
 
   // Helper function to extract process capsule data
   const processCapsuleData = async () => {
@@ -328,7 +333,7 @@ export function CapsuleDetailsScreen() {
       const link = `${BASE_BLINK_URL}/game/${capsule.databaseData?.capsule_id}`;
       const shortLink = await shortenUrl(link);
 
-      const shareText = `🎮 Check out this CapsuleX Game!\n\n📦 ${capsule.account.isGamified ? 'Interactive Game Capsule' : 'Time Capsule'}\n🔓 ${isRevealed ? 'Revealed!' : 'Pending reveal'}\n⏰ Reveal: ${fullCapsuleData ? new Date(fullCapsuleData.reveal_date).toLocaleDateString() : new Date(capsule.account.revealDate * 1000).toLocaleDateString()}\n${shortLink}\nJoin CapsuleX and create your own time capsules!`;
+      const shareText = `🎮 Check out this CapsuleX Game!\n\n📦 ${capsule.account?.isGamified ? 'Interactive Game Capsule' : 'Time Capsule'}\n🔓 ${isRevealed ? 'Revealed!' : 'Pending reveal'}\n⏰ Reveal: ${fullCapsuleData ? new Date(fullCapsuleData.reveal_date).toLocaleDateString() : new Date(capsule.account?.revealDate * 1000 || 0).toLocaleDateString()}\n${shortLink}\nJoin CapsuleX and create your own time capsules!`;
 
       await Share.share({
         message: shareText,
@@ -359,7 +364,7 @@ export function CapsuleDetailsScreen() {
           </Text>
           <Text style={styles.subtitleText}> status • </Text>
           <Text style={styles.highlightText}>
-            {capsule.account.isGamified ? 'Gamified' : 'Standard'}
+            {capsule.account?.isGamified ? 'Gamified' : 'Standard'}
           </Text>
           <Text style={styles.subtitleText}> capsule</Text>
         </Text>
@@ -379,15 +384,15 @@ export function CapsuleDetailsScreen() {
         <View style={styles.statItem}>
           <MaterialCommunityIcon
             name={
-              capsule.account.isGamified ? 'gamepad-variant' : 'package-variant'
+              capsule.account?.isGamified ? 'gamepad-variant' : 'package-variant'
             }
             size={28}
             color={
-              capsule.account.isGamified ? colors.premiumOrange : colors.primary
+              capsule.account?.isGamified ? colors.premiumOrange : colors.primary
             }
           />
           <Text style={styles.statValue}>
-            {capsule.account.isGamified ? 'Game' : 'Standard'}
+            {capsule.account?.isGamified ? 'Game' : 'Standard'}
           </Text>
           <Text style={styles.statLabel}>Type</Text>
         </View>
@@ -448,7 +453,7 @@ export function CapsuleDetailsScreen() {
         </View>
 
         {/* Share Button for Gamified Capsules */}
-        {capsule.account.isGamified && (
+        {capsule.account?.isGamified && (
           <View style={styles.shareButtonContainer}>
             <Button
               mode="outlined"
@@ -645,7 +650,7 @@ export function CapsuleDetailsScreen() {
               <Text variant="bodyMedium" style={styles.timelineValue}>
                 {fullCapsuleData
                   ? new Date(fullCapsuleData.created_at).toLocaleString()
-                  : new Date(capsule.account.createdAt * 1000).toLocaleString()}
+                  : new Date((capsule.account?.createdAt || 0) * 1000).toLocaleString()}
               </Text>
             </View>
 
@@ -672,7 +677,7 @@ export function CapsuleDetailsScreen() {
                   {fullCapsuleData
                     ? new Date(fullCapsuleData.reveal_date).toLocaleString()
                     : new Date(
-                        capsule.account.revealDate * 1000
+                        (capsule.account?.revealDate || 0) * 1000
                       ).toLocaleString()}
                 </Text>
                 <MaterialCommunityIcon
@@ -684,7 +689,7 @@ export function CapsuleDetailsScreen() {
               </View>
             </View>
 
-            {fullCapsuleData?.revealed_at && (
+            {isRevealed && (
               <View style={styles.timelineItem}>
                 <View style={styles.timelineItemLeft}>
                   <MaterialCommunityIcon
@@ -698,7 +703,7 @@ export function CapsuleDetailsScreen() {
                   </Text>
                 </View>
                 <Text variant="bodyMedium" style={styles.timelineValue}>
-                  {new Date(fullCapsuleData?.revealed_at!).toLocaleString()}
+                  {new Date(fullCapsuleData?.reveal_date!).toLocaleString()}
                 </Text>
               </View>
             )}
@@ -739,10 +744,10 @@ export function CapsuleDetailsScreen() {
               </Text>
               <Text variant="bodySmall" style={styles.techValue}>
                 {fullCapsuleData?.content_hash?.slice(0, 16) ||
-                  capsule.account.contentIntegrityHash.slice(0, 16)}
+                  capsule.account?.contentIntegrityHash?.slice(0, 16) || 'N/A'}
                 ...
                 {fullCapsuleData?.content_hash?.slice(-16) ||
-                  capsule.account.contentIntegrityHash.slice(-16)}
+                  capsule.account?.contentIntegrityHash?.slice(-16) || 'N/A'}
               </Text>
             </View>
 
@@ -762,12 +767,12 @@ export function CapsuleDetailsScreen() {
               <Text
                 variant="bodyMedium"
                 style={{
-                  color: capsule.account.isGamified
+                  color: capsule.account?.isGamified
                     ? colors.premiumOrange
                     : colors.textSecondary,
                 }}
               >
-                {capsule.account.isGamified
+                {capsule.account?.isGamified
                   ? 'Yes - Interactive Game'
                   : 'No - Standard Capsule'}
               </Text>
@@ -832,7 +837,7 @@ export function CapsuleDetailsScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          {capsule.account.isGamified && (
+          {capsule.account?.isGamified && (
             <Button
               mode="contained"
               onPress={() => {
@@ -862,11 +867,11 @@ export function CapsuleDetailsScreen() {
 
                 try {
                   const revealDateBN = new anchor.BN(
-                    capsule.account.revealDate
+                    capsule.account?.revealDate || 0
                   );
                   const signature = await revealCapsule.mutateAsync({
                     revealDate: revealDateBN,
-                    creator: new anchor.web3.PublicKey(capsule.account.creator),
+                    creator: new anchor.web3.PublicKey(capsule.account?.creator || ''),
                   });
                   showSuccess(
                     `Success! Capsule revealed successfully. Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}. Your content is now revealed on-chain!`

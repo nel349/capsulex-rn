@@ -51,7 +51,6 @@ export function useCapsuleService() {
       capsuleId: string,
       status: 'pending' | 'ready_to_reveal' | 'revealed' | 'failed',
       additionalData?: {
-        revealed_at?: string;
         reveal_tx_signature?: string;
         social_post_id?: string;
         posted_to_social?: boolean;
@@ -73,12 +72,8 @@ export function useCapsuleService() {
 
   // Specific function to mark capsule as revealed after successful blockchain transaction
   const markCapsuleAsRevealed = useCallback(
-    async (
-      capsuleId: string,
-      revealTxSignature: string
-    ): Promise<Capsule> => {
+    async (capsuleId: string, revealTxSignature: string): Promise<Capsule> => {
       return updateCapsuleStatus(capsuleId, 'revealed', {
-        revealed_at: new Date().toISOString(),
         reveal_tx_signature: revealTxSignature,
       });
     },

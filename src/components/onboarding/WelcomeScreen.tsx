@@ -1,4 +1,4 @@
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Button, Text } from 'react-native-paper';
@@ -16,9 +16,17 @@ export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
   // snackbar for errors
   const { snackbar, hideSnackbar } = useSnackbar();
 
-  // State to control video rendering and playback to ensure main thread initialization
+  // State to control video rendering to ensure main thread initialization
   const [showVideo, setShowVideo] = useState(false);
-  const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
+
+  // Create video player
+  const player = useVideoPlayer(
+    require('../../../assets/capsulex-5-video.mp4'),
+    player => {
+      player.loop = true;
+      player.muted = true;
+    }
+  );
 
   useEffect(() => {
     // Delay video initialization to ensure we're on the main thread
@@ -27,27 +35,25 @@ export function WelcomeScreen({ onGetStarted, onSignIn }: WelcomeScreenProps) {
       // Additional delay for Android to start playback safely
       if (Platform.OS === 'android') {
         const playTimer = setTimeout(() => {
-          setShouldPlayVideo(true);
+          player.play();
         }, 200);
         return () => clearTimeout(playTimer);
       } else {
-        setShouldPlayVideo(true);
+        player.play();
       }
     }, 100);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [player]);
 
   return (
     <View style={styles.container}>
       {showVideo && (
-        <Video
+        <VideoView
           style={styles.backgroundVideo}
-          source={require('../../../assets/capsulex-5-video.mp4')}
-          shouldPlay={shouldPlayVideo}
-          isLooping
-          isMuted
-          resizeMode={ResizeMode.COVER}
+          player={player}
+          nativeControls={false}
+          contentFit="cover"
         />
       )}
       <View style={styles.overlay}>

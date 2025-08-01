@@ -56,7 +56,6 @@ type RootStackParamList = {
       on_chain_tx: string;
       sol_fee_amount: number;
       status?: string;
-      revealed_at?: string;
       social_post_id?: string;
       posted_to_social?: boolean;
     };

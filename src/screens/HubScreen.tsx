@@ -338,21 +338,33 @@ export function HubScreen() {
         revealDate: revealDateBN,
         creator: new anchor.web3.PublicKey(capsule.account.creator),
       });
-      
+
       // Update database status after successful blockchain transaction
       const enhancedCapsule = capsule as EnhancedCapsule;
       if (enhancedCapsule.databaseData?.capsule_id) {
         try {
-          await markCapsuleAsRevealed(enhancedCapsule.databaseData.capsule_id, signature);
-          console.log('✅ Capsule marked as revealed in database:', enhancedCapsule.databaseData.capsule_id);
+          await markCapsuleAsRevealed(
+            enhancedCapsule.databaseData.capsule_id,
+            signature
+          );
+          console.log(
+            '✅ Capsule marked as revealed in database:',
+            enhancedCapsule.databaseData.capsule_id
+          );
         } catch (dbError) {
-          console.error('⚠️ Failed to update capsule status in database:', dbError);
+          console.error(
+            '⚠️ Failed to update capsule status in database:',
+            dbError
+          );
           // Don't throw here - blockchain transaction was successful
         }
       } else {
-        console.warn('⚠️ No database capsule ID found for revealed capsule:', capsule.publicKey);
+        console.warn(
+          '⚠️ No database capsule ID found for revealed capsule:',
+          capsule.publicKey
+        );
       }
-      
+
       Vibration.vibrate([100, 50, 100, 50, 100]);
       return signature;
     } catch (error: any) {

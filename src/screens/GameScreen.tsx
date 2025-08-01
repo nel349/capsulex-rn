@@ -760,6 +760,7 @@ export function GameScreen({ route }: GameScreenProps) {
                 mode="outlined"
                 placeholder="What do you think is in this time capsule?"
                 value={myGuess}
+                textColor={colors.text}
                 onChangeText={setMyGuess}
                 multiline
                 numberOfLines={3}

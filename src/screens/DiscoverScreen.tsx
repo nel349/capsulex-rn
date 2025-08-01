@@ -22,9 +22,9 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 
+import type { EnhancedCapsule } from '../components/capsules/types';
 import { discoverService } from '../services/discoverService';
 import { colors, typography, spacing, layout, shadows } from '../theme';
-import type { EnhancedCapsule } from '../components/capsules/types';
 
 // Navigation types
 type RootStackParamList = {
@@ -378,13 +378,18 @@ export function DiscoverScreen() {
                         status: capsule.revealed ? 'revealed' : 'pending',
                         databaseData: {
                           capsule_id: capsule.id,
+                          user_id: '',
                           content_encrypted: '',
                           content_hash: capsule.content_hash,
                           has_media: false,
                           media_urls: [],
-                          reveal_date: capsule.revealed ? new Date(
-                            capsule.reveal_date_timestamp * 1000
-                          ).toISOString() : undefined,
+                          reveal_date: capsule.revealed
+                            ? new Date(
+                                capsule.reveal_date_timestamp * 1000
+                              ).toISOString()
+                            : new Date(
+                                capsule.reveal_date_timestamp * 1000
+                              ).toISOString(),
                           created_at: new Date(
                             capsule.reveal_date_timestamp * 1000
                           ).toISOString(),
@@ -454,16 +459,19 @@ export function DiscoverScreen() {
                                     isActive: true,
                                     bump: 0,
                                   },
-                                  status: capsule.revealed ? 'revealed' : 'pending',
+                                  status: capsule.revealed
+                                    ? 'revealed'
+                                    : 'pending',
                                   databaseData: {
                                     capsule_id: capsule.id,
+                                    user_id: '',
                                     content_encrypted: '',
                                     content_hash: capsule.content_hash,
                                     has_media: false,
                                     media_urls: [],
-                                    reveal_date: capsule.revealed ? new Date(
+                                    reveal_date: new Date(
                                       capsule.reveal_date_timestamp * 1000
-                                    ).toISOString() : undefined,
+                                    ).toISOString(),
                                     created_at: new Date(
                                       capsule.reveal_date_timestamp * 1000
                                     ).toISOString(),
@@ -570,16 +578,19 @@ export function DiscoverScreen() {
                                     isActive: true,
                                     bump: 0,
                                   },
-                                  status: capsule.revealed ? 'revealed' : 'pending',
+                                  status: capsule.revealed
+                                    ? 'revealed'
+                                    : 'pending',
                                   databaseData: {
                                     capsule_id: capsule.id,
+                                    user_id: '',
                                     content_encrypted: '',
                                     content_hash: capsule.content_hash,
                                     has_media: false,
                                     media_urls: [],
-                                    reveal_date: capsule.revealed ? new Date(
+                                    reveal_date: new Date(
                                       capsule.reveal_date_timestamp * 1000
-                                    ).toISOString() : undefined,
+                                    ).toISOString(),
                                     created_at: new Date(
                                       capsule.reveal_date_timestamp * 1000
                                     ).toISOString(),

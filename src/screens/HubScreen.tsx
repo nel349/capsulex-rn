@@ -25,6 +25,11 @@ import {
 
 import { HorizontalCapsuleList } from '../components/capsules';
 import type { EnhancedCapsule } from '../components/capsules/types';
+import {
+  TourGuide,
+  hasCompletedTour,
+  type TourStep,
+} from '../components/tour/TourGuide';
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { useSnackbar } from '../hooks/useSnackbar';
@@ -60,6 +65,7 @@ type HubScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 export function HubScreen() {
+  const [showTour, setShowTour] = useState(false);
   const navigation = useNavigation<HubScreenNavigationProp>();
   const { isAuthenticated, walletAddress } = useDualAuth();
   const [capsuleData, setCapsuleData] = useState<
@@ -96,6 +102,17 @@ export function HubScreen() {
     };
     hideDynamicClient();
   }, []);
+
+  // Check if tour should be shown
+  useEffect(() => {
+    const checkTour = async () => {
+      if (isAuthenticated && !loading) {
+        const completed = await hasCompletedTour('hub_screen_tour');
+        setShowTour(!completed);
+      }
+    };
+    checkTour();
+  }, [isAuthenticated, loading]);
 
   // Authentication guard - navigate to onboarding if not authenticated
   useEffect(() => {
@@ -389,6 +406,36 @@ export function HubScreen() {
   };
 
   // Render hero content (shared between iOS gradient and Android fallback)
+  // Define hub tour steps
+  const hubTourSteps: TourStep[] = [
+    {
+      id: '1',
+      title: 'Welcome to the Hub! 🏠',
+      description:
+        'This is your home screen where you can see all your time capsules organized by status.',
+      icon: 'home',
+      position: 'center',
+    },
+    {
+      id: '2',
+      title: 'Your Capsule Statistics 📊',
+      description:
+        'See your SOL balance and capsule counts at a glance. Ready capsules can be revealed immediately!',
+      icon: 'chart-line',
+      position: 'top',
+    },
+    {
+      id: '3',
+      title: 'Ready to Create? ✨',
+      description:
+        'Now tap the "Create" tab at the bottom to start your time capsule journey! The tour will continue there to show you all the amazing features.',
+      icon: 'plus-circle',
+      position: 'center',
+      actionText: "Let's Create!",
+      action: () => {},
+    },
+  ];
+
   const renderHeroContent = () => (
     <>
       <View style={styles.titleContainer}>
@@ -605,6 +652,14 @@ export function HubScreen() {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Guided Tour for HubScreen */}
+      <TourGuide
+        visible={showTour}
+        onComplete={() => setShowTour(false)}
+        tourId="hub_screen_tour"
+        steps={hubTourSteps}
+      />
 
       {/* Snackbar for success/error messages */}
       <AppSnackbar

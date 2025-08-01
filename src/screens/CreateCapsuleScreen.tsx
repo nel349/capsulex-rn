@@ -24,6 +24,11 @@ import {
   Switch,
 } from 'react-native-paper';
 
+import {
+  TourGuide,
+  hasCompletedTour,
+  type TourStep,
+} from '../components/tour/TourGuide';
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
@@ -51,6 +56,7 @@ interface SOLBalance {
 type CreateMode = 'time_capsule' | 'social_post';
 
 export function CreateCapsuleScreen() {
+  const [showTour, setShowTour] = useState(false);
   const { isAuthenticated, walletAddress, connectWallet } = useDualAuth();
   const { createCapsule } = useCapsulexProgram();
   const { createCapsule: createCapsuleInDB } = useCapsuleService();
@@ -59,7 +65,8 @@ export function CreateCapsuleScreen() {
   const [createMode, setCreateMode] = useState<CreateMode>('time_capsule');
 
   const [content, setContent] = useState('something:for testing');
-  const [selectedPlatform, setSelectedPlatform] = useState<'twitter'>('twitter');
+  const [selectedPlatform, setSelectedPlatform] =
+    useState<'twitter'>('twitter');
   const [revealDateTime, setRevealDateTime] = useState(new Date()); // Combined Date and Time
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -81,9 +88,86 @@ export function CreateCapsuleScreen() {
     useSnackbar();
   const { getBalance } = useSolanaService();
 
-  const platforms = [
-    { key: 'twitter', label: 'X', icon: 'twitter' },
+  const platforms = [{ key: 'twitter', label: 'X', icon: 'twitter' }];
+
+  // Define create capsule tour steps
+  const createCapsuleTourSteps: TourStep[] = [
+    {
+      id: '1',
+      title: 'Welcome to Create! ✨',
+      description:
+        "This is where you can create amazing time capsules or schedule social posts. Let's explore all the options!",
+      icon: 'package-variant-closed',
+      position: 'center',
+    },
+    {
+      id: '2',
+      title: 'Choose Your Creation Mode 🎯',
+      description:
+        'Select between Time Capsule (encrypted content on blockchain) or Social Post (scheduled X posts).',
+      icon: 'pencil',
+      position: 'top',
+    },
+    {
+      id: '3',
+      title: 'SOL Balance & Fees 💰',
+      description:
+        'Check your SOL balance here. Both modes require a small fee (~$0.25) to cover blockchain or service costs.',
+      icon: 'wallet',
+      position: 'top',
+    },
+    {
+      id: '4',
+      title: 'Gamification Toggle 🎮',
+      description:
+        'For time capsules, enable gamification to let others guess your content and compete for points!',
+      icon: 'gamepad-variant',
+      position: 'center',
+    },
+    {
+      id: '5',
+      title: 'Write Your Content ✍️',
+      description:
+        'Enter your message or post content. For time capsules, this will be encrypted and stored securely.',
+      icon: 'message-text',
+      position: 'center',
+    },
+    {
+      id: '6',
+      title: 'Audience Notifications 📢',
+      description:
+        'For time capsules, choose whether to notify your X followers about your new capsule.',
+      icon: 'bullhorn',
+      position: 'center',
+    },
+    {
+      id: '7',
+      title: 'Schedule Your Reveal ⏰',
+      description:
+        'Set when your capsule should be revealed or your post should go live. Everything happens automatically!',
+      icon: 'calendar-clock',
+      position: 'bottom',
+    },
+    {
+      id: '8',
+      title: 'Ready to Create! 🚀',
+      description:
+        'Once everything looks good, hit the create button to make your capsule or schedule your post. Your content will be processed automatically!',
+      icon: 'rocket-launch',
+      position: 'bottom',
+    },
   ];
+
+  // Check if tour should be shown
+  useEffect(() => {
+    const checkTour = async () => {
+      if (isAuthenticated) {
+        const completed = await hasCompletedTour('create_capsule_screen_tour');
+        setShowTour(!completed);
+      }
+    };
+    checkTour();
+  }, [isAuthenticated]);
 
   useEffect(() => {
     checkSOLBalance();
@@ -676,7 +760,7 @@ export function CreateCapsuleScreen() {
         >
           <Card.Content>
             <View style={styles.balanceHeader}>
-              <Text>SOL Balance</Text>
+              <Text style={styles.balanceLabel}>SOL Balance</Text>
               <Text style={styles.balanceAmount}>
                 {solBalance.balance.toFixed(6)} SOL
               </Text>
@@ -700,9 +784,7 @@ export function CreateCapsuleScreen() {
                 key={platform.key}
                 mode={selectedPlatform === platform.key ? 'flat' : 'outlined'}
                 selected={selectedPlatform === platform.key}
-                onPress={() =>
-                  setSelectedPlatform(platform.key as 'twitter')
-                }
+                onPress={() => setSelectedPlatform(platform.key as 'twitter')}
                 style={styles.platformChip}
                 icon={() => (
                   <MaterialCommunityIcon
@@ -764,6 +846,7 @@ export function CreateCapsuleScreen() {
                 : 'What do you want to post on X?'
             }
             value={content}
+            textColor={colors.text}
             onChangeText={setContent}
             multiline
             numberOfLines={4}
@@ -781,8 +864,8 @@ export function CreateCapsuleScreen() {
                 style={styles.hintIcon}
               />
               <Text style={styles.socialPostHint}>
-                This content will be posted directly to X at your
-                scheduled time. Service fee required.
+                This content will be posted directly to X at your scheduled
+                time. Service fee required.
               </Text>
             </View>
           )}
@@ -810,9 +893,9 @@ export function CreateCapsuleScreen() {
               <Card style={styles.notificationInfoCard}>
                 <Card.Content>
                   <Text style={styles.notificationInfoText}>
-                    📢 This will post a teaser about your time capsule to your
-                    X account, letting your followers know when to expect
-                    the reveal.
+                    📢 This will post a teaser about your time capsule to your X
+                    account, letting your followers know when to expect the
+                    reveal.
                   </Text>
                 </Card.Content>
               </Card>
@@ -829,6 +912,7 @@ export function CreateCapsuleScreen() {
                 mode="outlined"
                 label="Date"
                 value={revealDateTime.toLocaleDateString()}
+                textColor={colors.text}
                 editable={false}
                 pointerEvents="none"
               />
@@ -837,6 +921,7 @@ export function CreateCapsuleScreen() {
               <TextInput
                 mode="outlined"
                 label="Time"
+                textColor={colors.text}
                 value={revealDateTime.toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -906,7 +991,6 @@ export function CreateCapsuleScreen() {
               : 'Schedule Post'}
         </Button>
       </ScrollView>
-
       {/* SOL Insufficient Modal */}
       <Portal>
         <Modal
@@ -940,7 +1024,13 @@ export function CreateCapsuleScreen() {
           </View>
         </Modal>
       </Portal>
-
+      {/* Guided Tour for CreateCapsuleScreen */}
+      <TourGuide
+        visible={showTour}
+        onComplete={() => setShowTour(false)}
+        tourId="create_capsule_screen_tour"
+        steps={createCapsuleTourSteps}
+      />
       {/* Snackbar for notifications */}
       <AppSnackbar
         visible={snackbar.visible}
@@ -1071,6 +1161,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
+  balanceLabel: {
+    // New style for the SOL Balance text
+    ...typography.bodyMedium,
+    color: colors.text,
+    fontWeight: 'bold',
+  },
   balanceAmount: {
     ...typography.titleMedium,
     color: colors.primary,
@@ -1136,6 +1232,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: spacing.lg,
     ...shadows.medium,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalContent: {
     alignItems: 'center',
@@ -1150,8 +1248,8 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.xl,
     lineHeight: 22,
+    marginBottom: spacing.xl,
   },
   modalActions: {
     flexDirection: 'row',

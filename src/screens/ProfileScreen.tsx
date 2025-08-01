@@ -1357,7 +1357,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning,
     borderRadius: 12,
   },
-  
+
   // List Item styles for better text visibility
   listItemTitle: {
     color: colors.text,

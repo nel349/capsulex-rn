@@ -26,8 +26,8 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 
-import { AppSnackbar } from '../components/ui/AppSnackbar';
 import type { EnhancedCapsule } from '../components/capsules/types';
+import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
@@ -95,7 +95,8 @@ export function CapsuleDetailsScreen() {
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [showContent, setShowContent] = useState(false);
-  const [fullCapsuleData, setFullCapsuleData] = useState<EnhancedCapsule | null>(null);
+  const [fullCapsuleData, setFullCapsuleData] =
+    useState<EnhancedCapsule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -178,7 +179,9 @@ export function CapsuleDetailsScreen() {
 
       let encryptedContent;
       try {
-        encryptedContent = JSON.parse(fullCapsuleData.databaseData?.content_encrypted || '');
+        encryptedContent = JSON.parse(
+          fullCapsuleData.databaseData?.content_encrypted || ''
+        );
         console.log('🔍 Debug - parsed encryptedContent:', encryptedContent);
       } catch (parseError) {
         console.error('❌ JSON parse failed:', parseError);
@@ -384,11 +387,15 @@ export function CapsuleDetailsScreen() {
         <View style={styles.statItem}>
           <MaterialCommunityIcon
             name={
-              capsule.account?.isGamified ? 'gamepad-variant' : 'package-variant'
+              capsule.account?.isGamified
+                ? 'gamepad-variant'
+                : 'package-variant'
             }
             size={28}
             color={
-              capsule.account?.isGamified ? colors.premiumOrange : colors.primary
+              capsule.account?.isGamified
+                ? colors.premiumOrange
+                : colors.primary
             }
           />
           <Text style={styles.statValue}>
@@ -493,15 +500,20 @@ export function CapsuleDetailsScreen() {
                   styles.statusChip,
                   {
                     backgroundColor:
-                      getStatusColor(fullCapsuleData?.databaseData?.status) + '20',
+                      getStatusColor(fullCapsuleData?.databaseData?.status) +
+                      '20',
                   },
                 ]}
-                textStyle={{ color: getStatusColor(fullCapsuleData?.databaseData?.status) }}
+                textStyle={{
+                  color: getStatusColor(fullCapsuleData?.databaseData?.status),
+                }}
                 icon={() => (
                   <MaterialCommunityIcon
                     name={getStatusIcon(fullCapsuleData?.databaseData?.status)}
                     size={16}
-                    color={getStatusColor(fullCapsuleData?.databaseData?.status)}
+                    color={getStatusColor(
+                      fullCapsuleData?.databaseData?.status
+                    )}
                   />
                 )}
               >
@@ -530,7 +542,9 @@ export function CapsuleDetailsScreen() {
               <View style={styles.sectionTitleContainer}>
                 <MaterialCommunityIcon
                   name={
-                    fullCapsuleData?.databaseData?.content_encrypted ? 'lock' : 'lock-open'
+                    fullCapsuleData?.databaseData?.content_encrypted
+                      ? 'lock'
+                      : 'lock-open'
                   }
                   size={20}
                   color={colors.primary}
@@ -548,14 +562,18 @@ export function CapsuleDetailsScreen() {
                     name={showContent ? 'eye-off' : 'eye'}
                     size={24}
                     color={
-                      isDecrypting || !fullCapsuleData?.databaseData?.content_encrypted
+                      isDecrypting ||
+                      !fullCapsuleData?.databaseData?.content_encrypted
                         ? colors.textSecondary
                         : colors.primary
                     }
                   />
                 )}
                 onPress={handleDecryptContent}
-                disabled={isDecrypting || !fullCapsuleData?.databaseData?.content_encrypted}
+                disabled={
+                  isDecrypting ||
+                  !fullCapsuleData?.databaseData?.content_encrypted
+                }
                 style={styles.eyeButton}
               />
             </View>
@@ -649,8 +667,12 @@ export function CapsuleDetailsScreen() {
               </View>
               <Text variant="bodyMedium" style={styles.timelineValue}>
                 {fullCapsuleData?.databaseData
-                  ? new Date(fullCapsuleData.databaseData.created_at).toLocaleString()
-                  : new Date((capsule.account?.createdAt || 0) * 1000).toLocaleString()}
+                  ? new Date(
+                      fullCapsuleData.databaseData.created_at
+                    ).toLocaleString()
+                  : new Date(
+                      (capsule.account?.createdAt || 0) * 1000
+                    ).toLocaleString()}
               </Text>
             </View>
 
@@ -675,7 +697,9 @@ export function CapsuleDetailsScreen() {
                   ]}
                 >
                   {fullCapsuleData?.databaseData
-                    ? new Date(fullCapsuleData.databaseData.reveal_date).toLocaleString()
+                    ? new Date(
+                        fullCapsuleData.databaseData.reveal_date
+                      ).toLocaleString()
                     : new Date(
                         (capsule.account?.revealDate || 0) * 1000
                       ).toLocaleString()}
@@ -703,7 +727,9 @@ export function CapsuleDetailsScreen() {
                   </Text>
                 </View>
                 <Text variant="bodyMedium" style={styles.timelineValue}>
-                  {new Date(fullCapsuleData?.databaseData?.reveal_date!).toLocaleString()}
+                  {new Date(
+                    fullCapsuleData?.databaseData?.reveal_date!
+                  ).toLocaleString()}
                 </Text>
               </View>
             )}
@@ -744,10 +770,12 @@ export function CapsuleDetailsScreen() {
               </Text>
               <Text variant="bodySmall" style={styles.techValue}>
                 {fullCapsuleData?.databaseData?.content_hash?.slice(0, 16) ||
-                  capsule.account?.contentIntegrityHash?.slice(0, 16) || 'N/A'}
+                  capsule.account?.contentIntegrityHash?.slice(0, 16) ||
+                  'N/A'}
                 ...
                 {fullCapsuleData?.databaseData?.content_hash?.slice(-16) ||
-                  capsule.account?.contentIntegrityHash?.slice(-16) || 'N/A'}
+                  capsule.account?.contentIntegrityHash?.slice(-16) ||
+                  'N/A'}
               </Text>
             </View>
 
@@ -784,7 +812,8 @@ export function CapsuleDetailsScreen() {
                   Media Files:
                 </Text>
                 <Text variant="bodyMedium">
-                  {fullCapsuleData?.databaseData?.media_urls?.length || 0} file(s)
+                  {fullCapsuleData?.databaseData?.media_urls?.length || 0}{' '}
+                  file(s)
                 </Text>
               </View>
             )}
@@ -842,7 +871,9 @@ export function CapsuleDetailsScreen() {
               mode="contained"
               onPress={() => {
                 navigation.navigate('Game', {
-                  capsule_id: fullCapsuleData?.databaseData?.capsule_id || capsule.publicKey,
+                  capsule_id:
+                    fullCapsuleData?.databaseData?.capsule_id ||
+                    capsule.publicKey,
                   action: 'view',
                 });
               }}
@@ -871,7 +902,9 @@ export function CapsuleDetailsScreen() {
                   );
                   const signature = await revealCapsule.mutateAsync({
                     revealDate: revealDateBN,
-                    creator: new anchor.web3.PublicKey(capsule.account?.creator || ''),
+                    creator: new anchor.web3.PublicKey(
+                      capsule.account?.creator || ''
+                    ),
                   });
                   showSuccess(
                     `Success! Capsule revealed successfully. Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}. Your content is now revealed on-chain!`

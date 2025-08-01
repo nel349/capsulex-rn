@@ -1,6 +1,5 @@
 import * as anchor from '@coral-xyz/anchor';
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Address } from '@solana/kit';
 import * as Crypto from 'expo-crypto';
@@ -24,6 +23,7 @@ import {
   Switch,
 } from 'react-native-paper';
 
+import DateTimePickerModal from '../components/DateTimePickerModal';
 import {
   TourGuide,
   hasCompletedTour,
@@ -68,8 +68,7 @@ export function CreateCapsuleScreen() {
   const [selectedPlatform, setSelectedPlatform] =
     useState<'twitter'>('twitter');
   const [revealDateTime, setRevealDateTime] = useState(new Date()); // Combined Date and Time
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSOLModal, setShowSOLModal] = useState(false);
 
@@ -235,24 +234,8 @@ export function CreateCapsuleScreen() {
     });
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || revealDateTime;
-    setShowDatePicker(Platform.OS === 'ios');
-    setRevealDateTime(currentDate);
-  };
-
-  const onTimeChange = (event: any, selectedTime?: Date) => {
-    const currentTime = selectedTime || revealDateTime;
-    setShowTimePicker(Platform.OS === 'ios');
-    setRevealDateTime(currentTime);
-  };
-
-  const showDatepicker = () => {
-    setShowDatePicker(true);
-  };
-
-  const showTimepicker = () => {
-    setShowTimePicker(true);
+  const openDateTimePicker = () => {
+    setShowDateTimePicker(true);
   };
 
   const attemptReconnectionAndRetry = async (): Promise<boolean> => {
@@ -903,54 +886,47 @@ export function CreateCapsuleScreen() {
           </View>
         )}
 
-        {/* Reveal Date & Time */}
+{/* Reveal Date & Time */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>When to Reveal</Text>
-          <View style={styles.dateTimeContainer}>
-            <Pressable onPress={showDatepicker} style={styles.dateInput}>
-              <TextInput
-                mode="outlined"
-                label="Date"
-                value={revealDateTime.toLocaleDateString()}
-                textColor={colors.text}
-                editable={false}
-                pointerEvents="none"
+          <Pressable onPress={openDateTimePicker} style={styles.dateTimeInputContainer}>
+            <View style={styles.dateTimeInputWrapper}>
+              <MaterialCommunityIcon
+                name="calendar-clock"
+                size={20}
+                color={colors.primary}
+                style={styles.dateTimeIcon}
               />
-            </Pressable>
-            <Pressable onPress={showTimepicker} style={styles.timeInput}>
-              <TextInput
-                mode="outlined"
-                label="Time"
-                textColor={colors.text}
-                value={revealDateTime.toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-                editable={false}
-                pointerEvents="none"
+              <View style={styles.dateTimeTextContainer}>
+                <Text style={styles.dateTimeLabel}>Selected Date & Time</Text>
+                <Text style={styles.dateTimeValue}>
+                  {revealDateTime.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })} at {revealDateTime.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </View>
+              <MaterialCommunityIcon
+                name="chevron-right"
+                size={20}
+                color={colors.textSecondary}
               />
-            </Pressable>
-          </View>
-          {showDatePicker && (
-            <DateTimePicker
-              testID="datePicker"
-              value={revealDateTime}
-              mode="date"
-              is24Hour={true}
-              display="default"
-              onChange={onDateChange}
-            />
-          )}
-          {showTimePicker && (
-            <DateTimePicker
-              testID="timePicker"
-              value={revealDateTime}
-              mode="time"
-              is24Hour={true}
-              display="default"
-              onChange={onTimeChange}
-            />
-          )}
+            </View>
+          </Pressable>
+          <DateTimePickerModal
+            visible={showDateTimePicker}
+            initialDate={revealDateTime}
+            onClose={() => setShowDateTimePicker(false)}
+            onConfirm={(date) => {
+              setRevealDateTime(date);
+              setShowDateTimePicker(false);
+            }}
+          />
         </View>
 
         {/* Automatic Processing Info */}
@@ -1211,9 +1187,34 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     color: colors.textSecondary,
   },
-  dateTimeContainer: {
+  dateTimeInputContainer: {
+    marginTop: spacing.sm,
+  },
+  dateTimeInputWrapper: {
     flexDirection: 'row',
-    gap: spacing.md,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 60,
+  },
+  dateTimeIcon: {
+    marginRight: spacing.md,
+  },
+  dateTimeTextContainer: {
+    flex: 1,
+  },
+  dateTimeLabel: {
+    ...typography.labelSmall,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  dateTimeValue: {
+    ...typography.bodyMedium,
+    color: colors.text,
+    fontWeight: '500',
   },
   dateInput: {
     flex: 2,

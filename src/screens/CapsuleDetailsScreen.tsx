@@ -30,6 +30,7 @@ import type { EnhancedCapsule } from '../components/capsules/types';
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
+import { useCapsuleEncryption } from '../services/capsuleEncryptionService';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import {
   colors,
@@ -39,7 +40,6 @@ import {
   shadows,
   components,
 } from '../theme';
-import { VaultKeyManager } from '../utils/vaultKey';
 
 // Base URL for Blink service (contains deep link handler)
 const BASE_BLINK_URL = 'https://capsulex-blink-production.up.railway.app';
@@ -83,15 +83,7 @@ export function CapsuleDetailsScreen() {
   const navigation = useNavigation<CapsuleDetailsNavigationProp>();
   const { capsule }: { capsule: EnhancedCapsule } = route.params; // this is the enhanced capsule
 
-  // Early return if capsule data is not available
-  if (!capsule || !capsule.account) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Capsule data not available</Text>
-      </View>
-    );
-  }
-
+  // All hooks must be called before any early returns
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [showContent, setShowContent] = useState(false);
@@ -103,6 +95,16 @@ export function CapsuleDetailsScreen() {
   const { isAuthenticated, walletAddress } = useDualAuth();
   const { snackbar, showError, showSuccess, hideSnackbar } = useSnackbar();
   const { revealCapsule } = useCapsulexProgram();
+  const capsuleEncryption = useCapsuleEncryption();
+
+  // Early return if capsule data is not available (after hooks)
+  if (!capsule || !capsule.account) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Capsule data not available</Text>
+      </View>
+    );
+  }
 
   // Process the enhanced capsule data from HubScreen
   useEffect(() => {
@@ -152,7 +154,7 @@ export function CapsuleDetailsScreen() {
       return;
     }
 
-    // Note: Creators can always decrypt their own content with their vault key
+    // Note: Creators can always decrypt their own content
     // The reveal date only applies to public/social sharing
 
     if (decryptedContent && showContent) {
@@ -171,79 +173,68 @@ export function CapsuleDetailsScreen() {
     setIsDecrypting(true);
 
     try {
-      // Parse the encrypted content from database
-      console.log(
-        '🔍 Debug - content_encrypted raw:',
-        fullCapsuleData.databaseData?.content_encrypted
-      );
+      // Create a capsule object from the database data for unified decryption
+      const capsule = {
+        capsule_id: fullCapsuleData.databaseData.capsule_id,
+        user_id: fullCapsuleData.databaseData.user_id || '',
+        content_encrypted: fullCapsuleData.databaseData.content_encrypted,
+        content_hash: fullCapsuleData.databaseData.content_hash,
+        has_media: fullCapsuleData.databaseData.has_media,
+        media_urls: fullCapsuleData.databaseData.media_urls,
+        reveal_date: fullCapsuleData.databaseData.reveal_date,
+        status: fullCapsuleData.databaseData.status as
+          | 'pending'
+          | 'revealed'
+          | 'failed',
+        on_chain_tx: fullCapsuleData.databaseData.on_chain_tx,
+        sol_fee_amount: fullCapsuleData.databaseData.sol_fee_amount,
+        created_at: fullCapsuleData.databaseData.created_at,
+        social_post_id: fullCapsuleData.databaseData.social_post_id,
+        posted_to_social: fullCapsuleData.databaseData.posted_to_social,
+        // New unified encryption metadata
+        encryption_version: fullCapsuleData.databaseData.encryption_version,
+        encryption_platform: fullCapsuleData.databaseData.encryption_platform,
+        encryption_key_id: fullCapsuleData.databaseData.encryption_key_id,
+        encryption_seed_name: fullCapsuleData.databaseData.encryption_seed_name,
+        encryption_derivation_path:
+          fullCapsuleData.databaseData.encryption_derivation_path,
+      };
 
-      let encryptedContent;
-      try {
-        encryptedContent = JSON.parse(
-          fullCapsuleData.databaseData?.content_encrypted || ''
-        );
-        console.log('🔍 Debug - parsed encryptedContent:', encryptedContent);
-      } catch (parseError) {
-        console.error('❌ JSON parse failed:', parseError);
-        console.log(
-          '❌ Raw content that failed to parse:',
-          fullCapsuleData.databaseData?.content_encrypted
-        );
+      console.log('🔍 Debug - capsule for decryption:', {
+        encryption_version: capsule.encryption_version,
+        encryption_platform: capsule.encryption_platform,
+      });
 
-        // Handle old format or plain text content
-        Alert.alert(
-          'Incompatible Content Format',
-          'This capsule was created with an older encryption format and cannot be decrypted with the current system.',
-          [{ text: 'OK' }]
-        );
+      // Validate decryption capability first
+      const validation = await capsuleEncryption.validateDecryption(capsule);
+      if (!validation.canDecrypt) {
+        if (validation.requiresMigration) {
+          Alert.alert(
+            'Migration Required',
+            'This capsule was created with an older encryption format. Migration is required to decrypt the content.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Cannot Decrypt',
+            validation.reason || 'Unable to decrypt this capsule content.',
+            [{ text: 'OK' }]
+          );
+        }
         setIsDecrypting(false);
         return;
       }
 
-      // Check if this wallet matches the original creator
-      if (encryptedContent.walletAddress !== walletAddress) {
-        Alert.alert(
-          'Unable to Decrypt',
-          'This content was created with a different wallet. You can only decrypt capsules created with your current wallet on this device.',
-          [{ text: 'OK' }]
-        );
-        setIsDecrypting(false);
-        return;
-      }
-
-      // Check if we have the vault key on this device
-      const hasVaultKey = await VaultKeyManager.hasVaultKey(
-        walletAddress as string
-      );
-      if (!hasVaultKey) {
-        Alert.alert(
-          'Vault Key Not Found',
-          'This device does not have the vault key needed to decrypt this content. The content was encrypted on a different device.',
-          [
-            { text: 'OK' },
-            {
-              text: 'Import Key',
-              onPress: () => {
-                // TODO: Navigate to vault key import screen
-                showError('Vault key import feature coming soon!');
-              },
-            },
-          ]
-        );
-        setIsDecrypting(false);
-        return;
-      }
-
-      // Decrypt using device vault key (no wallet signing required!)
-      const content = await VaultKeyManager.decryptContent(encryptedContent);
+      // Decrypt using unified encryption system
+      const content = await capsuleEncryption.decryptContent(capsule);
 
       setDecryptedContent(content);
       setShowContent(true);
       showSuccess('Content decrypted successfully');
     } catch (error) {
-      console.error('❌ Vault decryption failed:', error);
+      console.error('❌ Unified decryption failed:', error);
       showError(
-        'Failed to decrypt content. The vault key might be corrupted or the content is damaged.'
+        'Failed to decrypt content. The encryption key might not be available on this device or the content is damaged.'
       );
     } finally {
       setIsDecrypting(false);

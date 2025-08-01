@@ -33,6 +33,7 @@ import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
+import { CapsuleEncryptionService } from '../services/capsuleEncryptionService';
 import { useCapsuleService } from '../services/capsuleService';
 import { useBalance, useSolanaService } from '../services/solana';
 import { twitterService } from '../services/twitterService';
@@ -45,7 +46,6 @@ import {
   shadows,
   components,
 } from '../theme';
-import { VaultKeyManager } from '../utils/vaultKey';
 
 interface SOLBalance {
   balance: number;
@@ -172,16 +172,29 @@ export function CreateCapsuleScreen() {
     checkSOLBalance();
   }, [getBalance, walletAddress, createMode, isGamified]);
 
-  // Check if user is creating their first capsule (no vault key yet)
+  // Check if user is creating their first capsule (unified encryption)
   const checkFirstTimeUser = async () => {
     if (!walletAddress) return;
 
     try {
-      const hasVaultKey = await VaultKeyManager.hasVaultKey(walletAddress);
-      setIsFirstTimeUser(!hasVaultKey);
-      setShowVaultKeyInfo(!hasVaultKey); // Show info card for first-time users
+      // Check unified encryption availability
+      const isAvailable = await CapsuleEncryptionService.isEncryptionAvailable();
+      const status = await CapsuleEncryptionService.getEncryptionStatus(walletAddress);
+
+      console.log('🔍 Unified encryption status:', status);
+
+      // For iOS, check if vault key exists
+      // For Android, check if seed vault is authorized
+      const isFirstTime =
+        !isAvailable ||
+        (status.platform === 'ios' && !status.details.hasVaultKey) ||
+        (status.platform === 'android' && status.details.authorizedSeeds === 0);
+
+      setIsFirstTimeUser(isFirstTime);
+      setShowVaultKeyInfo(isFirstTime); // Show info card for first-time users
     } catch (error) {
-      console.error('Failed to check vault key status:', error);
+      console.error('Failed to check encryption status:', error);
+      setIsFirstTimeUser(true); // Default to first time user on error
     }
   };
 
@@ -348,31 +361,39 @@ export function CreateCapsuleScreen() {
       );
 
       const contentStorage = { text: {} };
-      const contentHash = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        content
-      );
+      // Content hash is generated as part of the unified encryption process
 
       // console.log('🐛 Debug info before createCapsule:');
       // console.log('- createCapsule object:', createCapsule);
       // console.log('- createCapsule.mutateAsync:', createCapsule?.mutateAsync);
       // console.log('- selectedAccount:', selectedAccount);
 
-      // Step 1: Encrypt content using device vault key (no wallet signing required!)
-      showInfo('Encrypting your content with your device vault key...');
+      // Step 1: Initialize and encrypt content using unified encryption
+      showInfo('Initializing encryption system...');
 
-      let encryptedContent;
       try {
-        encryptedContent = await VaultKeyManager.encryptContent(
+        // Initialize unified encryption (handles both Android Seed Vault and iOS Vault Key)
+        await CapsuleEncryptionService.initialize(walletAddress as string);
+        console.log('✅ Unified encryption initialized');
+      } catch (initError) {
+        console.error('❌ Encryption initialization failed:', initError);
+        showError('Failed to initialize encryption system. Please try again.');
+        return;
+      }
+
+      showInfo('Encrypting your content securely...');
+
+      // Encrypt only the content - all other data stays unencrypted
+      let encryptionResult;
+      try {
+        encryptionResult = await CapsuleEncryptionService.encryptContent(
           content,
           walletAddress as string
         );
-        console.log('🔐 Content encrypted with device vault key');
+        console.log('🔐 Content encrypted (content only)');
       } catch (encryptionError) {
-        console.error('❌ Vault encryption failed:', encryptionError);
-        showError(
-          'Failed to encrypt content with vault key. Please try again.'
-        );
+        console.error('❌ Content encryption failed:', encryptionError);
+        showError('Failed to encrypt content. Please try again.');
         return;
       }
 
@@ -385,29 +406,29 @@ export function CreateCapsuleScreen() {
       const txResult = await createCapsule.mutateAsync({
         encryptedContent: blockchainPlaceholder, // Placeholder hash on blockchain
         contentStorage: contentStorage,
-        contentIntegrityHash: contentHash,
+        contentIntegrityHash: encryptionResult.content_hash,
         revealDate: revealDateBN,
         isGamified: isGamified,
       });
 
       console.log('✅ Capsule created on-chain:', txResult);
 
-      // Step 3: Save capsule to Supabase database
+      // Step 3: Save capsule to Supabase database with encryption metadata
       try {
-        const currentTime = new Date().toISOString(); // Capture frontend time for consistency
         const capsuleData = await createCapsuleInDB({
-          content_encrypted: JSON.stringify(encryptedContent), // Store wallet-encrypted content with metadata
-          content_hash: contentHash,
+          // Unencrypted metadata
           has_media: false,
           media_urls: [],
           reveal_date: revealDateTime.toISOString(),
-          created_at: currentTime, // Use frontend time to ensure consistency with reveal_date
+          created_at: new Date().toISOString(),
+          sol_fee_amount: solBalance.required,
+          is_gamified: isGamified,
           on_chain_tx:
             typeof txResult === 'string'
               ? txResult
               : (txResult as any)?.signature || JSON.stringify(txResult),
-          sol_fee_amount: solBalance.required,
-          is_gamified: isGamified,
+          // Only the content and encryption metadata
+          ...encryptionResult, // Contains encrypted content + encryption metadata
         });
 
         console.log('✅ Capsule saved to database:', capsuleData);
@@ -444,7 +465,7 @@ export function CreateCapsuleScreen() {
           }
         }
 
-        // Show success message with backup reminder for first-time users
+        // Show success message with platform-specific backup reminder
         let successMessage =
           '🎉 Time capsule created successfully and scheduled for automatic reveal';
 
@@ -463,8 +484,17 @@ export function CreateCapsuleScreen() {
         }
 
         if (isFirstTimeUser) {
-          successMessage +=
-            ' Remember to backup your encryption key in Profile settings.';
+          // Platform-specific backup recommendations
+          const status = await CapsuleEncryptionService.getEncryptionStatus(
+            walletAddress as string
+          );
+          if (status.platform === 'ios') {
+            successMessage +=
+              ' Remember to backup your encryption key in Profile settings.';
+          } else {
+            successMessage +=
+              ' Your content is secured with Solana Mobile Seed Vault.';
+          }
           setIsFirstTimeUser(false); // No longer first-time user
         }
 
@@ -703,22 +733,28 @@ export function CreateCapsuleScreen() {
           </Card.Content>
         </Card>
 
-        {/* Vault Key Education Card - Show for first-time users (time capsule only) */}
+        {/* Unified Encryption Education Card - Show for first-time users (time capsule only) */}
         {createMode === 'time_capsule' && showVaultKeyInfo && (
           <Card style={styles.vaultKeyInfoCard}>
             <Card.Content>
               <View style={styles.vaultKeyHeader}>
-                <Text style={styles.vaultKeyIcon}>🔐</Text>
+                <Text style={styles.vaultKeyIcon}>
+                  {Platform.OS === 'android' ? '🤖' : '📱'}
+                </Text>
                 <View style={styles.vaultKeyTextContainer}>
                   <Text style={styles.vaultKeyTitle}>
-                    Device Encryption Setup
+                    {Platform.OS === 'android'
+                      ? 'Solana Mobile Seed Vault Setup'
+                      : 'Device Encryption Setup'}
                   </Text>
                   <Text style={styles.vaultKeyDescription}>
-                    Your content will be encrypted on this device for security.
-                    This requires one wallet signature to set up encryption.
+                    {Platform.OS === 'android'
+                      ? 'Your content will be encrypted using hardware-backed Solana Mobile Seed Vault for maximum security.'
+                      : 'Your content will be encrypted on this device using secure key storage for protection.'}
                   </Text>
                   <Text style={styles.vaultKeyManagement}>
-                    💡 You can manage your encryption key in the Profile screen.
+                    💡 You can manage your encryption settings in the Profile
+                    screen.
                   </Text>
                 </View>
                 <Button
@@ -886,10 +922,13 @@ export function CreateCapsuleScreen() {
           </View>
         )}
 
-{/* Reveal Date & Time */}
+        {/* Reveal Date & Time */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>When to Reveal</Text>
-          <Pressable onPress={openDateTimePicker} style={styles.dateTimeInputContainer}>
+          <Pressable
+            onPress={openDateTimePicker}
+            style={styles.dateTimeInputContainer}
+          >
             <View style={styles.dateTimeInputWrapper}>
               <MaterialCommunityIcon
                 name="calendar-clock"
@@ -905,7 +944,9 @@ export function CreateCapsuleScreen() {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
-                  })} at {revealDateTime.toLocaleTimeString([], {
+                  })}{' '}
+                  at{' '}
+                  {revealDateTime.toLocaleTimeString([], {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
@@ -922,7 +963,7 @@ export function CreateCapsuleScreen() {
             visible={showDateTimePicker}
             initialDate={revealDateTime}
             onClose={() => setShowDateTimePicker(false)}
-            onConfirm={(date) => {
+            onConfirm={date => {
               setRevealDateTime(date);
               setShowDateTimePicker(false);
             }}

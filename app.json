@@ -31,6 +31,10 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.capsulex.app",
+      "permissions": [
+        "com.solanamobile.seedvault.ACCESS_SEED_VAULT",
+        "com.solanamobile.seedvault.ACCESS_SEED_VAULT_PRIVILEGED"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",

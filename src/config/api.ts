@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 // Network configuration - centralized API endpoints
 const NETWORK_CONFIG = {
   // Development settings
-  DEV_HOST: '192.168.1.157', // Change this to your Mac's IP address
+  DEV_HOST: '192.168.1.188', // Change this to your Mac's IP address
   DEV_PORT: 3001,
 
   // Production settings

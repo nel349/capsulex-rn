@@ -1,5 +1,7 @@
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
+import { SeedVault, SeedVaultPermissionAndroid } from "@solana-mobile/seed-vault-lib";
+import { PermissionsAndroid } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect } from 'react';
@@ -28,6 +30,7 @@ import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
 import { useAuthService } from '../services/authService';
+import { useCapsuleEncryption } from '../services/capsuleEncryptionService';
 import { twitterService } from '../services/twitterService';
 import { colors, typography, spacing, layout, shadows } from '../theme';
 import { VaultKeyManager } from '../utils/vaultKey';
@@ -83,6 +86,54 @@ export function ProfileScreen() {
   const [vaultKeyExists, setVaultKeyExists] = useState(false);
   const [vaultKeyLoading, setVaultKeyLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // const [encryptionStatus, setEncryptionStatus] = useState<any>(null);
+
+  const capsuleEncryption = useCapsuleEncryption();
+  // const [seedVaultPermission, setSeedVaultPermission] = useState<'none' | 'allowed' | 'privileged'>('none');
+  // const [seedVaultAvailable, setSeedVaultAvailable] = useState(false);
+
+  useEffect(() => {
+    async function checkSeedVaultPermission() {
+      try {
+        if (await PermissionsAndroid.check(SeedVaultPermissionAndroid)) {
+          console.log('Seed Vault permission granted');
+
+          // setSeedVaultPermission('allowed');
+        } else {
+          const granted = await PermissionsAndroid.request(
+            SeedVaultPermissionAndroid,
+            {
+              title: 'Seed Vault Permission',
+              message: 'This app needs your permission to access Seed Vault',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            },
+          );
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('Seed Vault permission granted');
+            // setSeedVaultPermission('allowed');
+          } else {
+            console.log('Seed Vault permission not granted');
+            // setSeedVaultPermission('none');
+          }
+        }
+      } catch (err) {
+        console.warn(err);
+        // setSeedVaultPermission('none');
+      }
+    }
+    checkSeedVaultPermission();
+  }, []);
+
+  useEffect(() => {
+    async function updateIsSeedVaultAvailable() {
+      const available = await SeedVault.isSeedVaultAvailable(true);
+      console.log('Seed Vault available:', available);
+      // setSeedVaultAvailable(available);
+    }
+    updateIsSeedVaultAvailable();
+  }, []);
 
   useEffect(() => {
     checkTwitterConnection();
@@ -135,17 +186,31 @@ export function ProfileScreen() {
   const checkVaultKeyStatus = async () => {
     if (!walletAddress) {
       setVaultKeyExists(false);
+      // setEncryptionStatus(null);
       return;
     }
 
     try {
-      console.log('🔍 Checking vault key status for:', walletAddress);
-      const exists = await VaultKeyManager.hasVaultKey(walletAddress);
-      console.log('🔑 Vault key exists:', exists);
+      console.log('🔍 Checking unified encryption status for:', walletAddress);
+
+      // Get unified encryption status
+      const status = await capsuleEncryption.getStatus(walletAddress);
+      // setEncryptionStatus(status);
+
+      // Determine if encryption is set up based on platform
+      let exists = false;
+      if (status.platform === 'ios') {
+        exists = status.details.hasVaultKey || false;
+      } else if (status.platform === 'android') {
+        exists = status.details.authorizedSeeds > 0;
+      }
+
+      console.log('🔑 Unified encryption available:', exists);
       setVaultKeyExists(exists);
     } catch (error) {
-      console.error('Failed to check vault key status:', error);
+      console.error('Failed to check encryption status:', error);
       setVaultKeyExists(false); // Default to false on error
+      // setEncryptionStatus(null);
     }
   };
 
@@ -286,34 +351,102 @@ export function ProfileScreen() {
       return;
     }
 
-    Alert.alert(
-      'Create Vault Key',
-      'This will create a new encryption key on your device to secure your time capsule content. The key will be stored securely and can be backed up.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Create',
-          onPress: async () => {
-            try {
-              setVaultKeyLoading(true);
-              await VaultKeyManager.generateVaultKey(walletAddress);
+    if (Platform.OS === 'android') {
+      // For Android, we need to handle Seed Vault authorization differently
+      handleAndroidSeedVaultSetup();
+    } else {
+      // For iOS, proceed with the original flow
+      handleIOSVaultKeySetup();
+    }
+  };
 
-              // Force refresh the vault key status
-              await checkVaultKeyStatus();
+  const handleAndroidSeedVaultSetup = async () => {
+    try {
+      setVaultKeyLoading(true);
+      
+      // Check if we have any unauthorized seeds
+      const hasUnauthorized = await SeedVault.hasUnauthorizedSeeds();
+      
+      if (hasUnauthorized) {
+        Alert.alert(
+          'Authorize Seed Vault',
+          'You have seeds available in the Seed Vault. We need to authorize your app to use them for encryption.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Authorize',
+              onPress: async () => {
+                try {
+                  // This will launch the Seed Vault authorization UI
+                  const result = await SeedVault.authorizeNewSeed();
+                  console.log('✅ Seed authorized:', result.authToken.toString().slice(0, 8) + '...');
+                  
+                  // Force refresh the encryption status
+                  await checkVaultKeyStatus();
+                  
+                  showSuccess('Seed Vault authorized successfully! Your content will now be hardware-encrypted.');
+                } catch (error) {
+                  console.error('Failed to authorize seed:', error);
+                  showError('Failed to authorize Seed Vault. Please try again.');
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        // No unauthorized seeds available
+        Alert.alert(
+          'No Seeds Available',
+          'No seeds are available in the Seed Vault. Please:\n\n1. Open the Seed Vault Simulator app\n2. Create a new seed\n3. Return to this app and try again',
+          [
+            { text: 'OK' },
+            {
+              text: 'Check Again',
+              onPress: () => handleAndroidSeedVaultSetup(),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to check Seed Vault:', error);
+      showError('Failed to access Seed Vault. Make sure the Seed Vault Simulator is installed.');
+    } finally {
+      setVaultKeyLoading(false);
+    }
+  };
 
-              showSuccess(
-                'Vault key created successfully! Your content will now be encrypted.'
-              );
-            } catch (error) {
-              console.error('Failed to create vault key:', error);
-              showError('Failed to create vault key');
-            } finally {
-              setVaultKeyLoading(false);
+  const handleIOSVaultKeySetup = async () => {
+    const setupDescription = 'This will create a new encryption key on your device to secure your time capsule content. The key will be stored securely and can be backed up.';
+
+    Alert.alert('Setup Device Vault Key', setupDescription, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Setup',
+        onPress: async () => {
+          try {
+            setVaultKeyLoading(true);
+
+            if (!walletAddress) {
+              showError('No wallet connected');
+              return;
             }
-          },
+
+            // Initialize unified encryption for iOS
+            await capsuleEncryption.initialize(walletAddress);
+
+            // Force refresh the encryption status
+            await checkVaultKeyStatus();
+
+            showSuccess('Vault key created successfully! Your content will now be encrypted.');
+          } catch (error) {
+            console.error('Failed to setup encryption:', error);
+            showError('Failed to setup device vault key');
+          } finally {
+            setVaultKeyLoading(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleBackupVaultKey = async () => {
@@ -900,12 +1033,14 @@ export function ProfileScreen() {
           </Card.Content>
         </Card>
 
-        {/* Vault Key Management */}
+        {/* Unified Encryption Management */}
         <Card style={styles.vaultCard}>
           <Card.Content>
             <View style={styles.sectionHeaderWithStatus}>
               <Text variant="titleMedium" style={styles.sectionTitle}>
-                Vault Key Management
+                {Platform.OS === 'android'
+                  ? 'Seed Vault Management'
+                  : 'Vault Key Management'}
               </Text>
               <Chip
                 style={[
@@ -919,16 +1054,34 @@ export function ProfileScreen() {
             </View>
 
             <Text variant="bodySmall" style={styles.sectionDescription}>
-              Your vault key encrypts time capsule content on your device. This
-              key is required to decrypt your own content.
+              {Platform.OS === 'android'
+                ? 'Solana Mobile Seed Vault provides hardware-backed encryption for your time capsule content using secure hardware.'
+                : 'Your vault key encrypts time capsule content on your device. This key is required to decrypt your own content.'}
             </Text>
 
             {vaultKeyExists ? (
               <>
                 <List.Item
-                  title="Vault Key Status"
-                  description="Your device has an active vault key for encryption"
-                  left={props => <List.Icon {...props} icon="shield-check" />}
+                  title={
+                    Platform.OS === 'android'
+                      ? 'Seed Vault Status'
+                      : 'Vault Key Status'
+                  }
+                  description={
+                    Platform.OS === 'android'
+                      ? 'Hardware-backed encryption is active and ready'
+                      : 'Your device has an active vault key for encryption'
+                  }
+                  left={props => (
+                    <List.Icon
+                      {...props}
+                      icon={
+                        Platform.OS === 'android'
+                          ? 'shield-lock'
+                          : 'shield-check'
+                      }
+                    />
+                  )}
                   titleStyle={styles.listItemTitle}
                   descriptionStyle={styles.listItemDescription}
                   right={() => (
@@ -943,30 +1096,45 @@ export function ProfileScreen() {
 
                 <Divider />
 
-                <List.Item
-                  title="Backup Vault Key"
-                  description="Create a secure backup of your encryption key"
-                  left={props => <List.Icon {...props} icon="backup-restore" />}
-                  titleStyle={styles.listItemTitle}
-                  descriptionStyle={styles.listItemDescription}
-                  right={() => (
-                    <Button
-                      mode="outlined"
-                      onPress={handleBackupVaultKey}
-                      loading={vaultKeyLoading}
-                      disabled={vaultKeyLoading}
-                      compact
-                    >
-                      Backup
-                    </Button>
-                  )}
-                />
+                {/* Only show backup option for iOS */}
+                {Platform.OS === 'ios' && (
+                  <List.Item
+                    title="Backup Vault Key"
+                    description="Create a secure backup of your encryption key"
+                    left={props => (
+                      <List.Icon {...props} icon="backup-restore" />
+                    )}
+                    titleStyle={styles.listItemTitle}
+                    descriptionStyle={styles.listItemDescription}
+                    right={() => (
+                      <Button
+                        mode="outlined"
+                        onPress={handleBackupVaultKey}
+                        loading={vaultKeyLoading}
+                        disabled={vaultKeyLoading}
+                        compact
+                      >
+                        Backup
+                      </Button>
+                    )}
+                  />
+                )}
 
                 <Divider />
 
+
+                {/* Show reset option for both platforms */}
                 <List.Item
-                  title="Delete Vault Key"
-                  description="⚠️ Permanently remove key from this device"
+                  title={
+                    Platform.OS === 'android'
+                      ? 'Reset Seed Vault'
+                      : 'Delete Vault Key'
+                  }
+                  description={
+                    Platform.OS === 'android'
+                      ? '⚠️ Reset seed authorization for this app'
+                      : '⚠️ Permanently remove key from this device'
+                  }
                   left={props => <List.Icon {...props} icon="delete-forever" />}
                   titleStyle={styles.listItemTitle}
                   descriptionStyle={styles.listItemDescription}
@@ -979,7 +1147,7 @@ export function ProfileScreen() {
                       compact
                       textColor="#FF5722"
                     >
-                      Delete
+                      {Platform.OS === 'android' ? 'Reset' : 'Delete'}
                     </Button>
                   )}
                 />
@@ -987,8 +1155,16 @@ export function ProfileScreen() {
             ) : (
               <>
                 <List.Item
-                  title="No Vault Key"
-                  description="Create a vault key to encrypt your time capsule content"
+                  title={
+                    Platform.OS === 'android'
+                      ? 'No Seed Vault Setup'
+                      : 'No Vault Key'
+                  }
+                  description={
+                    Platform.OS === 'android'
+                      ? 'Setup Solana Mobile Seed Vault to encrypt your time capsule content'
+                      : 'Create a vault key to encrypt your time capsule content'
+                  }
                   left={props => <List.Icon {...props} icon="shield-alert" />}
                   titleStyle={styles.listItemTitle}
                   descriptionStyle={styles.listItemDescription}
@@ -1005,8 +1181,16 @@ export function ProfileScreen() {
                 <Divider />
 
                 <List.Item
-                  title="Create Vault Key"
-                  description="Generate a new encryption key for your content"
+                  title={
+                    Platform.OS === 'android'
+                      ? 'Setup Seed Vault'
+                      : 'Create Vault Key'
+                  }
+                  description={
+                    Platform.OS === 'android'
+                      ? 'Authorize hardware-backed encryption for your content'
+                      : 'Generate a new encryption key for your content'
+                  }
                   left={props => <List.Icon {...props} icon="shield-plus" />}
                   titleStyle={styles.listItemTitle}
                   descriptionStyle={styles.listItemDescription}
@@ -1018,31 +1202,37 @@ export function ProfileScreen() {
                       disabled={vaultKeyLoading}
                       compact
                     >
-                      Create
+                      {Platform.OS === 'android' ? 'Setup' : 'Create'}
                     </Button>
                   )}
                 />
 
                 <Divider />
 
-                <List.Item
-                  title="Restore Vault Key"
-                  description="Restore from a previous backup"
-                  left={props => <List.Icon {...props} icon="backup-restore" />}
-                  titleStyle={styles.listItemTitle}
-                  descriptionStyle={styles.listItemDescription}
-                  right={() => (
-                    <Button
-                      mode="outlined"
-                      onPress={handleRestoreVaultKey}
-                      loading={vaultKeyLoading}
-                      disabled={vaultKeyLoading}
-                      compact
-                    >
-                      Restore
-                    </Button>
-                  )}
-                />
+                {/* Only show restore option for iOS */}
+                {Platform.OS === 'ios' && (
+                  <List.Item
+                    title="Restore Vault Key"
+                    description="Restore from a previous backup"
+                    left={props => (
+                      <List.Icon {...props} icon="backup-restore" />
+                    )}
+                    titleStyle={styles.listItemTitle}
+                    descriptionStyle={styles.listItemDescription}
+                    right={() => (
+                      <Button
+                        mode="outlined"
+                        onPress={handleRestoreVaultKey}
+                        loading={vaultKeyLoading}
+                        disabled={vaultKeyLoading}
+                        compact
+                      >
+                        Restore
+                      </Button>
+                    )}
+                  />
+                )}
+
               </>
             )}
           </Card.Content>
@@ -1123,6 +1313,7 @@ export function ProfileScreen() {
           </Card.Content>
         </Card>
       </ScrollView>
+
 
       <AppSnackbar
         visible={snackbar.visible}

@@ -40,6 +40,12 @@ export interface CreateCapsuleRequest {
   on_chain_tx?: string;
   sol_fee_amount?: number;
   is_gamified: boolean;
+  // New unified encryption metadata
+  encryption_version?: string; // '2.0' for new unified encryption
+  encryption_platform?: 'android' | 'ios';
+  encryption_key_id?: string; // For iOS vault key
+  encryption_seed_name?: string; // For Android seed vault
+  encryption_derivation_path?: string; // For Android seed vault
 }
 
 // Capsule Types
@@ -55,6 +61,12 @@ export interface Capsule {
   on_chain_tx?: string;
   sol_fee_amount?: number;
   created_at: string;
+  // New unified encryption metadata
+  encryption_version?: string; // '2.0' for new unified encryption
+  encryption_platform?: 'android' | 'ios';
+  encryption_key_id?: string; // For iOS vault key
+  encryption_seed_name?: string; // For Android seed vault
+  encryption_derivation_path?: string; // For Android seed vault
   social_post_id?: string;
   posted_to_social: boolean;
 }

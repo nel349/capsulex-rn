@@ -148,7 +148,9 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
                     </View>
 
                     <View style={styles.quickActionsContainer}>
-                      <Text style={styles.quickActionsLabel}>Quick Actions</Text>
+                      <Text style={styles.quickActionsLabel}>
+                        Quick Actions
+                      </Text>
                       <View style={styles.quickActions}>
                         <Pressable
                           style={styles.quickActionButton}
@@ -169,7 +171,9 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
                             setSelectedDate(tomorrow);
                           }}
                         >
-                          <Text style={styles.quickActionText}>Tomorrow 9 AM</Text>
+                          <Text style={styles.quickActionText}>
+                            Tomorrow 9 AM
+                          </Text>
                         </Pressable>
                         <Pressable
                           style={styles.quickActionButton}

@@ -1,15 +1,10 @@
 import type { CapsuleWithStatus } from '../../services/capsuleApi';
+import type { Capsule } from '../../types/api';
 
 // Enhanced capsule type that merges blockchain and database data
 export interface EnhancedCapsule extends CapsuleWithStatus {
-  databaseData?: {
-    content_encrypted?: string;
-    capsule_id?: string;
-    status?: string;
-    reveal_date?: string;
-    created_at?: string;
-    [key: string]: any;
-  };
+  databaseData?: Capsule; // Additional database fields including content_encrypted
+  blockchainData?: CapsuleWithStatus; // Blockchain data for reliable reveal status
   account: CapsuleWithStatus['account'] & {
     contentStorage?: {
       text?: string | { content?: string; text?: string; [key: string]: any };

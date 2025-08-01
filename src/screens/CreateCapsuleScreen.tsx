@@ -29,7 +29,7 @@ import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
 import { useCapsuleService } from '../services/capsuleService';
-import { useSolanaService } from '../services/solana';
+import { useBalance, useSolanaService } from '../services/solana';
 import { twitterService } from '../services/twitterService';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import {
@@ -59,16 +59,16 @@ export function CreateCapsuleScreen() {
   const [createMode, setCreateMode] = useState<CreateMode>('time_capsule');
 
   const [content, setContent] = useState('something:for testing');
-  const [selectedPlatform, setSelectedPlatform] = useState<
-    'twitter' | 'instagram'
-  >('twitter');
+  const [selectedPlatform, setSelectedPlatform] = useState<'twitter'>('twitter');
   const [revealDateTime, setRevealDateTime] = useState(new Date()); // Combined Date and Time
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSOLModal, setShowSOLModal] = useState(false);
+
+  const { data: balance } = useBalance(walletAddress as unknown as Address);
   const [solBalance, setSolBalance] = useState<SOLBalance>({
-    balance: 0,
+    balance: balance || 0,
     sufficient: true,
     required: 0.0014, // Updated for V1 pricing: ~$0.25 at $180/SOL
   });
@@ -82,8 +82,7 @@ export function CreateCapsuleScreen() {
   const { getBalance } = useSolanaService();
 
   const platforms = [
-    { key: 'twitter', label: 'Twitter', icon: 'twitter' },
-    { key: 'instagram', label: 'Instagram', icon: 'instagram' },
+    { key: 'twitter', label: 'X', icon: 'twitter' },
   ];
 
   useEffect(() => {
@@ -146,7 +145,7 @@ export function CreateCapsuleScreen() {
     }
 
     setSolBalance({
-      balance: balance,
+      balance: balance || 0,
       sufficient: balance >= required,
       required,
     });
@@ -630,7 +629,7 @@ export function CreateCapsuleScreen() {
                   Social Post
                 </Text>
                 <Text style={styles.modeButtonDescription}>
-                  Schedule a post to Twitter
+                  Schedule a post to X
                 </Text>
               </Pressable>
             </View>
@@ -702,7 +701,7 @@ export function CreateCapsuleScreen() {
                 mode={selectedPlatform === platform.key ? 'flat' : 'outlined'}
                 selected={selectedPlatform === platform.key}
                 onPress={() =>
-                  setSelectedPlatform(platform.key as 'twitter' | 'instagram')
+                  setSelectedPlatform(platform.key as 'twitter')
                 }
                 style={styles.platformChip}
                 icon={() => (
@@ -762,7 +761,7 @@ export function CreateCapsuleScreen() {
             placeholder={
               createMode === 'time_capsule'
                 ? 'What would you like to share in the future?'
-                : 'What do you want to post on Twitter?'
+                : 'What do you want to post on X?'
             }
             value={content}
             onChangeText={setContent}
@@ -782,7 +781,7 @@ export function CreateCapsuleScreen() {
                 style={styles.hintIcon}
               />
               <Text style={styles.socialPostHint}>
-                This content will be posted directly to Twitter at your
+                This content will be posted directly to X at your
                 scheduled time. Service fee required.
               </Text>
             </View>
@@ -797,7 +796,7 @@ export function CreateCapsuleScreen() {
                 <Text style={styles.sectionTitle}>Notify Your Audience</Text>
                 {!isTwitterConnected && (
                   <Text style={styles.twitterWarning}>
-                    Connect Twitter in Profile to enable notifications
+                    Connect X in Profile to enable notifications
                   </Text>
                 )}
               </View>
@@ -812,7 +811,7 @@ export function CreateCapsuleScreen() {
                 <Card.Content>
                   <Text style={styles.notificationInfoText}>
                     📢 This will post a teaser about your time capsule to your
-                    Twitter account, letting your followers know when to expect
+                    X account, letting your followers know when to expect
                     the reveal.
                   </Text>
                 </Card.Content>
@@ -874,8 +873,8 @@ export function CreateCapsuleScreen() {
           <Card.Content>
             <Text style={styles.automaticRevealInfoText}>
               {createMode === 'time_capsule'
-                ? "⏰ Your time capsule will be automatically revealed at the scheduled time. If you have Twitter connected, we'll also post a reveal announcement to your followers."
-                : '📱 Your post will be automatically published to Twitter at the scheduled time. Make sure you have Twitter connected in your Profile settings.'}
+                ? "⏰ Your time capsule will be automatically revealed at the scheduled time. If you have X connected, we'll also post a reveal announcement to your followers."
+                : '📱 Your post will be automatically published to X at the scheduled time. Make sure you have X connected in your Profile settings.'}
             </Text>
           </Card.Content>
         </Card>

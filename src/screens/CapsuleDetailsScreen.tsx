@@ -27,9 +27,9 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
+import type { EnhancedCapsule } from '../components/capsules/types';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
-import type { CapsuleWithStatus } from '../services/capsuleApi';
 import { useCapsulexProgram } from '../solana/useCapsulexProgram';
 import {
   colors,
@@ -39,7 +39,6 @@ import {
   shadows,
   components,
 } from '../theme';
-import type { Capsule } from '../types/api';
 import { VaultKeyManager } from '../utils/vaultKey';
 
 // Base URL for Blink service (contains deep link handler)
@@ -63,11 +62,7 @@ const shortenUrl = async (url: string): Promise<string> => {
 };
 
 // Type definitions
-
-// Enhanced capsule type that merges blockchain and database data
-interface EnhancedCapsule extends CapsuleWithStatus {
-  databaseData?: Capsule; // Additional database fields including content_encrypted
-}
+// Using EnhancedCapsule from centralized types
 
 type RootStackParamList = {
   CapsuleDetails: { capsule: EnhancedCapsule };
@@ -100,7 +95,7 @@ export function CapsuleDetailsScreen() {
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [showContent, setShowContent] = useState(false);
-  const [fullCapsuleData, setFullCapsuleData] = useState<Capsule | null>(null);
+  const [fullCapsuleData, setFullCapsuleData] = useState<EnhancedCapsule | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -121,7 +116,7 @@ export function CapsuleDetailsScreen() {
           console.log(
             '✅ Enhanced capsule has database data with encrypted content'
           );
-          setFullCapsuleData(capsule.databaseData);
+          setFullCapsuleData(capsule);
         } else {
           // No database data - this is expected for capsules that haven't been matched yet
           // Just set fullCapsuleData to null and display with blockchain data
@@ -147,7 +142,7 @@ export function CapsuleDetailsScreen() {
       return;
     }
 
-    if (!fullCapsuleData?.content_encrypted) {
+    if (!fullCapsuleData?.databaseData?.content_encrypted) {
       Alert.alert(
         'Content Not Available',
         'This capsule was created with an older system or the encrypted content is not yet available. You can see the basic capsule information but cannot decrypt the content.',
@@ -178,18 +173,18 @@ export function CapsuleDetailsScreen() {
       // Parse the encrypted content from database
       console.log(
         '🔍 Debug - content_encrypted raw:',
-        fullCapsuleData.content_encrypted
+        fullCapsuleData.databaseData?.content_encrypted
       );
 
       let encryptedContent;
       try {
-        encryptedContent = JSON.parse(fullCapsuleData.content_encrypted);
+        encryptedContent = JSON.parse(fullCapsuleData.databaseData?.content_encrypted || '');
         console.log('🔍 Debug - parsed encryptedContent:', encryptedContent);
       } catch (parseError) {
         console.error('❌ JSON parse failed:', parseError);
         console.log(
           '❌ Raw content that failed to parse:',
-          fullCapsuleData.content_encrypted
+          fullCapsuleData.databaseData?.content_encrypted
         );
 
         // Handle old format or plain text content
@@ -285,7 +280,12 @@ export function CapsuleDetailsScreen() {
     }
   };
 
-  const isRevealed = fullCapsuleData?.reveal_date !== null && fullCapsuleData?.reveal_date !== undefined;
+  // Use blockchain data for reliable reveal status, fallback to database data
+  const isRevealed = capsule.blockchainData?.account.isRevealed;
+  const isReadyToReveal = capsule.blockchainData?.status === 'ready_to_reveal';
+
+  // if the user is the creator, should not be allowed to play the game
+  const isCreator = capsule.account.creator === walletAddress;
 
   // Helper function to extract process capsule data
   const processCapsuleData = async () => {
@@ -299,7 +299,7 @@ export function CapsuleDetailsScreen() {
         console.log(
           '✅ Enhanced capsule has database data with encrypted content'
         );
-        setFullCapsuleData(capsule.databaseData);
+        setFullCapsuleData(capsule);
       } else {
         // No database data - this is expected for capsules that haven't been matched yet
         // Just set fullCapsuleData to null and display with blockchain data
@@ -333,7 +333,7 @@ export function CapsuleDetailsScreen() {
       const link = `${BASE_BLINK_URL}/game/${capsule.databaseData?.capsule_id}`;
       const shortLink = await shortenUrl(link);
 
-      const shareText = `🎮 Check out this CapsuleX Game!\n\n📦 ${capsule.account?.isGamified ? 'Interactive Game Capsule' : 'Time Capsule'}\n🔓 ${isRevealed ? 'Revealed!' : 'Pending reveal'}\n⏰ Reveal: ${fullCapsuleData ? new Date(fullCapsuleData.reveal_date).toLocaleDateString() : new Date(capsule.account?.revealDate * 1000 || 0).toLocaleDateString()}\n${shortLink}\nJoin CapsuleX and create your own time capsules!`;
+      const shareText = `🎮 Check out this CapsuleX Game!\n\n📦 ${capsule.account?.isGamified ? 'Interactive Game Capsule' : 'Time Capsule'}\n🔓 ${isRevealed ? 'Revealed!' : 'Pending reveal'}\n⏰ Reveal: ${fullCapsuleData?.databaseData ? new Date(fullCapsuleData.databaseData.reveal_date).toLocaleDateString() : new Date(capsule.account?.revealDate * 1000 || 0).toLocaleDateString()}\n${shortLink}\nJoin CapsuleX and create your own time capsules!`;
 
       await Share.share({
         message: shareText,
@@ -360,7 +360,7 @@ export function CapsuleDetailsScreen() {
       <View style={styles.subtitleContainer}>
         <Text style={styles.heroSubtitle}>
           <Text style={styles.highlightText}>
-            {getStatusText(fullCapsuleData?.status)}
+            {getStatusText(fullCapsuleData?.databaseData?.status)}
           </Text>
           <Text style={styles.subtitleText}> status • </Text>
           <Text style={styles.highlightText}>
@@ -372,12 +372,12 @@ export function CapsuleDetailsScreen() {
       <View style={styles.heroStats}>
         <View style={styles.statItem}>
           <MaterialCommunityIcon
-            name={getStatusIcon(fullCapsuleData?.status)}
+            name={getStatusIcon(fullCapsuleData?.databaseData?.status)}
             size={28}
-            color={getStatusColor(fullCapsuleData?.status)}
+            color={getStatusColor(fullCapsuleData?.databaseData?.status)}
           />
           <Text style={styles.statValue}>
-            {getStatusText(fullCapsuleData?.status)}
+            {getStatusText(fullCapsuleData?.databaseData?.status)}
           </Text>
           <Text style={styles.statLabel}>Status</Text>
         </View>
@@ -493,19 +493,19 @@ export function CapsuleDetailsScreen() {
                   styles.statusChip,
                   {
                     backgroundColor:
-                      getStatusColor(fullCapsuleData?.status) + '20',
+                      getStatusColor(fullCapsuleData?.databaseData?.status) + '20',
                   },
                 ]}
-                textStyle={{ color: getStatusColor(fullCapsuleData?.status) }}
+                textStyle={{ color: getStatusColor(fullCapsuleData?.databaseData?.status) }}
                 icon={() => (
                   <MaterialCommunityIcon
-                    name={getStatusIcon(fullCapsuleData?.status)}
+                    name={getStatusIcon(fullCapsuleData?.databaseData?.status)}
                     size={16}
-                    color={getStatusColor(fullCapsuleData?.status)}
+                    color={getStatusColor(fullCapsuleData?.databaseData?.status)}
                   />
                 )}
               >
-                {getStatusText(fullCapsuleData?.status)}
+                {getStatusText(fullCapsuleData?.databaseData?.status)}
               </Chip>
             </View>
             <View style={styles.capsuleIdContainer}>
@@ -516,7 +516,7 @@ export function CapsuleDetailsScreen() {
                 style={styles.capsuleIdIcon}
               />
               <Text variant="bodyMedium" style={styles.capsuleId}>
-                {fullCapsuleData?.capsule_id ||
+                {fullCapsuleData?.databaseData?.capsule_id ||
                   capsule.publicKey.slice(0, 8) + '...'}
               </Text>
             </View>
@@ -530,14 +530,14 @@ export function CapsuleDetailsScreen() {
               <View style={styles.sectionTitleContainer}>
                 <MaterialCommunityIcon
                   name={
-                    fullCapsuleData?.content_encrypted ? 'lock' : 'lock-open'
+                    fullCapsuleData?.databaseData?.content_encrypted ? 'lock' : 'lock-open'
                   }
                   size={20}
                   color={colors.primary}
                   style={styles.sectionTitleIcon}
                 />
                 <Text variant="titleMedium" style={styles.sectionTitle}>
-                  {fullCapsuleData?.content_encrypted
+                  {fullCapsuleData?.databaseData?.content_encrypted
                     ? 'Encrypted Content'
                     : 'Content'}
                 </Text>
@@ -548,14 +548,14 @@ export function CapsuleDetailsScreen() {
                     name={showContent ? 'eye-off' : 'eye'}
                     size={24}
                     color={
-                      isDecrypting || !fullCapsuleData?.content_encrypted
+                      isDecrypting || !fullCapsuleData?.databaseData?.content_encrypted
                         ? colors.textSecondary
                         : colors.primary
                     }
                   />
                 )}
                 onPress={handleDecryptContent}
-                disabled={isDecrypting || !fullCapsuleData?.content_encrypted}
+                disabled={isDecrypting || !fullCapsuleData?.databaseData?.content_encrypted}
                 style={styles.eyeButton}
               />
             </View>
@@ -579,7 +579,7 @@ export function CapsuleDetailsScreen() {
                     name={
                       isDecrypting
                         ? 'loading'
-                        : fullCapsuleData?.content_encrypted
+                        : fullCapsuleData?.databaseData?.content_encrypted
                           ? 'lock'
                           : 'alert-circle'
                     }
@@ -587,7 +587,7 @@ export function CapsuleDetailsScreen() {
                     color={
                       isDecrypting
                         ? colors.primary
-                        : fullCapsuleData?.content_encrypted
+                        : fullCapsuleData?.databaseData?.content_encrypted
                           ? colors.warning
                           : colors.textSecondary
                     }
@@ -596,7 +596,7 @@ export function CapsuleDetailsScreen() {
                   <Text variant="bodyMedium" style={styles.encryptedText}>
                     {isDecrypting
                       ? 'Decrypting...'
-                      : fullCapsuleData?.content_encrypted
+                      : fullCapsuleData?.databaseData?.content_encrypted
                         ? 'Content is encrypted with your device vault key. Click the eye icon to decrypt and view.'
                         : 'Encrypted content not available. This capsule may have been created with an older system.'}
                   </Text>
@@ -648,8 +648,8 @@ export function CapsuleDetailsScreen() {
                 </Text>
               </View>
               <Text variant="bodyMedium" style={styles.timelineValue}>
-                {fullCapsuleData
-                  ? new Date(fullCapsuleData.created_at).toLocaleString()
+                {fullCapsuleData?.databaseData
+                  ? new Date(fullCapsuleData.databaseData.created_at).toLocaleString()
                   : new Date((capsule.account?.createdAt || 0) * 1000).toLocaleString()}
               </Text>
             </View>
@@ -663,7 +663,7 @@ export function CapsuleDetailsScreen() {
                   style={styles.timelineIcon}
                 />
                 <Text variant="bodyMedium" style={styles.timelineLabel}>
-                  Reveal Date:
+                  Ready to be revealed date:
                 </Text>
               </View>
               <View style={styles.revealDateContainer}>
@@ -674,8 +674,8 @@ export function CapsuleDetailsScreen() {
                     { color: isRevealed ? colors.success : colors.warning },
                   ]}
                 >
-                  {fullCapsuleData
-                    ? new Date(fullCapsuleData.reveal_date).toLocaleString()
+                  {fullCapsuleData?.databaseData
+                    ? new Date(fullCapsuleData.databaseData.reveal_date).toLocaleString()
                     : new Date(
                         (capsule.account?.revealDate || 0) * 1000
                       ).toLocaleString()}
@@ -703,7 +703,7 @@ export function CapsuleDetailsScreen() {
                   </Text>
                 </View>
                 <Text variant="bodyMedium" style={styles.timelineValue}>
-                  {new Date(fullCapsuleData?.reveal_date!).toLocaleString()}
+                  {new Date(fullCapsuleData?.databaseData?.reveal_date!).toLocaleString()}
                 </Text>
               </View>
             )}
@@ -730,10 +730,10 @@ export function CapsuleDetailsScreen() {
                 Blockchain TX:
               </Text>
               <Text variant="bodySmall" style={styles.techValue}>
-                {fullCapsuleData?.on_chain_tx?.slice(0, 16) ||
+                {fullCapsuleData?.databaseData?.on_chain_tx?.slice(0, 16) ||
                   capsule.publicKey.slice(0, 16)}
                 ...
-                {fullCapsuleData?.on_chain_tx?.slice(-16) ||
+                {fullCapsuleData?.databaseData?.on_chain_tx?.slice(-16) ||
                   capsule.publicKey.slice(-16)}
               </Text>
             </View>
@@ -743,10 +743,10 @@ export function CapsuleDetailsScreen() {
                 Content Hash:
               </Text>
               <Text variant="bodySmall" style={styles.techValue}>
-                {fullCapsuleData?.content_hash?.slice(0, 16) ||
+                {fullCapsuleData?.databaseData?.content_hash?.slice(0, 16) ||
                   capsule.account?.contentIntegrityHash?.slice(0, 16) || 'N/A'}
                 ...
-                {fullCapsuleData?.content_hash?.slice(-16) ||
+                {fullCapsuleData?.databaseData?.content_hash?.slice(-16) ||
                   capsule.account?.contentIntegrityHash?.slice(-16) || 'N/A'}
               </Text>
             </View>
@@ -756,7 +756,7 @@ export function CapsuleDetailsScreen() {
                 SOL Fee:
               </Text>
               <Text variant="bodyMedium">
-                {fullCapsuleData?.sol_fee_amount || '0.0014'} SOL
+                {fullCapsuleData?.databaseData?.sol_fee_amount || '0.0014'} SOL
               </Text>
             </View>
 
@@ -778,13 +778,13 @@ export function CapsuleDetailsScreen() {
               </Text>
             </View>
 
-            {fullCapsuleData?.has_media && (
+            {fullCapsuleData?.databaseData?.has_media && (
               <View style={styles.techItem}>
                 <Text variant="bodyMedium" style={styles.techLabel}>
                   Media Files:
                 </Text>
                 <Text variant="bodyMedium">
-                  {fullCapsuleData?.media_urls?.length || 0} file(s)
+                  {fullCapsuleData?.databaseData?.media_urls?.length || 0} file(s)
                 </Text>
               </View>
             )}
@@ -792,7 +792,7 @@ export function CapsuleDetailsScreen() {
         </Card>
 
         {/* Social Sharing Card */}
-        {fullCapsuleData?.posted_to_social && (
+        {fullCapsuleData?.databaseData?.posted_to_social && (
           <Card style={styles.socialCard}>
             <Card.Content>
               <View style={styles.sectionTitleContainer}>
@@ -819,13 +819,13 @@ export function CapsuleDetailsScreen() {
                 </Text>
               </View>
 
-              {fullCapsuleData?.social_post_id && (
+              {fullCapsuleData?.databaseData?.social_post_id && (
                 <View style={styles.socialItem}>
                   <Text variant="bodyMedium" style={styles.techLabel}>
                     Post ID:
                   </Text>
                   <Text variant="bodySmall" style={styles.techValue}>
-                    {fullCapsuleData?.social_post_id}
+                    {fullCapsuleData?.databaseData?.social_post_id}
                   </Text>
                 </View>
               )}
@@ -837,12 +837,12 @@ export function CapsuleDetailsScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          {capsule.account?.isGamified && (
+          {capsule.account?.isGamified && !isCreator && (
             <Button
               mode="contained"
               onPress={() => {
                 navigation.navigate('Game', {
-                  capsule_id: fullCapsuleData?.capsule_id || capsule.publicKey,
+                  capsule_id: fullCapsuleData?.databaseData?.capsule_id || capsule.publicKey,
                   action: 'view',
                 });
               }}
@@ -859,9 +859,9 @@ export function CapsuleDetailsScreen() {
             </Button>
           )}
 
-          {isRevealed && (
+          {isReadyToReveal && (
             <Button
-              mode="outlined"
+              mode="contained"
               onPress={async () => {
                 // lets reveal the capsule as we do in the hub screen
 
@@ -886,14 +886,6 @@ export function CapsuleDetailsScreen() {
               Reveal Capsule
             </Button>
           )}
-
-          <Button
-            mode="outlined"
-            onPress={() => navigation.goBack()}
-            style={styles.actionButton}
-          >
-            Back to List
-          </Button>
         </View>
       </ScrollView>
 

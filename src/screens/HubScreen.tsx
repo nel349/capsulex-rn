@@ -24,6 +24,7 @@ import {
 } from 'react-native-reanimated';
 
 import { HorizontalCapsuleList } from '../components/capsules';
+import type { EnhancedCapsule } from '../components/capsules/types';
 import { AppSnackbar } from '../components/ui/AppSnackbar';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { useSnackbar } from '../hooks/useSnackbar';
@@ -47,10 +48,7 @@ import {
 } from '../theme';
 import type { Capsule } from '../types/api';
 
-// Enhanced capsule type that merges blockchain and database data
-interface EnhancedCapsule extends CapsuleWithStatus {
-  databaseData?: Capsule; // Additional database fields including content_encrypted
-}
+// Using EnhancedCapsule from centralized types
 
 type RootStackParamList = {
   CapsuleDetails: { capsule: EnhancedCapsule };
@@ -226,6 +224,7 @@ export function HubScreen() {
           const enhancedCapsule: EnhancedCapsule = {
             ...blockchainCapsule,
             databaseData: undefined,
+            blockchainData: blockchainCapsule, // Store original blockchain data
           };
 
           // Try direct matching by various keys first

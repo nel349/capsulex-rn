@@ -641,6 +641,8 @@ export function ProfileScreen() {
                   : 'Enhanced wallet features'
               }
               left={props => <List.Icon {...props} icon="shield-account" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Button
                   mode={profile.privyConnected ? 'outlined' : 'contained'}
@@ -667,6 +669,8 @@ export function ProfileScreen() {
                 profile.socialAccounts.twitter || 'Post capsules to Twitter'
               }
               left={props => <List.Icon {...props} icon="twitter" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Button
                   mode={
@@ -699,6 +703,8 @@ export function ProfileScreen() {
                 profile.socialAccounts.instagram || 'Post capsules to Instagram'
               }
               left={props => <List.Icon {...props} icon="instagram" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Button
                   mode={
@@ -737,6 +743,8 @@ export function ProfileScreen() {
               title="Push Notifications"
               description="Get notified when capsules are revealed"
               left={props => <List.Icon {...props} icon="bell" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Switch
                   value={profile.settings.notifications}
@@ -751,6 +759,8 @@ export function ProfileScreen() {
               title="Network Settings"
               description="Manage blockchain network settings"
               left={props => <List.Icon {...props} icon="server" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               onPress={() => navigation.navigate('NetworkSettings')}
             />
 
@@ -760,6 +770,8 @@ export function ProfileScreen() {
               title="Public Profile"
               description="Allow others to see your capsules"
               left={props => <List.Icon {...props} icon="earth" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Switch
                   value={profile.settings.publicProfile}
@@ -774,6 +786,8 @@ export function ProfileScreen() {
               title="Auto-Reveal"
               description="Automatically post capsules when time comes"
               left={props => <List.Icon {...props} icon="clock-time-four" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Switch
                   value={profile.settings.autoReveal}
@@ -788,6 +802,8 @@ export function ProfileScreen() {
               title="Mock Twitter API"
               description="Use mock Twitter posting for development/demos"
               left={props => <List.Icon {...props} icon="api" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Switch
                   value={profile.settings.mockTwitterApi}
@@ -819,6 +835,8 @@ export function ProfileScreen() {
               title="SOL Balance"
               description="0.0124 SOL (~$1.18)"
               left={props => <List.Icon {...props} icon="wallet" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Button
                   mode="outlined"
@@ -841,6 +859,8 @@ export function ProfileScreen() {
               title="Transaction History"
               description="View your capsule creation history"
               left={props => <List.Icon {...props} icon="history" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Button
                   mode="outlined"
@@ -864,6 +884,8 @@ export function ProfileScreen() {
               title="Disconnect Wallet"
               description="Sign out and disconnect your wallet"
               left={props => <List.Icon {...props} icon="logout" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Button
                   mode="outlined"
@@ -907,6 +929,8 @@ export function ProfileScreen() {
                   title="Vault Key Status"
                   description="Your device has an active vault key for encryption"
                   left={props => <List.Icon {...props} icon="shield-check" />}
+                  titleStyle={styles.listItemTitle}
+                  descriptionStyle={styles.listItemDescription}
                   right={() => (
                     <Chip
                       style={styles.activeChip}
@@ -923,6 +947,8 @@ export function ProfileScreen() {
                   title="Backup Vault Key"
                   description="Create a secure backup of your encryption key"
                   left={props => <List.Icon {...props} icon="backup-restore" />}
+                  titleStyle={styles.listItemTitle}
+                  descriptionStyle={styles.listItemDescription}
                   right={() => (
                     <Button
                       mode="outlined"
@@ -942,6 +968,8 @@ export function ProfileScreen() {
                   title="Delete Vault Key"
                   description="⚠️ Permanently remove key from this device"
                   left={props => <List.Icon {...props} icon="delete-forever" />}
+                  titleStyle={styles.listItemTitle}
+                  descriptionStyle={styles.listItemDescription}
                   right={() => (
                     <Button
                       mode="outlined"
@@ -962,6 +990,8 @@ export function ProfileScreen() {
                   title="No Vault Key"
                   description="Create a vault key to encrypt your time capsule content"
                   left={props => <List.Icon {...props} icon="shield-alert" />}
+                  titleStyle={styles.listItemTitle}
+                  descriptionStyle={styles.listItemDescription}
                   right={() => (
                     <Chip
                       style={styles.warningChip}
@@ -978,6 +1008,8 @@ export function ProfileScreen() {
                   title="Create Vault Key"
                   description="Generate a new encryption key for your content"
                   left={props => <List.Icon {...props} icon="shield-plus" />}
+                  titleStyle={styles.listItemTitle}
+                  descriptionStyle={styles.listItemDescription}
                   right={() => (
                     <Button
                       mode="contained"
@@ -997,6 +1029,8 @@ export function ProfileScreen() {
                   title="Restore Vault Key"
                   description="Restore from a previous backup"
                   left={props => <List.Icon {...props} icon="backup-restore" />}
+                  titleStyle={styles.listItemTitle}
+                  descriptionStyle={styles.listItemDescription}
                   right={() => (
                     <Button
                       mode="outlined"
@@ -1033,6 +1067,8 @@ export function ProfileScreen() {
               title="Version"
               description="1.0.0"
               left={props => <List.Icon {...props} icon="information" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
             />
 
             <Divider />
@@ -1041,6 +1077,8 @@ export function ProfileScreen() {
               title="Privacy Policy"
               description="Learn how we protect your data"
               left={props => <List.Icon {...props} icon="shield-lock" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Button
                   mode="outlined"
@@ -1064,6 +1102,8 @@ export function ProfileScreen() {
               title="Terms of Service"
               description="Read our terms of service"
               left={props => <List.Icon {...props} icon="file-document" />}
+              titleStyle={styles.listItemTitle}
+              descriptionStyle={styles.listItemDescription}
               right={() => (
                 <Button
                   mode="outlined"
@@ -1316,5 +1356,14 @@ const styles = StyleSheet.create({
   warningChip: {
     backgroundColor: colors.warning,
     borderRadius: 12,
+  },
+  
+  // List Item styles for better text visibility
+  listItemTitle: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+  listItemDescription: {
+    color: colors.textSecondary,
   },
 });

@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClusterProvider } from './src/components/cluster/cluster-data-access';
 import { AppNavigator } from './src/navigators/AppNavigator';
+import { colors } from './src/theme';
 import { ConnectionProvider } from './src/utils/ConnectionProvider';
 
 const queryClient = new QueryClient();
@@ -47,6 +48,10 @@ export default function App() {
     colors: {
       ...MD3LightTheme.colors,
       ...LightTheme.colors,
+      // Override with our custom light theme colors if needed
+      primary: colors.primary,
+      surface: colors.surface,
+      background: colors.background,
     },
   };
   const CombinedDarkTheme = {
@@ -55,37 +60,54 @@ export default function App() {
     colors: {
       ...MD3DarkTheme.colors,
       ...DarkTheme.colors,
+      // Override with our custom dark theme colors
+      primary: colors.primary,
+      onPrimary: '#FFFFFF',
+      surface: colors.surface,
+      onSurface: colors.text,
+      background: colors.background,
+      onBackground: colors.text,
+      surfaceVariant: colors.surfaceVariant,
+      onSurfaceVariant: colors.textSecondary,
+      outline: colors.border,
+      outlineVariant: colors.borderLight,
+      error: colors.error,
+      onError: '#FFFFFF',
+      success: colors.success,
+      warning: colors.warning,
     },
   };
   return (
-    <QueryClientProvider client={queryClient}>
-      <ClusterProvider>
-        <ConnectionProvider config={{ commitment: 'processed' }}>
-          <dynamicClient.reactNative.WebView />
-          <SafeAreaView
-            style={[
-              styles.shell,
-              {
-                backgroundColor:
-                  colorScheme === 'dark'
-                    ? MD3DarkTheme.colors.background
-                    : MD3LightTheme.colors.background,
-              },
-            ]}
-          >
-            <PaperProvider
-              theme={
-                colorScheme === 'dark'
-                  ? CombinedDarkTheme
-                  : CombinedDefaultTheme
-              }
+    <>
+      <dynamicClient.reactNative.WebView />
+      <QueryClientProvider client={queryClient}>
+        <ClusterProvider>
+          <ConnectionProvider config={{ commitment: 'processed' }}>
+            <SafeAreaView
+              style={[
+                styles.shell,
+                {
+                  backgroundColor:
+                    colorScheme === 'dark'
+                      ? colors.background
+                      : colors.background,
+                },
+              ]}
             >
-              <AppNavigator />
-            </PaperProvider>
-          </SafeAreaView>
-        </ConnectionProvider>
-      </ClusterProvider>
-    </QueryClientProvider>
+              <PaperProvider
+                theme={
+                  colorScheme === 'dark'
+                    ? CombinedDarkTheme
+                    : CombinedDefaultTheme
+                }
+              >
+                <AppNavigator />
+              </PaperProvider>
+            </SafeAreaView>
+          </ConnectionProvider>
+        </ClusterProvider>
+      </QueryClientProvider>
+    </>
   );
 }
 

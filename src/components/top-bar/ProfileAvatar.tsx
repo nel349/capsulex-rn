@@ -46,11 +46,10 @@ export function ProfileAvatar({ size = 32 }: ProfileAvatarProps) {
       style={styles.container}
       activeOpacity={0.7}
     >
-      <Avatar.Text
+      <Avatar.Image
         size={size}
-        label={getProfileInitials()}
+        source={{ uri: 'https://xsgames.co/randomusers/avatar.php?g=pixel' }}
         style={styles.avatar}
-        labelStyle={styles.avatarLabel}
       />
     </TouchableOpacity>
   );

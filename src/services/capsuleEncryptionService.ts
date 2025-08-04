@@ -93,10 +93,10 @@ export class CapsuleEncryptionService {
     try {
       // Check if this uses the new unified encryption format
       if (capsule.encryption_version === '2.0') {
-        return await this.decryptUnifiedFormat(capsule);
+        return await CapsuleEncryptionService.decryptUnifiedFormat(capsule);
       } else {
         // Fall back to old encryption format
-        return await this.decryptLegacyFormat(capsule);
+        return await CapsuleEncryptionService.decryptLegacyFormat(capsule);
       }
     } catch (error) {
       console.error('❌ Failed to decrypt capsule content:', error);

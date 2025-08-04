@@ -1,6 +1,7 @@
 export * from './NetworkSettingsScreen';
 export * from './HubScreen';
 export * from './CreateCapsuleScreen';
+export * from './CreateCapsuleScreenNew';
 export * from './CapsuleDetailsScreen';
 export * from './DiscoverScreen';
 export * from './ProfileScreen';

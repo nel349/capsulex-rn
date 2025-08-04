@@ -25,7 +25,7 @@ export interface UnifiedEncryptedContent {
 export class UnifiedEncryption {
   private static readonly ENCRYPTION_MESSAGE_PREFIX = 'CapsuleX-Encrypt-v2:';
   private static readonly DEFAULT_DERIVATION_PATH = "m/44'/0'/0'/0'"; // BIP39 compatible derivation
-  
+
   // Cache for working derivation paths per seed
   private static seedDerivationPaths = new Map<number, string>();
 
@@ -78,16 +78,27 @@ export class UnifiedEncryption {
     walletAddress: string
   ): Promise<UnifiedEncryptedContent> {
     const createdAt = new Date().toISOString();
+    const currentPlatform = Platform.OS as 'android' | 'ios';
 
     if (Platform.OS === 'android') {
       try {
-        return await this.encryptWithSeedVault(content, walletAddress, createdAt);
+        return await this.encryptWithSeedVault(
+          content,
+          walletAddress,
+          createdAt
+        );
       } catch (error) {
-        // Discrete fallback to VaultKey method
-        return await this.encryptWithVaultKey(content, walletAddress, createdAt);
+        // Discrete fallback to VaultKey method but maintain correct platform
+        console.warn('🔄 Android Seed Vault failed, falling back to VaultKey but keeping platform as android');
+        return await this.encryptWithVaultKey(
+          content,
+          walletAddress,
+          createdAt,
+          currentPlatform // Pass the actual platform
+        );
       }
     } else {
-      return await this.encryptWithVaultKey(content, walletAddress, createdAt);
+      return await this.encryptWithVaultKey(content, walletAddress, createdAt, currentPlatform);
     }
   }
 
@@ -134,7 +145,7 @@ export class UnifiedEncryption {
       "m/44'/0'/0'",
       "m/44'/0'",
       "m/0'/0'",
-      "m/0",
+      'm/0',
       // Standard Solana paths
       "m/44'/501'/0'/0'",
       "m/44'/501'/0'",
@@ -142,24 +153,35 @@ export class UnifiedEncryption {
     ];
 
     const testMessage = Buffer.from('derivation-test').toString('base64');
-    
+
     for (const derivationPath of derivationPaths) {
       try {
-        console.log(`🔍 Testing derivation path: ${derivationPath} for seed ${seed.name}`);
-        await SeedVault.signMessage(seed.authToken, derivationPath, testMessage);
-        
+        console.log(
+          `🔍 Testing derivation path: ${derivationPath} for seed ${seed.name}`
+        );
+        await SeedVault.signMessage(
+          seed.authToken,
+          derivationPath,
+          testMessage
+        );
+
         // Success! Cache and return this path
-        console.log(`✅ Found working derivation path: ${derivationPath} for seed ${seed.name}`);
+        console.log(
+          `✅ Found working derivation path: ${derivationPath} for seed ${seed.name}`
+        );
         this.seedDerivationPaths.set(seed.authToken, derivationPath);
         return derivationPath;
-        
       } catch (error) {
-        console.log(`❌ Derivation path ${derivationPath} failed for seed ${seed.name}`);
+        console.log(
+          `❌ Derivation path ${derivationPath} failed for seed ${seed.name}`
+        );
         continue;
       }
     }
-    
-    throw new Error(`No working derivation path found for seed ${seed.name}. Please approve the signing dialogs when they appear.`);
+
+    throw new Error(
+      `No working derivation path found for seed ${seed.name}. Please approve the signing dialogs when they appear.`
+    );
   }
 
   /**
@@ -214,7 +236,7 @@ export class UnifiedEncryption {
         createdAt
       );
     } catch (error) {
-      console.error('❌ First encryption attempt failed:', error);
+      console.warn('❌ First encryption attempt failed:', error);
 
       // Check if this is an authorization error (result=1007)
       const errorMessage =
@@ -232,7 +254,7 @@ export class UnifiedEncryption {
           // When authorization expires, we might need to initialize again first
           console.log('🔄 Re-initializing Seed Vault...');
           await this.initializeAndroidSeedVault();
-          
+
           // If initialization succeeds, try direct re-authorization
           await this.reauthorizeSeed();
 
@@ -244,9 +266,12 @@ export class UnifiedEncryption {
             createdAt
           );
         } catch (reAuthError) {
-          console.error('❌ Re-authorization failed:', reAuthError);
-          const reAuthErrorMessage = reAuthError instanceof Error ? reAuthError.message : String(reAuthError);
-          
+          console.warn('❌ Re-authorization failed:', reAuthError);
+          const reAuthErrorMessage =
+            reAuthError instanceof Error
+              ? reAuthError.message
+              : String(reAuthError);
+
           if (reAuthErrorMessage.includes('NEED_NEW_SEED')) {
             throw new Error(
               'Seed Vault authorization expired. Please open the Seed Vault Simulator app, create a new seed or ensure existing seeds are available, then try again.'
@@ -280,18 +305,25 @@ export class UnifiedEncryption {
 
         // Deauthorize all existing seeds to make them available again
         for (const seed of authorizedSeeds) {
-          console.log(`🔄 Deauthorizing seed: ${seed.name} (${seed.authToken})`);
+          console.log(
+            `🔄 Deauthorizing seed: ${seed.name} (${seed.authToken})`
+          );
           await SeedVault.deauthorizeSeed(seed.authToken);
         }
-        
-        console.log('✅ All seeds deauthorized, they should now be available for re-authorization');
+
+        console.log(
+          '✅ All seeds deauthorized, they should now be available for re-authorization'
+        );
       } catch (error) {
         console.warn('⚠️ Could not deauthorize existing seeds:', error);
       }
 
       // Check if there are unauthorized seeds available now
       const hasUnauthorized = await SeedVault.hasUnauthorizedSeeds();
-      console.log('🔄 Has unauthorized seeds after deauthorization:', hasUnauthorized);
+      console.log(
+        '🔄 Has unauthorized seeds after deauthorization:',
+        hasUnauthorized
+      );
 
       if (hasUnauthorized) {
         console.log('🔄 Found unauthorized seeds, re-authorizing...');
@@ -307,7 +339,7 @@ export class UnifiedEncryption {
         );
       }
     } catch (error) {
-      console.error('❌ Re-authorization failed:', error);
+      console.warn('❌ Re-authorization failed:', error);
       throw error;
     }
   }
@@ -327,47 +359,57 @@ export class UnifiedEncryption {
     }
 
     const seed = authorizedSeeds[0];
-    
+
     console.log(
       `🤖 Using seed: ${seed.name} (token: ${String(seed.authToken).slice(0, 8)}...)`
     );
     console.log(`🤖 Seed details:`, {
       name: seed.name,
       authToken: seed.authToken,
-      purpose: seed.purpose
+      purpose: seed.purpose,
     });
 
     console.log('Authorized seed = ' + seed.name + ', ' + seed.authToken);
     const accounts = await SeedVault.getUserWallets(seed.authToken);
     console.log('📋 Found accounts:', accounts);
-    
+
     let derivationPath: string;
-    
+
     if (!accounts || accounts.length === 0) {
-      console.log('🔧 No user wallet accounts found, requesting public key to create one...');
-      
+      console.log(
+        '🔧 No user wallet accounts found, requesting public key to create one...'
+      );
+
       // Request a public key to create an account
       try {
         const publicKeyResult = await SeedVault.getPublicKey(
-          seed.authToken, 
+          seed.authToken,
           this.DEFAULT_DERIVATION_PATH
         );
-        console.log('✅ Created account with public key:', publicKeyResult.publicKeyEncoded.slice(0, 8) + '...');
-        console.log('✅ Using derivation path:', publicKeyResult.resolvedDerivationPath);
-        
+        console.log(
+          '✅ Created account with public key:',
+          publicKeyResult.publicKeyEncoded.slice(0, 8) + '...'
+        );
+        console.log(
+          '✅ Using derivation path:',
+          publicKeyResult.resolvedDerivationPath
+        );
+
         derivationPath = publicKeyResult.resolvedDerivationPath;
       } catch (createError) {
-        console.error('❌ Failed to create account:', createError);
-        throw new Error(`Failed to create user wallet account: ${createError instanceof Error ? createError.message : String(createError)}`);
+        console.warn('❌ Failed to create account:', createError);
+        throw new Error(
+          `Failed to create user wallet account: ${createError instanceof Error ? createError.message : String(createError)}`
+        );
       }
     } else {
       const account = accounts[0];
       console.log('🔑 Using existing account:', {
         name: account.name,
         publicKey: account.publicKeyEncoded.slice(0, 8) + '...',
-        derivationPath: account.derivationPath
+        derivationPath: account.derivationPath,
       });
-      
+
       derivationPath = account.derivationPath;
     }
 
@@ -390,7 +432,7 @@ export class UnifiedEncryption {
     // Convert message bytes to base64 string as expected by SeedVault API
     const messageBase64 = Buffer.from(messageBytes).toString('base64');
     console.log(`🤖 Base64 message: ${messageBase64}`);
-    
+
     // First try a simple test message
     try {
       console.log('🧪 Testing with a simple message first...');
@@ -399,8 +441,10 @@ export class UnifiedEncryption {
       console.log(`🧪 Test message base64: ${testMessageBase64}`);
       console.log(`🧪 Using authToken: ${seed.authToken}`);
       console.log(`🧪 Using derivationPath: ${derivationPath}`);
-      console.log(`🧪 About to call SeedVault.signMessage - WATCH FOR DIALOG NOW!`);
-      
+      console.log(
+        `🧪 About to call SeedVault.signMessage - WATCH FOR DIALOG NOW!`
+      );
+
       const testSignResult = await SeedVault.signMessage(
         seed.authToken,
         derivationPath,
@@ -408,14 +452,16 @@ export class UnifiedEncryption {
       );
       console.log('✅ Simple test message signed successfully!');
       console.log('✅ Test signature result:', testSignResult);
-      
+
       // If test succeeds, try the actual message
       console.log('🤖 Now trying the actual encryption message...');
     } catch (testError) {
       console.error('❌ Even simple test message failed:', testError);
-      throw new Error('🚨 USER ACTION REQUIRED: SeedVault is trying to show a signing dialog but getting result=1007 (CANCELED). Please watch your device screen for a Seed Vault popup dialog and click APPROVE/OK when it appears. If no dialog shows up, make sure the Seed Vault Simulator app is running.');
+      throw new Error(
+        '🚨 USER ACTION REQUIRED: SeedVault is trying to show a signing dialog but getting result=1007 (CANCELED). Please watch your device screen for a Seed Vault popup dialog and click APPROVE/OK when it appears. If no dialog shows up, make sure the Seed Vault Simulator app is running.'
+      );
     }
-    
+
     const signResult = await SeedVault.signMessage(
       seed.authToken,
       derivationPath,
@@ -509,7 +555,8 @@ export class UnifiedEncryption {
   private static async encryptWithVaultKey(
     content: string,
     walletAddress: string,
-    createdAt: string
+    createdAt: string,
+    platform: 'android' | 'ios' = 'ios'
   ): Promise<UnifiedEncryptedContent> {
     try {
       const vaultEncrypted = await VaultKeyManager.encryptContent(
@@ -517,11 +564,11 @@ export class UnifiedEncryption {
         walletAddress
       );
 
-      console.log('📱🔐 Content encrypted with Vault Key');
+      console.log(`📱🔐 Content encrypted with Vault Key (platform: ${platform})`);
 
       return {
         encryptedData: vaultEncrypted.encryptedData,
-        platform: 'ios',
+        platform: platform, // Use the passed platform instead of hardcoded 'ios'
         keyId: vaultEncrypted.keyId,
         createdAt,
         walletAddress,
@@ -599,7 +646,7 @@ export class UnifiedEncryption {
       await this.reauthorizeSeed();
     } else {
       // iOS doesn't need special authorization refresh
-      console.log('📱 iOS doesn\'t require authorization refresh');
+      console.log("📱 iOS doesn't require authorization refresh");
     }
   }
 
@@ -614,7 +661,7 @@ export class UnifiedEncryption {
 
     try {
       console.log('🧪 === SEED VAULT DIAGNOSTIC TEST ===');
-      
+
       // Test 1: Check if module is available
       console.log('🧪 Test 1: Module availability');
       if (!SeedVault) {
@@ -625,7 +672,10 @@ export class UnifiedEncryption {
       // Test 2: Get authorized seeds
       console.log('🧪 Test 2: Get authorized seeds');
       const authorizedSeeds = await SeedVault.getAuthorizedSeeds();
-      console.log(`✅ Found ${authorizedSeeds.length} authorized seeds:`, authorizedSeeds);
+      console.log(
+        `✅ Found ${authorizedSeeds.length} authorized seeds:`,
+        authorizedSeeds
+      );
 
       if (authorizedSeeds.length === 0) {
         throw new Error('No authorized seeds available');
@@ -634,8 +684,10 @@ export class UnifiedEncryption {
       // Test 3: Try different seeds and derivation paths
       for (let i = 0; i < Math.min(authorizedSeeds.length, 2); i++) {
         const seed = authorizedSeeds[i];
-        console.log(`🧪 Test 3.${i+1}: Testing seed ${seed.name} (${seed.authToken})`);
-        
+        console.log(
+          `🧪 Test 3.${i + 1}: Testing seed ${seed.name} (${seed.authToken})`
+        );
+
         // Try different derivation paths for both BIP39 and Ed25519
         const derivationPaths = [
           // Standard Solana paths
@@ -648,33 +700,37 @@ export class UnifiedEncryption {
           "m/44'/0'",
           // Simple paths
           "m/0'/0'",
-          "m/0",
+          'm/0',
         ];
-        
+
         for (const derivationPath of derivationPaths) {
           try {
             console.log(`🧪 Trying derivation path: ${derivationPath}`);
             const simpleMessage = Buffer.from('test').toString('base64');
-            
+
             console.log('🧪 🚨 APPROVE THE DIALOG WHEN IT APPEARS! 🚨');
-            
+
             const result = await SeedVault.signMessage(
               seed.authToken,
               derivationPath,
               simpleMessage
             );
-            
-            console.log(`✅ SUCCESS! Seed ${seed.name} with path ${derivationPath} works:`, result);
+
+            console.log(
+              `✅ SUCCESS! Seed ${seed.name} with path ${derivationPath} works:`,
+              result
+            );
             return; // Success, exit early
-            
           } catch (error) {
-            console.log(`❌ Failed with seed ${seed.name}, path ${derivationPath}:`, error);
+            console.log(
+              `❌ Failed with seed ${seed.name}, path ${derivationPath}:`,
+              error
+            );
           }
         }
       }
-      
+
       throw new Error('All seed and derivation path combinations failed');
-      
     } catch (error) {
       console.error('❌ SeedVault diagnostic failed:', error);
       console.log('🚨 TROUBLESHOOTING STEPS:');

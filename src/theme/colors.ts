@@ -30,4 +30,10 @@ export const colors = {
   // Border colors
   border: '#38444D',
   borderLight: '#2F3336',
+
+  // Additional colors for components
+  onPrimary: '#FFFFFF', // Text color on primary background
+  surfaceDisabled: '#0D0D0D', // Disabled surface color
+  textDisabled: '#5B7083', // Disabled text color
+  errorContainer: '#2D1517', // Error container background
 } as const;

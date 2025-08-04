@@ -66,8 +66,9 @@ export function CreateCapsuleScreen() {
   const [createMode, setCreateMode] = useState<CreateMode>('time_capsule');
 
   const [content, setContent] = useState('');
-  const [selectedPlatform, setSelectedPlatform] =
-    useState<'twitter' | 'farcaster'>('twitter');
+  const [selectedPlatform, setSelectedPlatform] = useState<
+    'twitter' | 'farcaster'
+  >('twitter');
   const [revealDateTime, setRevealDateTime] = useState(new Date()); // Combined Date and Time
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,8 +90,18 @@ export function CreateCapsuleScreen() {
   const { getBalance } = useSolanaService();
 
   const platforms = [
-    { key: 'twitter', label: 'X', icon: 'custom-x', customIcon: require('../../assets/icons8-x-30.png') },
-    { key: 'farcaster', label: 'Farcaster', icon: 'custom-farcaster', customIcon: require('../../assets/farcaster-transparent-purple.png') }
+    {
+      key: 'twitter',
+      label: 'X',
+      icon: 'custom-x',
+      customIcon: require('../../assets/icons8-x-30.png'),
+    },
+    {
+      key: 'farcaster',
+      label: 'Farcaster',
+      icon: 'custom-farcaster',
+      customIcon: require('../../assets/farcaster-transparent-purple.png'),
+    },
   ];
 
   // Define create capsule tour steps
@@ -830,15 +841,17 @@ export function CreateCapsuleScreen() {
                 key={platform.key}
                 mode={selectedPlatform === platform.key ? 'flat' : 'outlined'}
                 selected={selectedPlatform === platform.key}
-                onPress={() => setSelectedPlatform(platform.key as 'twitter' | 'farcaster')}
+                onPress={() =>
+                  setSelectedPlatform(platform.key as 'twitter' | 'farcaster')
+                }
                 style={styles.platformChip}
-                icon={() => (
+                icon={() =>
                   platform.customIcon ? (
                     <Image
                       source={platform.customIcon}
                       style={{
                         width: 16,
-                        height: 16
+                        height: 16,
                       }}
                     />
                   ) : (
@@ -852,7 +865,7 @@ export function CreateCapsuleScreen() {
                       }
                     />
                   )
-                )}
+                }
               >
                 <Text style={{ color: colors.text }}>{platform.label}</Text>
               </Chip>
@@ -1254,7 +1267,7 @@ const styles = StyleSheet.create({
   platformChip: {
     marginRight: spacing.sm,
     backgroundColor: colors.surfaceVariant,
-    borderColor: colors.border
+    borderColor: colors.border,
   },
   contentInput: {
     marginBottom: spacing.sm,

@@ -4,7 +4,7 @@ import React from 'react';
 import { View } from 'react-native';
 
 import { TopBar } from '../components/top-bar/top-bar-feature';
-import { CreateCapsuleScreen } from '../screens/CreateCapsuleScreen';
+import { CreateCapsuleScreenNew as CreateCapsuleScreen } from '../screens/CreateCapsuleScreenNew';
 import { CreatorValidationScreen } from '../screens/CreatorValidationScreen';
 import { DiscoverScreen } from '../screens/DiscoverScreen';
 import { HubScreen } from '../screens/HubScreen';

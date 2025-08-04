@@ -23,6 +23,8 @@ import { AppNavigator } from './src/navigators/AppNavigator';
 import { colors } from './src/theme';
 import { ConnectionProvider } from './src/utils/ConnectionProvider';
 
+// console.log = console.warn = console.error = () => {}; // Comment to DISABLE console.log in Debug mode // Uncomment to ENABLE console.log in Debug mode
+
 const queryClient = new QueryClient();
 
 export const dynamicClient = createClient({

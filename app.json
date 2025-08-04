@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "capsulex-app-rn",
+    "name": "CapsuleX",
     "slug": "capsulex-app-rn",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,7 +28,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#000000"
       },
       "package": "com.capsulex.app",
       "permissions": [

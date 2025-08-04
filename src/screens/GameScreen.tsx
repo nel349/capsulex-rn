@@ -483,7 +483,8 @@ export function GameScreen({ route }: GameScreenProps) {
   }
 
   const isGameRevealed = game.is_revealed;
-  const canSubmitGuess = isAuthenticated && !isGameRevealed && game.is_active;
+  const isCreator = game.creator === walletAddress;
+  const canSubmitGuess = isAuthenticated && !isGameRevealed && game.is_active && !isCreator;
   const myExistingGuess = guesses?.find(g => g.guesser === walletAddress);
 
   return (
@@ -659,6 +660,25 @@ export function GameScreen({ route }: GameScreenProps) {
                 />
                 <Text style={styles.authText}>
                   Connect your wallet to participate in this game
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Creator Message */}
+        {isAuthenticated && isCreator && (
+          <Card style={styles.creatorCard}>
+            <Card.Content>
+              <View style={styles.creatorContainer}>
+                <MaterialCommunityIcon
+                  name="crown"
+                  size={20}
+                  color={colors.premiumOrange}
+                  style={styles.creatorIcon}
+                />
+                <Text style={styles.creatorText}>
+                  You're the creator of this game! You can view game details and stats, but cannot submit guesses.
                 </Text>
               </View>
             </Card.Content>
@@ -1118,6 +1138,29 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.warning,
     textAlign: 'center',
+  },
+
+  // Creator Card
+  creatorCard: {
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    backgroundColor: colors.premiumOrange + '15',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.premiumOrange,
+  },
+  creatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  creatorIcon: {
+    marginRight: spacing.sm,
+  },
+  creatorText: {
+    ...typography.bodyMedium,
+    color: colors.premiumOrange,
+    textAlign: 'center',
+    flex: 1,
   },
 
   // Existing Guess

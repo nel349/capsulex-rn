@@ -1,105 +1,188 @@
-# Solana Mobile Expo Template
+# CapsuleX – Encrypted Time Capsules on Solana
 
-This template is a ready-to-go Android Expo dApp that offers:
+<img width="1255" alt="CapsuleX Screenshot" src="https://github.com/user-attachments/assets/screenshot-placeholder" />
 
-- Solana libraries: `web3.js`, Mobile Wallet Adapter, and `spl-token`.
-- Required polyfills like `crypto` and `Buffer` configured.
-- Pre-built React UI and re-usable hooks and code patterns like `useMobileWallet`.
+CapsuleX – Encrypted Time Capsules on Solana, aka. future-proof content with blockchain security
 
-**This is only fully functional on Android.**
+Turn your thoughts into time capsules.
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="./screenshots/screenshot1.png" alt="Scaffold dApp Screenshot 1" width=300 />
-    </td>
-    <td align="center">
-      <img src="./screenshots/screenshot2.png" alt="Scaffold dApp Screenshot 2" width=300 />
-    </td>
-    <td align="center">
-      <img src="./screenshots/screenshot3.png" alt="Scaffold dApp Screenshot 3" width=300 />
-    </td>
-  </tr>
-</table>
+Create encrypted time capsules that unlock at your chosen moment, schedule social posts for the future, and turn content into interactive guessing games — all secured by Solana blockchain and advanced encryption.
 
-## Tech Stack
+CapsuleX's technology powers "temporal content drops" — creating a powerful distribution channel for creators, brands, and communities through time-locked, encrypted content experiences.
 
-| Library               | Category          | Version | Description                                           |
-| --------------------- | ----------------- | ------- | ----------------------------------------------------- |
-| React Native          | Mobile Framework  | v0.76   | The best cross-platform mobile framework              |
-| Expo                  | SDK               | v52     | Allows (optional) Expo modules                        |
-| React                 | UI Framework      | v18.3   | The most popular UI framework in the world            |
-| Mobile Wallet Adapter | SDK               | v2.1    | Connect and request signing from mobile wallet apps   |
-| Solana web3.js        | SDK               | v1.78   | General Solana library for transactions and RPCs      |
-| spl-token             | SDK               | v0.4    | Library for building with Solana SPL tokens           |
-| React Native Paper    | Component Library | v5.12   | Production-ready components following Material Design |
-| React Navigation      | Navigation        | v6      | Performant and consistent navigation framework        |
-| React Query           | State management  | v5.24   | Async query management                                |
-| TypeScript            | Language          | v5      | Static typechecking                                   |
-| AsyncStorage          | Persistence       | v1.23   | State persistence                                     |
+## 1. Repositories & Demo Apps
 
-## Quick Start
+| Purpose                  | Link                                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| **Main mobile app**      | https://github.com/capsulex-org/capsulex-app-rn (Public)                                    |
+| **Backend API**          | https://github.com/capsulex-org/capsulex-backend (Private, contact team@capsulex.com)       |
+| **Solana Program**       | https://github.com/capsulex-org/capsulex-program (Private, contact team@capsulex.com)       |
+| iOS TestFlight           | [TestFlight](https://testflight.apple.com/join/placeholder)                             |
+| Android APK              | [Download APK](https://drive.google.com/file/placeholder)                               |
+| Web Dashboard            | https://dashboard.capsulex.com                                                           |
+
+## 2. Architecture Overview
+
+| Layer                | Tech                                                        | What It Does                                                                              |
+| -------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Mobile**           | React Native + Expo                                        | Cross-platform native performance with fast iteration                                    |
+| **Authentication**   | Dynamic.xyz + Solana Mobile Wallet Adapter                       | Email login with embedded wallet. Power users connect with hardware/mobile wallets.     |
+| **Encryption**       | Platform-specific secure storage                            | iOS: Keychain Services, Android: Solana Mobile Seed Vault                               |
+| **Core Flow**        | Time-lock → Encryption → Blockchain → Auto-reveal          | Content encrypted → stored on-chain → automatically revealed at scheduled time          |
+| **Smart Contracts**  | Anchor Framework on Solana                                  | Time capsule creation, game mechanics, revelation, and NFT minting                      |
+| **Content Storage**  | Encrypted on-chain + IPFS for media                        | All content encrypted before storage, media files on IPFS                               |
+| **Social Features**  | X (Twitter) + Farcaster APIs                               | Schedule posts, notify audiences, cross-platform sharing                                |
+| **Games**            | On-chain guessing mechanics                                 | Turn capsules into interactive games with leaderboards and rewards                      |
+
+## 3. Feature Highlights
+
+### 3-1. Advanced Encryption
+
+Platform-specific secure encryption
+- **iOS**: Secure Keychain-based encryption with biometric protection
+- **Android**: Solana Mobile Seed Vault integration for hardware-backed security  
+- **Unified API**: Cross-platform encryption service with automatic fallbacks
+
+Encryption Service: https://github.com/your-org/capsulex-app-rn/blob/main/src/services/capsuleEncryptionService.ts
+
+Unified Encryption: https://github.com/your-org/capsulex-app-rn/blob/main/src/utils/unifiedEncryption.ts
+
+Sample Encryption Flow ▶ All content encrypted client-side before blockchain storage
+
+### 3-2. Solana Program Integration
+
+Time-locked content with blockchain security
+- Capsule creation and revelation
+- Game mechanics with guessing
+- Leaderboard tracking
+- NFT minting for special capsules
+
+Program ID: `J1r7tHjxEuCcSYVrikUKxzyeeccuC3QbyHjUbY8Pw7uH`
+
+Solana Integration:  https://github.com/your-org/capsulex-app-rn/blob/main/src/solana/useCapsulexProgram.ts
+
+Sample Transaction ▶ https://solscan.io/tx/sample-transaction-hash?cluster=devnet
+
+### 3-3. Social Media Integration
+
+Scheduled posting and audience engagement
+- X (Twitter) integration for scheduled posts
+- Farcaster support for decentralized social
+- Audience notifications for capsule reveals
+
+Social Service: https://github.com/your-org/capsulex-app-rn/blob/main/src/services/twitterService.ts
+
+### 3-4. Gamification
+
+Interactive guessing games
+- Turn capsules into community games
+- Semantic validation for guesses
+- Leaderboards and achievements
+- Creator validation tools
+
+Game Mechanics: https://github.com/your-org/capsulex-app-rn/blob/main/src/screens/CreatorValidationScreen.tsx
+
+### 3-5. Modular Architecture
+
+Scalable component system
+- Step-by-step capsule creation flow
+- Reusable UI components
+- Clean separation of concerns
+- Easy feature additions
+
+Component System: https://github.com/your-org/capsulex-app-rn/tree/main/src/components/create-capsule
+
+## 4. Quick Start
 
 ### Prerequisites
+- Node.js (v18+)
+- Expo CLI
+- iOS Simulator or Android Emulator
 
-- A free [Expo](https://expo.dev/) account.
-- An Android device/emulator to test your app
-  - Install an MWA compliant wallet app on your device/emulator.
-- If using Expo's cloud service `eas build`, no further setup is required.
-- If building locally:
-  - React Native and Android Envrionment [setup](https://docs.solanamobile.com/getting-started/development-setup)
-
-### Initialize
-
-Run the CLI command:
-
-```
-yarn create expo-app --template @solana-mobile/solana-mobile-expo-template
+### Installation
+```bash
+git clone https://github.com/your-org/capsulex-app-rn.git
+cd capsulex-app-rn
+npm install
+cp .env.example .env
+npm start
 ```
 
-Choose your project name then navigate into the directory.
+### Environment Variables
+```env
+EXPO_PUBLIC_API_BASE_URL=https://api.capsulex.com
+EXPO_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
+EXPO_PUBLIC_DYNAMIC_PROJECT_ID=your-dynamic-project-id
+EXPO_PUBLIC_CAPSULEX_PROGRAM_ID=J1r7tHjxEuCcSYVrikUKxzyeeccuC3QbyHjUbY8Pw7uH
+```
 
-### Build and run the app
+## 5. Development Commands
 
-Once your app is initialized, follow the **["Running the app"](https://docs.solanamobile.com/react-native/expo#running-the-app)** guide to launch the template as a custom development build.
+```bash
+# Start development server
+npm start
 
-## Troubleshooting
+# Run on platforms
+npm run ios
+npm run android
 
-- `Metro has encountered an error: While trying to resolve module @solana-mobile/mobile-wallet-adapter-protocol...`
+# Code quality
+npm run typecheck
+npm run lint
 
-  - This is an on-going issue when using `npm install` to install the Expo template.
-  - To mitigate, clean your project dependencies and reinstall with `yarn install`
+# Testing
+npm test
+npm run test:coverage
+```
 
-- `The package 'solana-mobile-wallet-adapter-protocol' doesn't seem to be linked. Make sure: ...`
+## 6. Project Structure
 
-  - Ensure you are _NOT_ using Expo Go to run your app.
-  - You need to be using an [Expo custom development build](https://docs.solanamobile.com/react-native/expo#custom-development-build), rather than Expo Go.
+```
+src/
+├── components/          # Reusable UI components
+│   ├── capsules/       # Capsule-related components  
+│   ├── create-capsule/ # Modular creation flow
+│   └── ui/             # Base UI components
+├── hooks/              # Custom React hooks
+├── navigators/         # Navigation configuration
+├── providers/          # Context providers
+├── screens/            # Screen components
+├── services/           # API and external services
+├── solana/             # Solana program interactions
+├── types/              # TypeScript definitions
+└── utils/              # Utility functions
+```
 
-- `failed to connect to...`
+## 7. Technology Stack
 
-  - This is an Expo error that can occur when trying to connect to the dev server on certain Wifi networks.
-  - To fix, try starting the dev server with the `--tunnel` command (`npx expo start --dev-client --tunnel`)
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Framework** | React Native + Expo | Cross-platform mobile development |
+| **Language** | TypeScript | Type-safe development |
+| **State Management** | React Context + TanStack React Query | Global state and server state |
+| **Navigation** | React Navigation v6 | Screen navigation |
+| **UI Components** | React Native Paper | Material Design components |
+| **Blockchain** | Solana Web3.js + Anchor | Blockchain interactions |
+| **Authentication** | Dynamic.xyz + Mobile Wallet Adapter | User authentication |
+| **Backend** | Node.js + Express | API and database |
 
-- `Error: crypto.getRandomValues() not supported`
-  - This is a polyfill issue when trying to use certain functions from the `@solana/web3.js` in a React Native/Expo environment.
-  - To fix, ensure your App properly imports and uses the polyfills like in this [guide](http://docs.solanamobile.com/react-native/expo#step-3-update-appjs-with-polyfills).
+## 8. Security Features
 
-<br>
+- **End-to-End Encryption**: All content encrypted before blockchain storage
+- **Platform Security**: iOS Keychain + Android Seed Vault integration  
+- **Blockchain Verification**: Content integrity verified on Solana
+- **No Plain Text Storage**: Encrypted content never stored in plain text
+- **Biometric Protection**: Device-level security for encryption keys
 
-- `error Failed to load configuration of your project.`
-  - Same as above, but for `yarn`. [Uninstall and reinstall](https://github.com/react-native-community/cli#updating-the-cli) the CLI through yarn.
+## 9. Contributing
 
-<br>
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`  
+3. Make changes and test: `npm test && npm run lint`
+4. Commit: `git commit -m 'Add amazing feature'`
+5. Push: `git push origin feature/amazing-feature`
+6. Open Pull Request
 
-- `Looks like your iOS environment is not properly set`:
-  - You can ignore this during template initialization and build the Android app as normal. This template is only compatible with Android.
+## 10. License
 
-<br>
-
-- `Usage Error: It seems you are trying to add a package using a https:... url; we now require package names to be explicitly specified.`
-  - This error happens on certain versions of `yarn`, and occurs if you try to initialize the template through the Github repo URL, rather than the npm package. To avoid this, use the `@solana-mobile/solana-mobile-dapp-scaffold` package as specified, or downgrade your `yarn` version to classic (1.22.x).
-
-<br>
-
-- `error Couldn't find the ".../@solana-mobile/solana-mobile-dapp-scaffold/template.config.js file inside "@solana-mobile/solana-mobile-dapp-scaffold" template.`
-  - This is a [known error](https://github.com/react-native-community/cli/issues/1924) that occurs with certain versions of `yarn` (>= 3.5.0). It is fixed by running the cli command with the `--npm` flag or downgrading your version of `yarn`.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.

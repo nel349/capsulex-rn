@@ -865,7 +865,7 @@ export function CapsuleDetailsScreen() {
                   capsule_id:
                     fullCapsuleData?.databaseData?.capsule_id ||
                     capsule.publicKey,
-                  action: 'view',
+                  action: 'guess',
                 });
               }}
               style={styles.actionButton}
@@ -878,6 +878,31 @@ export function CapsuleDetailsScreen() {
               )}
             >
               Play Game
+            </Button>
+          )}
+
+          {capsule.account?.isGamified && isCreator && (
+            <Button
+              mode="outlined"
+              textColor={colors.text}
+              onPress={() => {
+                navigation.navigate('Game', {
+                  capsule_id:
+                    fullCapsuleData?.databaseData?.capsule_id ||
+                    capsule.publicKey,
+                  action: 'view',
+                });
+              }}
+              style={styles.actionButton}
+              icon={() => (
+                <MaterialCommunityIcon
+                  name="eye"
+                  size={20}
+                  color={colors.primary}
+                />
+              )}
+            >
+              View Game Details
             </Button>
           )}
 

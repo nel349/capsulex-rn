@@ -29,6 +29,7 @@ import {
 } from 'react-native-paper';
 
 import { AppSnackbar } from '../components/ui/AppSnackbar';
+import { FlashyModal } from '../components/ui/FlashyModal';
 import { useSnackbar } from '../hooks/useSnackbar';
 import { useDualAuth } from '../providers';
 import { apiService } from '../services/api';
@@ -89,6 +90,8 @@ export function ProfileScreen() {
   const [vaultKeyExists, setVaultKeyExists] = useState(false);
   const [vaultKeyLoading, setVaultKeyLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
   // const [encryptionStatus, setEncryptionStatus] = useState<any>(null);
 
   const capsuleEncryption = useCapsuleEncryption();
@@ -404,8 +407,13 @@ export function ProfileScreen() {
   };
 
   const handleAndroidSeedVaultSetup = async () => {
+    setShowSetupModal(true);
+  };
+
+  const performAndroidSeedVaultSetup = async () => {
     try {
       setVaultKeyLoading(true);
+      setShowSetupModal(false);
 
       // First request permissions before any Seed Vault operations
       const permissionGranted = await checkAndRequestSeedVaultPermissions();
@@ -427,50 +435,30 @@ export function ProfileScreen() {
       const hasUnauthorized = await SeedVault.hasUnauthorizedSeeds();
 
       if (hasUnauthorized) {
-        Alert.alert(
-          'Authorize Seed Vault',
-          'You have seeds available in the Seed Vault. We need to authorize your app to use them for encryption.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Authorize',
-              onPress: async () => {
-                try {
-                  // This will launch the Seed Vault authorization UI
-                  const result = await SeedVault.authorizeNewSeed();
-                  console.log(
-                    '✅ Seed authorized:',
-                    result.authToken.toString().slice(0, 8) + '...'
-                  );
+        try {
+          // This will launch the Seed Vault authorization UI
+          const result = await SeedVault.authorizeNewSeed();
+          console.log(
+            '✅ Seed authorized:',
+            result.authToken.toString().slice(0, 8) + '...'
+          );
 
-                  // Force refresh the encryption status
-                  await checkVaultKeyStatus();
+          // Force refresh the encryption status
+          await checkVaultKeyStatus();
 
-                  showSuccess(
-                    'Seed Vault authorized successfully! Your content will now be hardware-encrypted.'
-                  );
-                } catch (error) {
-                  console.error('Failed to authorize seed:', error);
-                  showError(
-                    'Failed to authorize Seed Vault. Please try again.'
-                  );
-                }
-              },
-            },
-          ]
-        );
+          showSuccess(
+            'Seed Vault authorized successfully! Your content will now be hardware-encrypted.'
+          );
+        } catch (error) {
+          console.error('Failed to authorize seed:', error);
+          showError(
+            'Failed to authorize Seed Vault. Please try again.'
+          );
+        }
       } else {
-        // No unauthorized seeds available
-        Alert.alert(
-          'No Seeds Available',
-          'No seeds are available in the Seed Vault. Please:\n\n1. Open the Seed Vault Simulator app\n2. Create a new seed\n3. Return to this app and try again',
-          [
-            { text: 'OK' },
-            {
-              text: 'Check Again',
-              onPress: () => handleAndroidSeedVaultSetup(),
-            },
-          ]
+        // No unauthorized seeds available - show error
+        showError(
+          'No seeds available in Seed Vault. Please open the Seed Vault Simulator app, create a new seed, and try again.'
         );
       }
     } catch (error) {
@@ -484,40 +472,32 @@ export function ProfileScreen() {
   };
 
   const handleIOSVaultKeySetup = async () => {
-    const setupDescription =
-      'This will create a new encryption key on your device to secure your time capsule content. The key will be stored securely and can be backed up.';
+    setShowSetupModal(true);
+  };
 
-    Alert.alert('Setup Device Vault Key', setupDescription, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Setup',
-        onPress: async () => {
-          try {
-            setVaultKeyLoading(true);
+  const performVaultKeySetup = async () => {
+    try {
+      setVaultKeyLoading(true);
 
-            if (!walletAddress) {
-              showError('No wallet connected');
-              return;
-            }
+      if (!walletAddress) {
+        showError('No wallet connected');
+        return;
+      }
 
-            // Initialize unified encryption for iOS
-            await capsuleEncryption.initialize(walletAddress);
+      // Initialize unified encryption for iOS
+      await capsuleEncryption.initialize(walletAddress);
 
-            // Force refresh the encryption status
-            await checkVaultKeyStatus();
+      // Force refresh the encryption status
+      await checkVaultKeyStatus();
 
-            showSuccess(
-              'Vault key created successfully! Your content will now be encrypted.'
-            );
-          } catch (error) {
-            console.error('Failed to setup encryption:', error);
-            showError('Failed to setup device vault key');
-          } finally {
-            setVaultKeyLoading(false);
-          }
-        },
-      },
-    ]);
+      showSuccess('Vault key created successfully! Your content will now be encrypted.');
+    } catch (error) {
+      console.error('Failed to setup encryption:', error);
+      showError('Failed to setup device vault key');
+    } finally {
+      setVaultKeyLoading(false);
+      setShowSetupModal(false);
+    }
   };
 
   const handleBackupVaultKey = async () => {
@@ -555,7 +535,7 @@ export function ProfileScreen() {
               // TODO: Copy to clipboard when @react-native-clipboard/clipboard is available
               Alert.alert(
                 'Backup Data',
-                `Wallet: ${walletAddress}\n\nBackup: ${backupData}\n\n⚠️ Save this information securely!`,
+                `Wallet: ${walletAddress}\n\nBackup: ${backupData}\n\n Save this information securely!`,
                 [{ text: 'OK' }]
               );
             },
@@ -597,6 +577,68 @@ export function ProfileScreen() {
       return;
     }
 
+    if (Platform.OS === 'android') {
+      // For Android, handle Seed Vault reset
+      handleResetSeedVault();
+    } else {
+      // For iOS, handle vault key deletion
+      handleIOSVaultKeyDeletion();
+    }
+  };
+
+  const handleResetSeedVault = async () => {
+    setShowResetModal(true);
+  };
+
+  const performSeedVaultReset = async () => {
+    try {
+      setVaultKeyLoading(true);
+      setShowResetModal(false);
+      showInfo('Resetting Seed Vault authorization...');
+
+      // First check and request permissions
+      const permissionGranted = await checkAndRequestSeedVaultPermissions();
+      if (!permissionGranted) {
+        showError(
+          'Seed Vault permission is required. Please grant permission and try again.'
+        );
+        return;
+      }
+
+      // Get all authorized seeds and deauthorize them
+      const authorizedSeeds = await SeedVault.getAuthorizedSeeds();
+      console.log(`🔄 Found ${authorizedSeeds.length} authorized seeds to deauthorize`);
+
+      if (authorizedSeeds.length === 0) {
+        showInfo('No authorized seeds found. Seed Vault is already reset.');
+        return;
+      }
+
+      // Deauthorize all seeds
+      for (const seed of authorizedSeeds) {
+        console.log(`🔄 Deauthorizing seed: ${seed.name} (${seed.authToken})`);
+        await SeedVault.deauthorizeSeed(seed.authToken);
+      }
+
+      console.log('✅ All seeds deauthorized successfully');
+      
+      // Force refresh the encryption status
+      await checkVaultKeyStatus();
+
+      showSuccess(
+        'Seed Vault reset successfully! All seeds have been deauthorized. You can now set up encryption again in Profile settings.'
+      );
+    } catch (error) {
+      console.error('Failed to reset Seed Vault:', error);
+      showError(
+        'Failed to reset Seed Vault. Make sure the Seed Vault Simulator is installed and try again.'
+      );
+    } finally {
+      setVaultKeyLoading(false);
+    }
+  };
+
+  const handleIOSVaultKeyDeletion = async () => {
     Alert.alert(
       'Delete Vault Key',
       '⚠️ WARNING: This will permanently delete your vault key from this device. You will lose access to all encrypted content unless you have a backup. This action cannot be undone.',
@@ -608,7 +650,7 @@ export function ProfileScreen() {
           onPress: async () => {
             try {
               setVaultKeyLoading(true);
-              await VaultKeyManager.deleteVaultKey(walletAddress);
+              await VaultKeyManager.deleteVaultKey(walletAddress!);
 
               // Force refresh the vault key status
               await checkVaultKeyStatus();
@@ -1388,6 +1430,36 @@ export function ProfileScreen() {
         message={snackbar.message}
         type={snackbar.type}
         onDismiss={hideSnackbar}
+      />
+      
+      {/* Flashy Reset Seed Vault Modal */}
+      <FlashyModal
+        visible={showResetModal}
+        onDismiss={() => setShowResetModal(false)}
+        title="Reset Seed Vault"
+        message="This will deauthorize all seeds for this app. You will lose access to all encrypted content unless you re-authorize seeds.\n\nThis action will clear the app's seed authorization and cannot be undone."
+        onConfirm={performSeedVaultReset}
+        loading={vaultKeyLoading}
+        iconName="shield-off"
+        confirmText="Reset"
+        cancelText="Keep Seeds"
+        isDangerous={true}
+      />
+      
+      {/* Flashy Setup Vault Key Modal */}
+      <FlashyModal
+        visible={showSetupModal}
+        onDismiss={() => setShowSetupModal(false)}
+        title={Platform.OS === 'android' ? 'Setup Seed Vault' : 'Setup Device Vault Key'}
+        message={Platform.OS === 'android' 
+          ? 'This will authorize the Solana Mobile Seed Vault to provide hardware-backed encryption for your time capsule content.\n\nYour content will be protected with secure hardware encryption.'
+          : 'This will create a new encryption key on your device to secure your time capsule content. The key will be stored securely and can be backed up.\n\nYour content will be protected with device-level encryption.'}
+        onConfirm={Platform.OS === 'android' ? performAndroidSeedVaultSetup : performVaultKeySetup}
+        loading={vaultKeyLoading}
+        iconName="shield-plus"
+        confirmText="Setup"
+        cancelText="Cancel"
+        isDangerous={false}
       />
     </View>
   );

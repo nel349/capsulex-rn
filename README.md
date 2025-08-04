@@ -1,6 +1,8 @@
 # CapsuleX – Encrypted Time Capsules on Solana
 
-<img width="1255" alt="CapsuleX Screenshot" src="https://github.com/user-attachments/assets/screenshot-placeholder" />
+<div align="center">
+<img width="400" alt="CapsuleX Screenshot" src="https://github.com/nel349/capsulex-rn/blob/main/assets/splash.png?raw=true" />
+</div>
 
 CapsuleX – Encrypted Time Capsules on Solana, aka. future-proof content with blockchain security
 
@@ -15,11 +17,10 @@ CapsuleX's technology powers "temporal content drops" — creating a powerful di
 | Purpose                  | Link                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------- |
 | **Main mobile app**      | https://github.com/capsulex-org/capsulex-app-rn (Public)                                    |
-| **Backend API**          | https://github.com/capsulex-org/capsulex-backend (Private, contact team@capsulex.com)       |
-| **Solana Program**       | https://github.com/capsulex-org/capsulex-program (Private, contact team@capsulex.com)       |
-| iOS TestFlight           | [TestFlight](https://testflight.apple.com/join/placeholder)                             |
-| Android APK              | [Download APK](https://drive.google.com/file/placeholder)                               |
-| Web Dashboard            | https://dashboard.capsulex.com                                                           |
+| **Backend API**          | https://github.com/nel349/capsule-server (Private, contact team@capsulex.com)       |
+| **Solana Program**       | https://github.com/nel349/capsule-server/tree/main/capsulex-program (Private, contact team@capsulex.com)       |
+| iOS TestFlight           | [TestFlight](https://testflight.apple.com/join/qexjrHv7) (if not available, contact noell.lpz@gmail.com for access)                            |
+| Android APK              | [Download APK](https://github.com/nel349/capsulex-rn/releases)  (download the latest release from assets)                              |                                              |
 
 ## 2. Architecture Overview
 

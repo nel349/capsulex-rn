@@ -1,11 +1,14 @@
 import MaterialCommunityIcon from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { SeedVault, SeedVaultPermissionAndroid } from "@solana-mobile/seed-vault-lib";
-import { PermissionsAndroid } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  SeedVault,
+  SeedVaultPermissionAndroid,
+} from '@solana-mobile/seed-vault-lib';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState, useEffect } from 'react';
 import {
+  PermissionsAndroid,
   StyleSheet,
   View,
   ScrollView,
@@ -108,7 +111,7 @@ export function ProfileScreen() {
               buttonNeutral: 'Ask Me Later',
               buttonNegative: 'Cancel',
               buttonPositive: 'OK',
-            },
+            }
           );
           if (granted === PermissionsAndroid.RESULTS.GRANTED) {
             console.log('Seed Vault permission granted');
@@ -138,7 +141,17 @@ export function ProfileScreen() {
   useEffect(() => {
     checkTwitterConnection();
     loadAppSettings();
-    checkVaultKeyStatus();
+
+    // Only check vault key status if permissions are granted
+    PermissionsAndroid.check(SeedVaultPermissionAndroid).then(granted => {
+      if (granted) {
+        checkVaultKeyStatus();
+      } else {
+        console.warn(
+          'Seed Vault permission not yet granted. Skipping status check.'
+        );
+      }
+    });
   }, []);
 
   // Re-check vault key status when wallet changes (sign in/out)
@@ -360,13 +373,59 @@ export function ProfileScreen() {
     }
   };
 
+  const checkAndRequestSeedVaultPermissions = async (): Promise<boolean> => {
+    try {
+      // First check if permission is already granted
+      const alreadyGranted = await PermissionsAndroid.check(
+        SeedVaultPermissionAndroid
+      );
+      if (alreadyGranted) {
+        return true;
+      }
+
+      // Request the permission
+      const granted = await PermissionsAndroid.request(
+        SeedVaultPermissionAndroid,
+        {
+          title: 'Seed Vault Permission',
+          message:
+            'This app requires access to the Seed Vault for secure content encryption.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.warn('Permission request failed:', err);
+      return false;
+    }
+  };
+
   const handleAndroidSeedVaultSetup = async () => {
     try {
       setVaultKeyLoading(true);
-      
+
+      // First request permissions before any Seed Vault operations
+      const permissionGranted = await checkAndRequestSeedVaultPermissions();
+      if (!permissionGranted) {
+        showError(
+          'Seed Vault permission is required for encryption. Please grant permission and try again.'
+        );
+        return;
+      }
+
+      // Check if seed vault is available
+      const isAvailable = await SeedVault.isSeedVaultAvailable(true);
+      if (!isAvailable) {
+        showError('Seed Vault is not available on this device.');
+        return;
+      }
+
       // Check if we have any unauthorized seeds
       const hasUnauthorized = await SeedVault.hasUnauthorizedSeeds();
-      
+
       if (hasUnauthorized) {
         Alert.alert(
           'Authorize Seed Vault',
@@ -379,15 +438,22 @@ export function ProfileScreen() {
                 try {
                   // This will launch the Seed Vault authorization UI
                   const result = await SeedVault.authorizeNewSeed();
-                  console.log('✅ Seed authorized:', result.authToken.toString().slice(0, 8) + '...');
-                  
+                  console.log(
+                    '✅ Seed authorized:',
+                    result.authToken.toString().slice(0, 8) + '...'
+                  );
+
                   // Force refresh the encryption status
                   await checkVaultKeyStatus();
-                  
-                  showSuccess('Seed Vault authorized successfully! Your content will now be hardware-encrypted.');
+
+                  showSuccess(
+                    'Seed Vault authorized successfully! Your content will now be hardware-encrypted.'
+                  );
                 } catch (error) {
                   console.error('Failed to authorize seed:', error);
-                  showError('Failed to authorize Seed Vault. Please try again.');
+                  showError(
+                    'Failed to authorize Seed Vault. Please try again.'
+                  );
                 }
               },
             },
@@ -409,14 +475,17 @@ export function ProfileScreen() {
       }
     } catch (error) {
       console.error('Failed to check Seed Vault:', error);
-      showError('Failed to access Seed Vault. Make sure the Seed Vault Simulator is installed.');
+      showError(
+        'Failed to access Seed Vault. Make sure the Seed Vault Simulator is installed.'
+      );
     } finally {
       setVaultKeyLoading(false);
     }
   };
 
   const handleIOSVaultKeySetup = async () => {
-    const setupDescription = 'This will create a new encryption key on your device to secure your time capsule content. The key will be stored securely and can be backed up.';
+    const setupDescription =
+      'This will create a new encryption key on your device to secure your time capsule content. The key will be stored securely and can be backed up.';
 
     Alert.alert('Setup Device Vault Key', setupDescription, [
       { text: 'Cancel', style: 'cancel' },
@@ -437,7 +506,9 @@ export function ProfileScreen() {
             // Force refresh the encryption status
             await checkVaultKeyStatus();
 
-            showSuccess('Vault key created successfully! Your content will now be encrypted.');
+            showSuccess(
+              'Vault key created successfully! Your content will now be encrypted.'
+            );
           } catch (error) {
             console.error('Failed to setup encryption:', error);
             showError('Failed to setup device vault key');
@@ -1122,7 +1193,6 @@ export function ProfileScreen() {
 
                 <Divider />
 
-
                 {/* Show reset option for both platforms */}
                 <List.Item
                   title={
@@ -1232,7 +1302,6 @@ export function ProfileScreen() {
                     )}
                   />
                 )}
-
               </>
             )}
           </Card.Content>
@@ -1313,7 +1382,6 @@ export function ProfileScreen() {
           </Card.Content>
         </Card>
       </ScrollView>
-
 
       <AppSnackbar
         visible={snackbar.visible}

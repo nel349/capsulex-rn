@@ -136,6 +136,7 @@ export default [
       'assets/',
       'assets/capsulex.json',
       'assets/capsulex.ts',
+      'seed-vault-sdk/',
     ],
   },
 ]; 

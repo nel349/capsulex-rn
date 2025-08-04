@@ -1,26 +1,40 @@
+import {
+  SeedVault,
+  useSeedVault,
+  type Seed,
+  type SeedVaultEvent,
+  type SeedVaultContentChange,
+} from '@solana-mobile/seed-vault-lib';
 import React, { useEffect, useState } from 'react';
 import { View, Button, Text, Alert } from 'react-native';
-import { SeedVault, useSeedVault } from "@solana-mobile/seed-vault-lib";
 
 export default function SeedVaultManager() {
-  const [authorizedSeeds, setAuthorizedSeeds] = useState([]);
+  const [authorizedSeeds, setAuthorizedSeeds] = useState<Seed[]>([]);
   const [hasUnauthorizedSeeds, setHasUnauthorizedSeeds] = useState(false);
 
-  const vault = useSeedVault();
+  const handleSeedVaultEvent = (event: SeedVaultEvent) => {
+    console.log('SeedVault event:', event);
+  };
+
+  const handleContentChange = (event: SeedVaultContentChange) => {
+    console.log('SeedVault content change:', event);
+  };
+
+  useSeedVault(handleSeedVaultEvent, handleContentChange);
+
+  const checkSeeds = async () => {
+    try {
+      const unauthorized = await SeedVault.hasUnauthorizedSeeds();
+      setHasUnauthorizedSeeds(unauthorized);
+
+      const seeds = await SeedVault.getAuthorizedSeeds();
+      setAuthorizedSeeds(seeds);
+    } catch (error) {
+      console.error('Failed to check seeds:', error);
+    }
+  };
 
   useEffect(() => {
-    async function checkSeeds() {
-      try {
-        const unauthorized = await SeedVault.hasUnauthorizedSeeds();
-        setHasUnauthorizedSeeds(unauthorized);
-
-        const seeds = await SeedVault.getAuthorizedSeeds();
-        setAuthorizedSeeds(seeds);
-      } catch (error) {
-        console.error('Failed to check seeds:', error);
-      }
-    }
-
     checkSeeds();
   }, []);
 
@@ -46,4 +60,3 @@ export default function SeedVaultManager() {
     </View>
   );
 }
-

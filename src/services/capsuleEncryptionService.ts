@@ -1,4 +1,6 @@
+import { SeedVaultPermissionAndroid } from '@solana-mobile/seed-vault-lib';
 import * as Crypto from 'expo-crypto';
+import { PermissionsAndroid, Platform } from 'react-native';
 
 import type { Capsule, CreateCapsuleRequest } from '../types/api';
 import type { UnifiedEncryptedContent } from '../utils/unifiedEncryption';
@@ -30,6 +32,14 @@ export class CapsuleEncryptionService {
    */
   static async isEncryptionAvailable(): Promise<boolean> {
     return await UnifiedEncryption.isAvailable();
+  }
+
+  /**
+   * Run diagnostic test for SeedVault (Android only)
+   * Use this to debug SeedVault communication issues
+   */
+  static async testSeedVault(): Promise<void> {
+    return await UnifiedEncryption.testSeedVault();
   }
 
   /**
@@ -154,6 +164,16 @@ export class CapsuleEncryptionService {
     platform: 'android' | 'ios';
     details: any;
   }> {
+    // Only check permissions on Android
+    if (Platform.OS === 'android') {
+      const permissionsGranted = await PermissionsAndroid.check(
+        SeedVaultPermissionAndroid
+      );
+      if (!permissionsGranted) {
+        throw new Error('Seed Vault permission not granted');
+      }
+    }
+
     return await UnifiedEncryption.getEncryptionInfo(walletAddress);
   }
 

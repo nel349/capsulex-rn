@@ -178,8 +178,10 @@ export function CreateCapsuleScreen() {
 
     try {
       // Check unified encryption availability
-      const isAvailable = await CapsuleEncryptionService.isEncryptionAvailable();
-      const status = await CapsuleEncryptionService.getEncryptionStatus(walletAddress);
+      const isAvailable =
+        await CapsuleEncryptionService.isEncryptionAvailable();
+      const status =
+        await CapsuleEncryptionService.getEncryptionStatus(walletAddress);
 
       console.log('🔍 Unified encryption status:', status);
 
@@ -367,7 +369,7 @@ export function CreateCapsuleScreen() {
       // console.log('- createCapsule object:', createCapsule);
       // console.log('- createCapsule.mutateAsync:', createCapsule?.mutateAsync);
       // console.log('- selectedAccount:', selectedAccount);
-
+      // await CapsuleEncryptionService.testSeedVault();
       // Step 1: Initialize and encrypt content using unified encryption
       showInfo('Initializing encryption system...');
 
@@ -393,7 +395,28 @@ export function CreateCapsuleScreen() {
         console.log('🔐 Content encrypted (content only)');
       } catch (encryptionError) {
         console.error('❌ Content encryption failed:', encryptionError);
-        showError('Failed to encrypt content. Please try again.');
+
+        const errorMessage =
+          encryptionError instanceof Error
+            ? encryptionError.message
+            : String(encryptionError);
+
+        if (errorMessage.includes('NEED_NEW_SEED')) {
+          showError(
+            '⚠️ Seed Vault authorization expired. Please:\n\n1. Open the Seed Vault Simulator app\n2. Create a new seed\n3. Return here and try again\n\nEncryption is required for capsule security.'
+          );
+        } else if (
+          errorMessage.includes('Seed Vault') ||
+          errorMessage.includes('authorization')
+        ) {
+          showError(
+            '⚠️ Seed Vault setup required. Please go to Profile → Seed Vault Management to set up encryption again. Encryption is mandatory for capsule security.'
+          );
+        } else {
+          showError(
+            'Failed to encrypt content. Encryption is required for capsule security. Please try again.'
+          );
+        }
         return;
       }
 

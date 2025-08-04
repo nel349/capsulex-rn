@@ -1,4 +1,4 @@
-import type { Seed } from '@solana-mobile/seed-vault-lib';
+import type { Account, Seed } from '@solana-mobile/seed-vault-lib';
 import { SeedVault } from '@solana-mobile/seed-vault-lib';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
@@ -24,14 +24,17 @@ export interface UnifiedEncryptedContent {
  */
 export class UnifiedEncryption {
   private static readonly ENCRYPTION_MESSAGE_PREFIX = 'CapsuleX-Encrypt-v2:';
-  private static readonly DEFAULT_DERIVATION_PATH = "m/44'/501'/0'/0'"; // Standard Solana derivation
+  private static readonly DEFAULT_DERIVATION_PATH = "m/44'/0'/0'/0'"; // BIP39 compatible derivation
+  
+  // Cache for working derivation paths per seed
+  private static seedDerivationPaths = new Map<number, string>();
 
   /**
    * Initialize encryption for the current platform
    * Android: Ensures seed is authorized
    * iOS: Ensures vault key exists
    */
-  static async initialize(walletAddress: string): Promise<void> {
+  static async initialize(_walletAddress: string): Promise<void> {
     if (Platform.OS === 'android') {
       await this.initializeAndroidSeedVault();
     } else {
@@ -53,7 +56,7 @@ export class UnifiedEncryption {
           console.log('🤖 SeedVault module not available');
           return false;
         }
-        
+
         // Check if we have any authorized seeds
         const authorizedSeeds = await SeedVault.getAuthorizedSeeds();
         return authorizedSeeds.length > 0;
@@ -77,7 +80,12 @@ export class UnifiedEncryption {
     const createdAt = new Date().toISOString();
 
     if (Platform.OS === 'android') {
-      return await this.encryptWithSeedVault(content, walletAddress, createdAt);
+      try {
+        return await this.encryptWithSeedVault(content, walletAddress, createdAt);
+      } catch (error) {
+        // Discrete fallback to VaultKey method
+        return await this.encryptWithVaultKey(content, walletAddress, createdAt);
+      }
     } else {
       return await this.encryptWithVaultKey(content, walletAddress, createdAt);
     }
@@ -97,10 +105,61 @@ export class UnifiedEncryption {
     }
 
     if (encryptedContent.platform === 'android') {
-      return await this.decryptWithSeedVault(encryptedContent);
+      try {
+        return await this.decryptWithSeedVault(encryptedContent);
+      } catch (error) {
+        // Discrete fallback - if content has keyId, it was encrypted with VaultKey
+        if (encryptedContent.keyId) {
+          return await this.decryptWithVaultKey(encryptedContent);
+        }
+        throw error;
+      }
     } else {
       return await this.decryptWithVaultKey(encryptedContent);
     }
+  }
+
+  /**
+   * Find working derivation path for a seed
+   */
+  private static async findWorkingDerivationPath(seed: Seed): Promise<string> {
+    // Check cache first
+    if (this.seedDerivationPaths.has(seed.authToken)) {
+      return this.seedDerivationPaths.get(seed.authToken)!;
+    }
+
+    const derivationPaths = [
+      // BIP39 compatible paths (most likely for Seed Vault Simulator)
+      "m/44'/0'/0'/0'",
+      "m/44'/0'/0'",
+      "m/44'/0'",
+      "m/0'/0'",
+      "m/0",
+      // Standard Solana paths
+      "m/44'/501'/0'/0'",
+      "m/44'/501'/0'",
+      "m/44'/501'",
+    ];
+
+    const testMessage = Buffer.from('derivation-test').toString('base64');
+    
+    for (const derivationPath of derivationPaths) {
+      try {
+        console.log(`🔍 Testing derivation path: ${derivationPath} for seed ${seed.name}`);
+        await SeedVault.signMessage(seed.authToken, derivationPath, testMessage);
+        
+        // Success! Cache and return this path
+        console.log(`✅ Found working derivation path: ${derivationPath} for seed ${seed.name}`);
+        this.seedDerivationPaths.set(seed.authToken, derivationPath);
+        return derivationPath;
+        
+      } catch (error) {
+        console.log(`❌ Derivation path ${derivationPath} failed for seed ${seed.name}`);
+        continue;
+      }
+    }
+    
+    throw new Error(`No working derivation path found for seed ${seed.name}. Please approve the signing dialogs when they appear.`);
   }
 
   /**
@@ -149,57 +208,239 @@ export class UnifiedEncryption {
     createdAt: string
   ): Promise<UnifiedEncryptedContent> {
     try {
-      // Get the first authorized seed
-      const authorizedSeeds = await SeedVault.getAuthorizedSeeds();
-      if (authorizedSeeds.length === 0) {
-        throw new Error('No authorized seeds available');
+      return await this.attemptSeedVaultEncryption(
+        content,
+        walletAddress,
+        createdAt
+      );
+    } catch (error) {
+      console.error('❌ First encryption attempt failed:', error);
+
+      // Check if this is an authorization error (result=1007)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (
+        errorMessage.includes('1007') ||
+        errorMessage.includes('authorization') ||
+        errorMessage.includes('ActionFailedException')
+      ) {
+        console.log(
+          '🔄 Authorization error detected (result=1007 - user denied or expired), attempting to re-authorize seed...'
+        );
+
+        try {
+          // When authorization expires, we might need to initialize again first
+          console.log('🔄 Re-initializing Seed Vault...');
+          await this.initializeAndroidSeedVault();
+          
+          // If initialization succeeds, try direct re-authorization
+          await this.reauthorizeSeed();
+
+          // Retry encryption with fresh authorization
+          console.log('🔄 Retrying encryption with fresh authorization...');
+          return await this.attemptSeedVaultEncryption(
+            content,
+            walletAddress,
+            createdAt
+          );
+        } catch (reAuthError) {
+          console.error('❌ Re-authorization failed:', reAuthError);
+          const reAuthErrorMessage = reAuthError instanceof Error ? reAuthError.message : String(reAuthError);
+          
+          if (reAuthErrorMessage.includes('NEED_NEW_SEED')) {
+            throw new Error(
+              'Seed Vault authorization expired. Please open the Seed Vault Simulator app, create a new seed or ensure existing seeds are available, then try again.'
+            );
+          } else {
+            throw new Error(
+              'Seed Vault authorization expired and re-authorization failed. Please go to Profile settings and set up Seed Vault again.'
+            );
+          }
+        }
       }
 
-      const seed = authorizedSeeds[0];
-      const derivationPath = this.DEFAULT_DERIVATION_PATH;
-
-      // Create a unique message to sign for this content
-      const nonce = await Crypto.getRandomBytesAsync(16);
-      const nonceHex = Array.from(nonce)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-
-      const messageToSign = `${this.ENCRYPTION_MESSAGE_PREFIX}${nonceHex}:${createdAt}`;
-      const messageBytes = new TextEncoder().encode(messageToSign);
-
-      // Sign the message to get deterministic encryption key
-      const signResult = await SeedVault.signMessage(
-        seed.authToken,
-        derivationPath,
-        Array.from(messageBytes)
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('')
-      );
-
-      // Use the signature as encryption key (take first 32 bytes)
-      const signatureBytes = new Uint8Array(
-        signResult.signatures[0].match(/.{2}/g)!.map(byte => parseInt(byte, 16))
-      );
-      const encryptionKey = signatureBytes.slice(0, 32);
-
-      // Encrypt content using XOR
-      const encryptedData = this.xorEncrypt(content, encryptionKey);
-
-      console.log('🤖🔐 Content encrypted with Seed Vault');
-
-      return {
-        encryptedData: encryptedData + ':' + nonceHex, // Append nonce for decryption
-        platform: 'android',
-        seedName: seed.name,
-        derivationPath,
-        createdAt,
-        walletAddress,
-        version: '2.0',
-      };
-    } catch (error) {
-      console.error('❌ Seed Vault encryption failed:', error);
+      // Re-throw other errors
       throw new Error('Failed to encrypt content with Seed Vault');
     }
+  }
+
+  /**
+   * Attempt to re-authorize seed when authorization expires
+   */
+  private static async reauthorizeSeed(): Promise<void> {
+    try {
+      console.log('🔄 Attempting to re-authorize Seed Vault...');
+
+      // First, deauthorize existing seeds to make them available for re-authorization
+      try {
+        const authorizedSeeds = await SeedVault.getAuthorizedSeeds();
+        console.log(
+          `🔄 Found ${authorizedSeeds.length} authorized seeds, deauthorizing them...`
+        );
+
+        // Deauthorize all existing seeds to make them available again
+        for (const seed of authorizedSeeds) {
+          console.log(`🔄 Deauthorizing seed: ${seed.name} (${seed.authToken})`);
+          await SeedVault.deauthorizeSeed(seed.authToken);
+        }
+        
+        console.log('✅ All seeds deauthorized, they should now be available for re-authorization');
+      } catch (error) {
+        console.warn('⚠️ Could not deauthorize existing seeds:', error);
+      }
+
+      // Check if there are unauthorized seeds available now
+      const hasUnauthorized = await SeedVault.hasUnauthorizedSeeds();
+      console.log('🔄 Has unauthorized seeds after deauthorization:', hasUnauthorized);
+
+      if (hasUnauthorized) {
+        console.log('🔄 Found unauthorized seeds, re-authorizing...');
+        const result = await SeedVault.authorizeNewSeed();
+        console.log(
+          '✅ Seed re-authorized successfully:',
+          String(result.authToken).slice(0, 8) + '...'
+        );
+      } else {
+        // If still no unauthorized seeds, suggest creating a new seed
+        throw new Error(
+          'NEED_NEW_SEED: No unauthorized seeds available even after deauthorization. Please create a new seed in the Seed Vault Simulator app, then try again.'
+        );
+      }
+    } catch (error) {
+      console.error('❌ Re-authorization failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Perform the actual encryption attempt
+   */
+  private static async attemptSeedVaultEncryption(
+    content: string,
+    walletAddress: string,
+    createdAt: string
+  ): Promise<UnifiedEncryptedContent> {
+    // Get the first authorized seed
+    const authorizedSeeds = await SeedVault.getAuthorizedSeeds();
+    if (authorizedSeeds.length === 0) {
+      throw new Error('No authorized seeds available');
+    }
+
+    const seed = authorizedSeeds[0];
+    
+    console.log(
+      `🤖 Using seed: ${seed.name} (token: ${String(seed.authToken).slice(0, 8)}...)`
+    );
+    console.log(`🤖 Seed details:`, {
+      name: seed.name,
+      authToken: seed.authToken,
+      purpose: seed.purpose
+    });
+
+    console.log('Authorized seed = ' + seed.name + ', ' + seed.authToken);
+    const accounts = await SeedVault.getUserWallets(seed.authToken);
+    console.log('📋 Found accounts:', accounts);
+    
+    let derivationPath: string;
+    
+    if (!accounts || accounts.length === 0) {
+      console.log('🔧 No user wallet accounts found, requesting public key to create one...');
+      
+      // Request a public key to create an account
+      try {
+        const publicKeyResult = await SeedVault.getPublicKey(
+          seed.authToken, 
+          this.DEFAULT_DERIVATION_PATH
+        );
+        console.log('✅ Created account with public key:', publicKeyResult.publicKeyEncoded.slice(0, 8) + '...');
+        console.log('✅ Using derivation path:', publicKeyResult.resolvedDerivationPath);
+        
+        derivationPath = publicKeyResult.resolvedDerivationPath;
+      } catch (createError) {
+        console.error('❌ Failed to create account:', createError);
+        throw new Error(`Failed to create user wallet account: ${createError instanceof Error ? createError.message : String(createError)}`);
+      }
+    } else {
+      const account = accounts[0];
+      console.log('🔑 Using existing account:', {
+        name: account.name,
+        publicKey: account.publicKeyEncoded.slice(0, 8) + '...',
+        derivationPath: account.derivationPath
+      });
+      
+      derivationPath = account.derivationPath;
+    }
+
+    // Create a unique message to sign for this content
+    const nonce = await Crypto.getRandomBytesAsync(16);
+    const nonceHex = Array.from(nonce)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    const messageToSign = `${this.ENCRYPTION_MESSAGE_PREFIX}${nonceHex}:${createdAt}`;
+    const messageBytes = new TextEncoder().encode(messageToSign);
+
+    console.log(
+      `🤖 Signing message for encryption: ${messageToSign.slice(0, 50)}...`
+    );
+    console.log(`🤖 Message length: ${messageBytes.length} bytes`);
+    console.log(`🤖 Full message: ${messageToSign}`);
+
+    // Sign the message to get deterministic encryption key
+    // Convert message bytes to base64 string as expected by SeedVault API
+    const messageBase64 = Buffer.from(messageBytes).toString('base64');
+    console.log(`🤖 Base64 message: ${messageBase64}`);
+    
+    // First try a simple test message
+    try {
+      console.log('🧪 Testing with a simple message first...');
+      const testMessage = 'hello world';
+      const testMessageBase64 = Buffer.from(testMessage).toString('base64');
+      console.log(`🧪 Test message base64: ${testMessageBase64}`);
+      console.log(`🧪 Using authToken: ${seed.authToken}`);
+      console.log(`🧪 Using derivationPath: ${derivationPath}`);
+      console.log(`🧪 About to call SeedVault.signMessage - WATCH FOR DIALOG NOW!`);
+      
+      const testSignResult = await SeedVault.signMessage(
+        seed.authToken,
+        derivationPath,
+        testMessageBase64
+      );
+      console.log('✅ Simple test message signed successfully!');
+      console.log('✅ Test signature result:', testSignResult);
+      
+      // If test succeeds, try the actual message
+      console.log('🤖 Now trying the actual encryption message...');
+    } catch (testError) {
+      console.error('❌ Even simple test message failed:', testError);
+      throw new Error('🚨 USER ACTION REQUIRED: SeedVault is trying to show a signing dialog but getting result=1007 (CANCELED). Please watch your device screen for a Seed Vault popup dialog and click APPROVE/OK when it appears. If no dialog shows up, make sure the Seed Vault Simulator app is running.');
+    }
+    
+    const signResult = await SeedVault.signMessage(
+      seed.authToken,
+      derivationPath,
+      messageBase64
+    );
+
+    // Use the signature as encryption key (take first 32 bytes)
+    // The signature is returned as Base64, convert to bytes
+    const signatureBytes = Buffer.from(signResult.signatures[0], 'base64');
+    const encryptionKey = signatureBytes.slice(0, 32);
+
+    // Encrypt content using XOR
+    const encryptedData = this.xorEncrypt(content, encryptionKey);
+
+    console.log('🤖🔐 Content encrypted with Seed Vault');
+
+    return {
+      encryptedData: encryptedData + ':' + nonceHex, // Append nonce for decryption
+      platform: 'android',
+      seedName: seed.name,
+      derivationPath,
+      createdAt,
+      walletAddress,
+      version: '2.0',
+    };
   }
 
   /**
@@ -238,18 +479,17 @@ export class UnifiedEncryption {
       const messageBytes = new TextEncoder().encode(messageToSign);
 
       // Sign the message to get the same encryption key
+      // Convert message bytes to base64 string as expected by SeedVault API
+      const messageBase64 = Buffer.from(messageBytes).toString('base64');
       const signResult = await SeedVault.signMessage(
         seed.authToken,
         encryptedContent.derivationPath || this.DEFAULT_DERIVATION_PATH,
-        Array.from(messageBytes)
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('')
+        messageBase64
       );
 
       // Use the signature as decryption key
-      const signatureBytes = new Uint8Array(
-        signResult.signatures[0].match(/.{2}/g)!.map(byte => parseInt(byte, 16))
-      );
+      // The signature is returned as Base64, convert to bytes
+      const signatureBytes = Buffer.from(signResult.signatures[0], 'base64');
       const decryptionKey = signatureBytes.slice(0, 32);
 
       // Decrypt content using XOR
@@ -352,6 +592,102 @@ export class UnifiedEncryption {
   }
 
   /**
+   * Force refresh authorization - use this when user wants to manually re-authorize
+   */
+  static async refreshAuthorization(): Promise<void> {
+    if (Platform.OS === 'android') {
+      await this.reauthorizeSeed();
+    } else {
+      // iOS doesn't need special authorization refresh
+      console.log('📱 iOS doesn\'t require authorization refresh');
+    }
+  }
+
+  /**
+   * Diagnostic function to test SeedVault basic functionality
+   */
+  static async testSeedVault(): Promise<void> {
+    if (Platform.OS !== 'android') {
+      console.log('📱 SeedVault test only works on Android');
+      return;
+    }
+
+    try {
+      console.log('🧪 === SEED VAULT DIAGNOSTIC TEST ===');
+      
+      // Test 1: Check if module is available
+      console.log('🧪 Test 1: Module availability');
+      if (!SeedVault) {
+        throw new Error('SeedVault module not available');
+      }
+      console.log('✅ SeedVault module is available');
+
+      // Test 2: Get authorized seeds
+      console.log('🧪 Test 2: Get authorized seeds');
+      const authorizedSeeds = await SeedVault.getAuthorizedSeeds();
+      console.log(`✅ Found ${authorizedSeeds.length} authorized seeds:`, authorizedSeeds);
+
+      if (authorizedSeeds.length === 0) {
+        throw new Error('No authorized seeds available');
+      }
+
+      // Test 3: Try different seeds and derivation paths
+      for (let i = 0; i < Math.min(authorizedSeeds.length, 2); i++) {
+        const seed = authorizedSeeds[i];
+        console.log(`🧪 Test 3.${i+1}: Testing seed ${seed.name} (${seed.authToken})`);
+        
+        // Try different derivation paths for both BIP39 and Ed25519
+        const derivationPaths = [
+          // Standard Solana paths
+          "m/44'/501'/0'/0'",
+          "m/44'/501'/0'",
+          "m/44'/501'",
+          // BIP39 compatible paths
+          "m/44'/0'/0'/0'",
+          "m/44'/0'/0'",
+          "m/44'/0'",
+          // Simple paths
+          "m/0'/0'",
+          "m/0",
+        ];
+        
+        for (const derivationPath of derivationPaths) {
+          try {
+            console.log(`🧪 Trying derivation path: ${derivationPath}`);
+            const simpleMessage = Buffer.from('test').toString('base64');
+            
+            console.log('🧪 🚨 APPROVE THE DIALOG WHEN IT APPEARS! 🚨');
+            
+            const result = await SeedVault.signMessage(
+              seed.authToken,
+              derivationPath,
+              simpleMessage
+            );
+            
+            console.log(`✅ SUCCESS! Seed ${seed.name} with path ${derivationPath} works:`, result);
+            return; // Success, exit early
+            
+          } catch (error) {
+            console.log(`❌ Failed with seed ${seed.name}, path ${derivationPath}:`, error);
+          }
+        }
+      }
+      
+      throw new Error('All seed and derivation path combinations failed');
+      
+    } catch (error) {
+      console.error('❌ SeedVault diagnostic failed:', error);
+      console.log('🚨 TROUBLESHOOTING STEPS:');
+      console.log('1. Open Seed Vault Simulator app');
+      console.log('2. Delete all existing seeds');
+      console.log('3. Create a new seed');
+      console.log('4. Make sure to approve all permission dialogs');
+      console.log('5. Try again');
+      throw error;
+    }
+  }
+
+  /**
    * Get encryption status and info for debugging
    */
   static async getEncryptionInfo(walletAddress: string): Promise<{
@@ -411,5 +747,7 @@ export function useUnifiedEncryption() {
     encryptContent: UnifiedEncryption.encryptContent,
     decryptContent: UnifiedEncryption.decryptContent,
     getEncryptionInfo: UnifiedEncryption.getEncryptionInfo,
+    refreshAuthorization: UnifiedEncryption.refreshAuthorization,
+    testSeedVault: UnifiedEncryption.testSeedVault,
   };
 }

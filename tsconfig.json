@@ -2,5 +2,11 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  "exclude": [
+    "seed-vault-sdk/**/*",
+    "node_modules/**/*",
+    "build/**/*",
+    "dist/**/*"
+  ]
 }

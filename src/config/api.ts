@@ -7,7 +7,7 @@ const NETWORK_CONFIG = {
   DEV_PORT: 3001,
 
   // Production settings
-  PROD_BASE_URL: 'https://api.capsulex.com',
+  PROD_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://capsulex-server-production-api.up.railway.app' ,
 };
 
 // API Configuration

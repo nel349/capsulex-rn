@@ -14,6 +14,7 @@ import {
   Vibration,
   AppState,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { Text, Button, ActivityIndicator } from 'react-native-paper';
 import {
@@ -22,6 +23,10 @@ import {
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
+import {
+  SeedVault,
+  SeedVaultPermissionAndroid,
+} from '@solana-mobile/seed-vault-lib';
 
 import { HorizontalCapsuleList } from '../components/capsules';
 import type { EnhancedCapsule } from '../components/capsules/types';
@@ -102,6 +107,53 @@ export function HubScreen() {
     };
     hideDynamicClient();
   }, []);
+
+  // Check and request Seed Vault permissions on app startup (Android only)
+  useEffect(() => {
+    const checkSeedVaultPermissions = async () => {
+      if (Platform.OS !== 'android' || !isAuthenticated) return;
+
+      try {
+        // Check if permission is already granted
+        const alreadyGranted = await PermissionsAndroid.check(
+          SeedVaultPermissionAndroid
+        );
+        
+        if (!alreadyGranted) {
+          console.log('🔐 HubScreen - Requesting Seed Vault permissions...');
+          
+          // Request the permission
+          const granted = await PermissionsAndroid.request(
+            SeedVaultPermissionAndroid,
+            {
+              title: 'Seed Vault Permission Required',
+              message: 'CapsuleX needs access to Solana Mobile Seed Vault for secure content encryption. This enables hardware-backed security for your time capsules.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Skip',
+              buttonPositive: 'Allow',
+            }
+          );
+
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('✅ HubScreen - Seed Vault permission granted');
+            showSuccess('Seed Vault access granted! Your content will be hardware-encrypted.');
+          } else {
+            console.log('⚠️ HubScreen - Seed Vault permission denied');
+            showError('Seed Vault permission denied. You can enable it later in Profile settings for enhanced security.');
+          }
+        } else {
+          console.log('✅ HubScreen - Seed Vault permissions already granted');
+        }
+      } catch (err) {
+        console.error('❌ HubScreen - Failed to check Seed Vault permissions:', err);
+      }
+    };
+
+    // Only check permissions after user is authenticated and component is loaded
+    if (isAuthenticated && !loading) {
+      checkSeedVaultPermissions();
+    }
+  }, [isAuthenticated, loading, showSuccess, showError]);
 
   // Check if tour should be shown
   useEffect(() => {

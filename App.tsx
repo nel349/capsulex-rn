@@ -28,7 +28,7 @@ import { ConnectionProvider } from './src/utils/ConnectionProvider';
 const queryClient = new QueryClient();
 
 export const dynamicClient = createClient({
-  environmentId: '13a7a6f3-8e29-4e10-ae0a-e98535ac83e3',
+  environmentId: process.env.EXPO_PUBLIC_DYNAMIC_ENVIRONMENT_ID || '',
 
   // Optional:
   appLogoUrl: 'https://demo.dynamic.xyz/favicon-32x32.png',
